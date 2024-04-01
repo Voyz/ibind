@@ -1,10 +1,13 @@
-*This library is currently being developd. See something that's broken? Did we get something
+*This library is currently being developed. See something that's broken? Did we get something
 wrong? [Create an issue and let us know!][issues]*
 
+# IBind
 
-IBind a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
+IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
 
-# NOTICE
+I recommend using this library along with [IBeam][ibeam] for easier authentication with IBKR.
+
+## NOTICE
 ### This library is a work in progres. I haven't published it yet. Many things are due to change without any notice. 
 
 ## Examples
@@ -158,6 +161,7 @@ Or if you'd just want to give something back, I've got a Buy Me A Coffee account
 Thanks and have an awesome day 👋
 
 
+[ibeam]: https://github.com/Voyz/ibeam
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
 
