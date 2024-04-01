@@ -52,3 +52,6 @@ IBKR_WS_SUBSCRIPTION_RETRIES = int(os.getenv('IBKR_WS_SUBSCRIPTION_RETRIES', 5))
 
 IBKR_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBKR_WS_SUBSCRIPTION_TIMEOUT', 2))
 """ Timeout for WebSocket subscription verifications. """
+
+IBKR_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBKR_WS_LOG_RAW_MESSAGES', False))
+"""Whether raw WebSocket messages should be logged."""
