@@ -90,14 +90,14 @@ class RestClient:
         """
 
         if url is None:
-            raise ValueError("url must not be None")
+            raise ValueError(f"{self}: url must not be None")
         self.base_url = url
         if not url.endswith('/'):
             self.base_url += '/'
 
         self.cacert = cacert
         if not (self.cacert is False or Path(self.cacert).exists()):
-            raise ValueError("cacert must be a valid Path or False")
+            raise ValueError(f"{self}: cacert must be a valid Path or False")
 
         self._timeout = timeout
         self._max_retries = max_retries
@@ -165,9 +165,9 @@ class RestClient:
 
             except ReadTimeout as e:
                 if attempt >= self._max_retries:
-                    raise TimeoutError(f'Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
+                    raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
 
-                _LOGGER.info(f'Timeout for {method} {url}, retrying attempt {attempt + 1}/{self._max_retries}')
+                _LOGGER.info(f'{self}: Timeout for {method} {url}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
 
@@ -182,8 +182,11 @@ class RestClient:
             result.data = response.json()
             return result
         except Timeout as e:
-            raise ExternalBrokerError(f'Timeout error ({self._timeout}S)', status_code=response.status_code) from e
+            raise ExternalBrokerError(f'{self}: Timeout error ({self._timeout}S)', status_code=response.status_code) from e
         # TODO: add further network exceptions for graceful handling
         # TODO: add JSON parse exception handling
         except Exception as e:
-            raise ExternalBrokerError(f'IbkrClient response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+            raise ExternalBrokerError(f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+
+    def __str__(self):
+        return f'{self.__class__.__qualname__}'
