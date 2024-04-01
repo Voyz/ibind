@@ -1,34 +1,67 @@
-from pathlib import Path
 import datetime
 import logging
 import sys
+from pathlib import Path
+
+import var
 
 DEFAULT_FORMAT = '%(asctime)s|%(levelname)-.1s| %(message)s'
 
-initialized = False
+_initialized = False
+_log_to_file = False
 
-def initialize(log_format: str,log_level: str):
-    global initialized
-    if initialized: return
-    initialized = True
+
+def project_logger(filepath=None):
+    """
+    Returns a project-specific logger instance.
+
+    This function creates a new logger instance with the name `'ibind'.{filepath.stem}` if `filepath` is specified,
+    or 'ibind' if `filepath` is not specified.
+
+    Parameters:
+        filepath (str): The file path where the log files will be stored. If no filepath is specified, the default logs directory will be used.
+
+    Returns:
+        logging.Logger: The project-specific logger instance.
+    """
+    return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
+
+_LOGGER = project_logger()
+
+def initialize(
+        log_to_console: bool = var.LOG_TO_CONSOLE,
+        log_format: str = var.LOG_FORMAT,
+        log_level: str = var.LOG_LEVEL,
+        log_to_file: bool = var.LOG_TO_FILE,
+):
+    global _initialized
+    if _initialized: return
+    _initialized = True
+
+    global _log_to_file
+    _log_to_file = log_to_file
+
 
     logger = logging.getLogger('ibind')
     formatter = logging.Formatter(log_format)
-
-    # stdout handler, for INFO and below:
-    h1 = logging.StreamHandler(stream=sys.stdout)
-    h1.setLevel(getattr(logging, log_level))
-    h1.addFilter(lambda record: record.levelno <= logging.INFO)
-    h1.setFormatter(formatter)
-    logger.addHandler(h1)
-
-    # stderr handler, for WARNING and above:
-    h2 = logging.StreamHandler(stream=sys.stderr)
-    h2.setLevel(logging.WARNING)
-    h2.setFormatter(formatter)
-    logger.addHandler(h2)
-
     logger.setLevel(logging.DEBUG)
+
+    if log_to_console:
+        # stdout handler, for INFO and below:
+        h1 = logging.StreamHandler(stream=sys.stdout)
+        h1.setLevel(getattr(logging, log_level))
+        h1.addFilter(lambda record: record.levelno <= logging.INFO)
+        h1.setFormatter(formatter)
+        logger.addHandler(h1)
+
+        # stderr handler, for WARNING and above:
+        h2 = logging.StreamHandler(stream=sys.stderr)
+        h2.setLevel(logging.WARNING)
+        h2.setFormatter(formatter)
+        logger.addHandler(h2)
+
+    if not _log_to_file:
+        logging.getLogger('ibind_fh').addFilter(lambda record: False)
 
 
 def new_daily_rotating_file_handler(logger_name, filepath):
@@ -50,19 +83,22 @@ def new_daily_rotating_file_handler(logger_name, filepath):
         - The logger is set to DEBUG level by default.
         - The format of the logs is determined by the DEFAULT_FORMAT global variable.
     """
-    logger = logging.getLogger(f'ibind.fh.{logger_name}')
+    logger = logging.getLogger(f'ibind_fh.{logger_name}')
 
-    if len(logger.handlers) == 0:
-        fh_logger = logging.getLogger('ibind.fh')
-        handler = DailyRotatingFileHandler(filepath, encoding='utf-8')
-        handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
+    if _log_to_file:
+        _LOGGER.info(f'New daily rotating file handler for logger "{logger_name}": {filepath}')
+        if len(logger.handlers) == 0:
+            fh_logger = logging.getLogger('ibind_fh')
+            handler = DailyRotatingFileHandler(filepath, encoding='utf-8')
+            handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
 
-        # if filehandler outputs are disabled, this should bring over the filter that will do this
-        for filter in fh_logger.filters:
-            logger.addFilter(filter)
-        logger.addHandler(handler)
+            # if filehandler outputs are disabled, this should bring over the filter that will do this
+            for filter in fh_logger.filters:
+                logger.addFilter(filter)
+            logger.addHandler(handler)
 
-    logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+
     return logger
 
 
@@ -96,19 +132,3 @@ class DailyRotatingFileHandler(logging.FileHandler):
 
         super().emit(record)
 
-
-
-def project_logger(filepath=None):
-    """
-    Returns a project-specific logger instance.
-
-    This function creates a new logger instance with the name `'ibind'.{filepath.stem}` if `filepath` is specified,
-    or 'ibind' if `filepath` is not specified.
-
-    Parameters:
-        filepath (str): The file path where the log files will be stored. If no filepath is specified, the default logs directory will be used.
-
-    Returns:
-        logging.Logger: The project-specific logger instance.
-    """
-    return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
