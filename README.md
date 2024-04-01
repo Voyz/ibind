@@ -10,6 +10,14 @@ I recommend using this library along with [IBeam][ibeam] for easier authenticati
 ## NOTICE
 ### This library is a work in progres. I haven't published it yet. Many things are due to change without any notice. 
 
+Features:
+
+* **REST Python client** - for IBKR REST API.
+* **WebSocket Python client** - for IBKR WebSocket API.
+* **Feature rich REST** - automated question/answer handling, parallel requests, rate limiting, conid unpacking, and more.
+* **Feature rich WebSocket** - WebSocket thread lifecycle handling, thread-safe Queue data stream, internal subscription tracking, heartbeat monitoring, and more.
+
+
 ## Examples
 
 See [all examples][examples]
