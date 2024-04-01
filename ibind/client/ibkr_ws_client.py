@@ -146,6 +146,7 @@ class IbkrWsClient(WsClient):
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             SubscriptionControllerClass: Type[SubscriptionController] = SubscriptionController,
+            log_raw_messages: bool = var.IBKR_WS_LOG_RAW_MESSAGES,
             # subscription controller
             subscription_retries: int = var.IBKR_WS_SUBSCRIPTION_RETRIES,
             subscription_timeout: float = var.IBKR_WS_SUBSCRIPTION_TIMEOUT,
@@ -193,6 +194,7 @@ class IbkrWsClient(WsClient):
             subscription_retries=subscription_retries,
             subscription_timeout=subscription_timeout
         )
+        self._log_raw_messages = log_raw_messages
 
         super().__init__(
             url=url,
@@ -335,7 +337,8 @@ class IbkrWsClient(WsClient):
         return message, topic, data, subscribed, channel
 
     def on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
-        # print(raw_message)
+        if self._log_raw_messages:
+            _LOGGER.debug(f'{self}: Raw message: {raw_message}')
         message, topic, data, subscribed, channel = self._preprocess_raw_message(raw_message)
 
         if 'error' in message:
