@@ -55,10 +55,9 @@ class TestIbkrClientI(TestCase):
                 self.assertRaises(TimeoutError) as cm_err:
             rv = self.client.get(self.default_path)
 
-        self.assertEqual(f'GET {self.default_url} {{}}', cm.records[0].msg)
-        for i, record in enumerate(cm.records[1:]):
-            self.assertEqual(f'Timeout for GET {self.default_url}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
-        self.assertEqual(f"Reached max retries ({self.max_retries}) for GET {self.default_url} {{}}", str(cm_err.exception))
+        for i, record in enumerate(cm.records):
+            self.assertEqual(f'RestClient: Timeout for GET {self.default_url}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
+        self.assertEqual(f"RestClient: Reached max retries ({self.max_retries}) for GET {self.default_url} {{}}", str(cm_err.exception))
 
     def test_response_raise_timeout(self, requests_mock):
         requests_mock.request.return_value = self.response
@@ -67,7 +66,7 @@ class TestIbkrClientI(TestCase):
         with self.assertRaises(ExternalBrokerError) as cm_err:
             rv = self.client.get(self.default_path)
 
-        self.assertEqual(f"Timeout error ({self.timeout}S)", str(cm_err.exception))
+        self.assertEqual(f"RestClient: Timeout error ({self.timeout}S)", str(cm_err.exception))
 
     def test_response_raise_generic(self, requests_mock):
         requests_mock.request.return_value = self.response
@@ -80,4 +79,4 @@ class TestIbkrClientI(TestCase):
         with self.assertRaises(ExternalBrokerError) as cm_err:
             rv = self.client.get(self.default_path)
 
-        self.assertEqual(f"IbkrClient response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}", str(cm_err.exception))
+        self.assertEqual(f"RestClient: response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}", str(cm_err.exception))
