@@ -1,8 +1,119 @@
-*This library is currently being beta-tested. See something that's broken? Did we get something
+*This library is currently being developd. See something that's broken? Did we get something
 wrong? [Create an issue and let us know!][issues]*
 
 
 IBind a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
+
+# NOTICE
+### This library is a work in progres. I haven't published it yet. Many things are due to change without any notice. 
+
+## Examples
+
+See [all examples][examples]
+
+### 01 IbkrClient basic
+
+```python
+import warnings
+
+from ibind import IbkrClient
+
+warnings.filterwarnings("ignore", message="Unverified HTTPS request is being made to host 'localhost'")
+
+c = IbkrClient(url='https://localhost:5000/v1/api/')
+
+print('\n#### check_health ####')
+print(c.check_health())
+
+print('\n\n#### tickle ####')
+print(c.tickle().data)
+
+print('\n\n#### get_accounts ####')
+print(c.get_accounts().data)
+```
+
+### 02 IbkrClient intermediate
+```python
+import var
+
+from ibind import IbkrClient
+import ibind
+
+ibind.logs.initialize()
+
+c = IbkrClient(
+    url='https://localhost:5000/v1/api/',
+    cacert=var.IBKR_CACERT,
+)
+
+print('\n#### get_accounts ####')
+accounts = c.get_accounts().data
+c.account_id = accounts[0]['accountId']
+print(accounts)
+
+print('\n\n#### get_ledger ####')
+ledger = c.get_ledger().data
+for currency, subledger in ledger.items():
+    print(f'\t Ledger currency: {currency}')
+    print(f'\t cash balance: {subledger["cashbalance"]}')
+    print(f'\t net liquidation value: {subledger["netliquidationvalue"]}')
+    print(f'\t stock market value: {subledger["stockmarketvalue"]}')
+    print()
+
+print('\n#### get_positions ####')
+positions = c.get_positions().data
+for position in positions:
+    print(f'\t Position {position["ticker"]}: {position["position"]} (${position["mktValue"]})')
+```
+
+### IbkrWsClient basic
+
+```python
+import os
+import time
+
+import ibind
+from client.ibkr_definitions import snapshot_keys_to_ids
+from ibind import IbkrWsKey, IbkrClient, IbkrWsClient
+
+ibind.logs.initialize(log_to_file=False)
+
+account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
+
+client = IbkrClient(
+    account_id=account_id,
+    url='https://localhost:5000/v1/api/',
+)
+
+ws_client = IbkrWsClient(
+    ibkr_client=client,
+    account_id=account_id,
+    url='wss://localhost:5000/v1/api/ws'
+)
+
+ws_client.start()
+channel = 'md+265598'
+fields = [str(x) for x in snapshot_keys_to_ids(['symbol', 'open', 'high', 'low', 'close', 'volume',])]
+
+qa = ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
+
+ws_client.subscribe(channel, {'fields': fields}, needs_confirmation=False)
+
+while ws_client.running:
+    try:
+        while not qa.empty():
+            print(str(qa), qa.get())
+
+        time.sleep(1)
+    except KeyboardInterrupt:
+        print('KeyboardInterrupt')
+        break
+
+ws_client.unsubscribe(channel, {'fields': fields}, needs_confirmation=False)
+
+ws_client.shutdown()
+```
+
 
 ## Licence
 
@@ -43,6 +154,7 @@ Or if you'd just want to give something back, I've got a Buy Me A Coffee account
 Thanks and have an awesome day 👋
 
 
+[examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
 
 [gateway]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
