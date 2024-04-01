@@ -1,11 +1,11 @@
 import datetime
 import pprint
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Dict
 
+from base.rest_client import Result, pass_result
 from support.errors import ExternalBrokerError
 from support.logs import project_logger
-from base.rest_client import Result, pass_result
 from support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum
 
 _LOGGER = project_logger(__file__)
@@ -46,7 +46,7 @@ def process_instruments(
         name_match: str = None,
         instrument_conditions: dict = None,
         contract_conditions: dict = None,
-        ) -> [dict]:
+) -> [dict]:
     """
     Filters a list of instruments based on specified name matching and conditions.
 
@@ -143,7 +143,7 @@ class QuestionType(VerboseEnum):
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
 
 
-Answers = dict[QuestionType, bool]
+Answers = Dict[QuestionType, bool]
 
 
 def find_answer(question: str, answers: Answers):
@@ -396,6 +396,7 @@ def date_from_ibkr(d: str) -> datetime.datetime:
         return datetime.datetime(int(d[:4]), int(d[4:6]), int(d[6:8]), int(d[8:10]), int(d[10:12]), int(d[12:14]))
     except ValueError:
         raise ValueError(f'Date seems to be missing fields: year={d[0:4]}, month={d[4:6]}, day={d[6:8]}, hour={d[8:10]}, minute={d[10:12]}, second={d[12:14]}')
+
 
 def extract_conid(data):
     # by default conid should be made available as 'smh+<conid>', let's look for it
