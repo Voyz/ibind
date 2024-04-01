@@ -138,12 +138,16 @@ authors make no warranty that the functionality of IBind will be uninterrupted o
 corrected or that IBind or the server that makes it available are free of viruses or anything else which may be harmful
 or destructive.
 
+## Acknowledgement
+
+IBind has been enriched by incorporating work developed in collaboration with  [Kinetic](https://www.kinetic.xyz/), which now forms part of this open-source release. I appreciate Kinetic's significant contribution to this community-driven initiative.
+
 ## Built by Voy
 
 Hi! Thanks for checking out and using this library. If you are interested in discussing your project, require
 mentorship, consider hiring me, or just wanna chat - I'm happy to talk.
 
-You can send me an email to get in touch: hello@voyzan.com
+You can email me to get in touch: hello@voyzan.com
 
 Or if you'd just want to give something back, I've got a Buy Me A Coffee account:
 
