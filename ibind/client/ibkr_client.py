@@ -1,7 +1,7 @@
 import datetime
 import os
 import pprint
-from typing import List, Union
+from typing import List, Union, Optional
 
 from requests import ConnectTimeout
 
@@ -31,9 +31,9 @@ class IbkrClient(RestClient):
     """
 
     def __init__(self,
-                 url: str,
-                 account_id: str,
-                 cacert: Union[os.PathLike, bool] = False,
+                 account_id: Optional[str] = var.IBKR_ACCOUNT_ID,
+                 url: str = var.IBKR_URL,
+                 cacert: Union[os.PathLike, bool] = var.IBKR_CACERT,
                  timeout: float = 10,
                  max_retries: int = 3,
                  ) -> None:
@@ -51,11 +51,9 @@ class IbkrClient(RestClient):
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         self.logger.info('#################')
-        self.logger.info(f'New IbkrClient base_url={self.base_url}, account_id={self.account_id}, ssl={self.cacert}, timeout={self._timeout}, max_retries={self._max_retries}')
-        self.logger.info('#################')
-
+        self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
     def make_logger(self):
-        self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_{self.account_id}'))
+        self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
     ###### SIMPLE ENDPOINTS ######
     def tickle(self) -> Result:  # pragma: no cover
@@ -219,7 +217,7 @@ class IbkrClient(RestClient):
     def switch_account(self, account_id: str) -> Result:
         result = self.post('iserver/account', params={"acctId": account_id})
         self.account_id = account_id
-        self.logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, 'adapters', 'ibkr' f'{self.account_id}'))
+        self.make_logger()
         _LOGGER.warning(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
         return result
 
