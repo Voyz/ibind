@@ -1,15 +1,28 @@
 import os
 import tempfile
-from pathlib import Path
+from distutils.util import strtobool
+
+
+def to_bool(value):
+    return bool(strtobool(str(value)))
+
 
 ##### LOGS #####
 
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
-""" The global log level for the SteamHandler. """
+LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))
+"""Whether logs should be streamed to the standard output."""
 
-LOGS_DIR = os.getenv('LOGS_DIR', tempfile.gettempdir())
+LOG_LEVEL = os.getenv('IBIND_LOG_LEVEL', 'DEBUG')
+""" The global log level for the StreamHandler. """
+
+LOG_FORMAT = os.getenv('IBIND_LOG_FORMAT', '%(asctime)s|%(levelname)-.1s| %(message)s')
+""" Log format that is used by IBind """
+
+LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 """ Directory of file logs produced. """
 
+LOG_TO_FILE = to_bool(os.environ.get('IBIND_LOG_TO_FILE', True))
+"""Whether logs should be saved to a file."""
 
 ##### IBKR #####
 
