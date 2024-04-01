@@ -140,10 +140,10 @@ class IbkrWsClient(WsClient):
 
     def __init__(
             self,
-            url: str,
             ibkr_client: IbkrClient,
-            account_id: str,
-            SubscriptionProcessorClass: Type[SubscriptionProcessor],
+            account_id: str = var.IBKR_ACCOUNT_ID,
+            url: str = var.IBKR_WS_URL,
+            SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             SubscriptionControllerClass: Type[SubscriptionController] = SubscriptionController,
             # subscription controller
@@ -156,7 +156,7 @@ class IbkrWsClient(WsClient):
             restart_on_close: bool = True,
             restart_on_critical: bool = True,
             max_connection_attempts: int = 10,
-            cacert: Union[str, bool] = False,
+            cacert: Union[str, bool] = var.IBKR_CACERT,
     ) -> None:
         """
         Initializes the IbkrWsClient, an Interactive Brokers WebSocket client.
