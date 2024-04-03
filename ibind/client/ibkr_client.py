@@ -6,14 +6,16 @@ from typing import List, Union, Optional
 from requests import ConnectTimeout
 
 import var
+from base.rest_client import RestClient, Result, pass_result
 from client.ibkr_definitions import decode_data_availability
 from client.ibkr_utils import query_to_symbols, StockQuery, filter_stocks, Answers, handle_questions
 from support.errors import ExternalBrokerError
 from support.logs import new_daily_rotating_file_handler, project_logger
-from base.rest_client import RestClient, Result, pass_result
-from support.py_utils import ensure_list_arg, execute_in_parallel
+from support.py_utils import ensure_list_arg, execute_in_parallel, OneOrMany
 
 _LOGGER = project_logger(__file__)
+
+StockQueries = OneOrMany[Union[StockQuery, str]]
 
 
 class IbkrClient(RestClient):
@@ -30,13 +32,14 @@ class IbkrClient(RestClient):
     See: https://interactivebrokers.github.io/cpwebapi/endpoints
     """
 
-    def __init__(self,
-                 account_id: Optional[str] = var.IBKR_ACCOUNT_ID,
-                 url: str = var.IBKR_URL,
-                 cacert: Union[os.PathLike, bool] = var.IBKR_CACERT,
-                 timeout: float = 10,
-                 max_retries: int = 3,
-                 ) -> None:
+    def __init__(
+            self,
+            account_id: Optional[str] = var.IBKR_ACCOUNT_ID,
+            url: str = var.IBKR_URL,
+            cacert: Union[str, os.PathLike, bool] = var.IBKR_CACERT,
+            timeout: float = 10,
+            max_retries: int = 3,
+    ) -> None:
         """
         Parameters:
             url (str): The base URL for the REST API.
@@ -52,6 +55,7 @@ class IbkrClient(RestClient):
 
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
+
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
@@ -96,7 +100,7 @@ class IbkrClient(RestClient):
 
     def marketdata_history_by_symbol(
             self,
-            symbol: str,
+            symbol: StockQuery,
             exchange: str = None,
             period: str = None,
             bar: str = None,
@@ -105,37 +109,44 @@ class IbkrClient(RestClient):
         conid = self.get_conids(symbol).data[symbol]
         return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth)
 
-    @ensure_list_arg('symbols')
-    def marketdata_history_by_symbols(self, symbols: List[str]) -> dict:
-        conids = self.get_conids(symbols).data
+    @ensure_list_arg('queries')
+    def marketdata_history_by_symbols(
+            self,
+            queries: StockQueries,
+            period: str = "1min",
+            bar: str = "1min",
+            outside_rth: bool = True
+    ) -> dict:
+        conids = self.get_conids(queries).data
 
-        requests = {symbol: {"kwargs":
-                                 {'conid': conid, "period": "1min", "bar": "1min", "outside_rth": True}
-                             } for symbol, conid in conids.items()}
+        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth}
+        requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}
 
+        # /iserver/marketdata/history accepts 5 concurrent requests at a time
         history = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=5)
 
         results = {}
         for symbol, entry in history.items():
-            if isinstance(entry, Exception): # pragma: no cover
+            if isinstance(entry, Exception):  # pragma: no cover
+                _LOGGER.error(f'Error fetching market data for {symbol}')
                 raise entry
 
             # check if entry['mdAvailability'] has 'S' or 'R' in it
             if 'mdAvailability' in entry.data and not (any((key in entry.data['mdAvailability'].upper()) for key in ['S', 'R'])):
                 _LOGGER.warning(f'Market data for {symbol} is not live: {decode_data_availability(entry.data["mdAvailability"])}')
 
-            data = entry.data['data'][-1]
-            result = {
-                'conid': conids[symbol],
-                'symbol': symbol,
-                "open": data['o'],
-                "high": data['h'],
-                "low": data['l'],
-                "close": data['c'],
-                "volume": data['v'],
-                "date": datetime.datetime.fromtimestamp(data['t'] / 1000)
-            }
-            results[symbol] = result
+            data = entry.data['data']
+            records = []
+            for record in data:
+                records.append({
+                    "open": record['o'],
+                    "high": record['h'],
+                    "low": record['l'],
+                    "close": record['c'],
+                    "volume": record['v'],
+                    "date": datetime.datetime.fromtimestamp(record['t'] / 1000)
+                })
+            results[symbol] = records
 
         return results
 
@@ -158,7 +169,7 @@ class IbkrClient(RestClient):
     ###### COMPLEX ENDPOINTS ######
 
     @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self, conids: [int]):
+    def marketdata_unsubscribe(self, conids: OneOrMany[int]):
         # we unsubscribe from all conids simultaneously
         unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
         results = execute_in_parallel(self.get, unsubscribe_requests)
@@ -172,7 +183,7 @@ class IbkrClient(RestClient):
 
         return results
 
-    def get_live_orders(self, filters: Union[list, str] = None, force:bool=False) -> Result:
+    def get_live_orders(self, filters: OneOrMany[str] = None, force: bool = False) -> Result:
         """
         Retrieves live orders with optional filtering. The filters, if provided, should be a list of strings. These filters are then converted and sent as a comma-separated string in the request to the API.
 
@@ -222,7 +233,7 @@ class IbkrClient(RestClient):
         return result
 
     @ensure_list_arg('queries')
-    def get_stocks(self, queries: [StockQuery], default_filtering: bool = True) -> Result:
+    def get_stocks(self, queries: StockQueries, default_filtering: bool = True) -> Result:
         """
         Retrieves and filters stock information based on specified queries.
 
@@ -253,7 +264,7 @@ class IbkrClient(RestClient):
         return filtered_stocks_result
 
     @ensure_list_arg('queries')
-    def get_conids(self, queries: [StockQuery], default_filtering: bool = True, return_type='dict') -> Result:
+    def get_conids(self, queries: StockQueries, default_filtering: bool = True, return_type: str = 'dict') -> Result:
         """
         Retrieves contract IDs (conids) for given stock queries, ensuring only one conid per query.
 
