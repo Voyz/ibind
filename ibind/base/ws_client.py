@@ -7,8 +7,8 @@ from typing import Optional, Union, Dict, List
 
 from websocket import WebSocketApp
 
-from support.logs import project_logger
-from support.py_utils import exception_to_string, wait_until, tname
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import exception_to_string, wait_until, tname
 
 _LOGGER = project_logger(__file__)
 

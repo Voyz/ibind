@@ -2,9 +2,9 @@ from pprint import pformat
 from unittest import TestCase
 from unittest.mock import MagicMock, patch, call
 
-from client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions
-from support.logs import project_logger
-from base.rest_client import Result
+from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions
+from ibind.support.logs import project_logger
+from ibind.base.rest_client import Result
 from test.integration.client import ibkr_responses
 
 from test_utils import verify_log
@@ -198,7 +198,7 @@ class TestHandleQuestionsI(TestCase):
         self.reply_callback = MagicMock()
 
 
-    @patch('client.ibkr_utils.QuestionType')
+    @patch('ibind.client.ibkr_utils.QuestionType')
     def test_successful_handling(self, QuestionTypeMock):
         # Mocking the QuestionType enum
         QuestionTypeMock.PRICE_PERCENTAGE_CONSTRAINT.__str__.return_value = 'price exceeds the Percentage constraint of 3%.'

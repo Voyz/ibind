@@ -6,11 +6,10 @@ from typing import Union, Optional, Dict, Any
 import requests
 from requests import ReadTimeout, Timeout
 
-import var
-from support.logs import new_daily_rotating_file_handler, project_logger
-
-from support.errors import ExternalBrokerError
-from support.py_utils import filter_none, UNDEFINED
+from ibind import var
+from ibind.support.logs import new_daily_rotating_file_handler, project_logger
+from ibind.support.errors import ExternalBrokerError
+from ibind.support.py_utils import filter_none, UNDEFINED
 
 _LOGGER = project_logger(__file__)
 

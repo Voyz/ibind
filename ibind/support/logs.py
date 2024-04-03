@@ -3,7 +3,7 @@ import logging
 import sys
 from pathlib import Path
 
-import var
+from ibind import var
 
 DEFAULT_FORMAT = '%(asctime)s|%(levelname)-.1s| %(message)s'
 

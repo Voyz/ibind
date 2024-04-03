@@ -2,13 +2,11 @@ from threading import Thread
 from typing import Optional
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
-import logging
 
-import var
 from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
-from base.ws_client import WsClient
+from ibind.base.ws_client import WsClient
 from test_utils import RaiseLogsContext, exact_log
-from support.py_utils import tname
+from ibind.support.py_utils import tname
 
 
 class TestWsClient(TestCase):
@@ -32,8 +30,8 @@ class TestWsClient(TestCase):
         self.thread_mock.start.side_effect = lambda: self.ws_client._run_websocket(self.wsa_mock)
 
     def run_in_test_context(self, fn, expected_errors: list[str] = None):
-        with patch('base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
-                patch('base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
+        with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
+                patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
                 self.assertLogs('ibind', level='DEBUG') as cm, \
                 RaiseLogsContext(self, 'ibind', level='ERROR', expected_errors=expected_errors):
             self.new_thread_mock = new_thread_mock
@@ -259,7 +257,7 @@ class TestWsClient(TestCase):
             self.ws_client.check_ping()
             # we simulate that closing the WebSocketApp doesn't work since we have connectivity issues
             self.wsa_mock.on_close.side_effect = lambda x, y, z: None
-            with patch('base.ws_client.time') as time_mock:
+            with patch('ibind.base.ws_client.time') as time_mock:
                 time_mock.time.side_effect = fake_time
                 self.wsa_mock.last_ping_tm = self.max_ping_interval
                 self.ws_client.check_ping()

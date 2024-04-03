@@ -1,22 +1,20 @@
 import datetime
-import logging
 from pprint import pformat
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
 from requests import ConnectTimeout
 
-import var
-from client.ibkr_client import IbkrClient
-from client.ibkr_utils import StockQuery, filter_stocks
-from support.errors import ExternalBrokerError
-from support.logs import project_logger
-from base.rest_client import Result
+from ibind.client.ibkr_client import IbkrClient
+from ibind.client.ibkr_utils import StockQuery, filter_stocks
+from ibind.support.errors import ExternalBrokerError
+from ibind.support.logs import project_logger
+from ibind.base.rest_client import Result
 from test.integration.client import ibkr_responses
 from test_utils import verify_log, SafeAssertLogs, RaiseLogsContext
 
 
-@patch('base.rest_client.requests')
+@patch('ibind.base.rest_client.requests')
 class TestIbkrClientI(TestCase):
 
     def setUp(self):

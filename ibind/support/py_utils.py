@@ -10,8 +10,7 @@ from functools import wraps
 from collections.abc import Mapping
 from typing import List, TypeVar, Union, Dict
 
-
-from support.logs import project_logger
+from ibind.support.logs import project_logger
 
 UNDEFINED = object()
 _PRECISION_OFFSET = 7

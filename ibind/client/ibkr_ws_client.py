@@ -6,15 +6,15 @@ from typing import Union, Type, Dict
 
 from websocket import WebSocketApp
 
-import var
-from client import ibkr_definitions
-from client.ibkr_client import IbkrClient
-from client.ibkr_utils import extract_conid
-from support.logs import project_logger
-from base.queue_controller import QueueController, QueueAccessor
-from base.subscription_controller import SubscriptionProcessor, SubscriptionController
-from base.ws_client import WsClient
-from support.py_utils import TimeoutLock, UNDEFINED
+from ibind import var
+from ibind.base.queue_controller import QueueController, QueueAccessor
+from ibind.base.subscription_controller import SubscriptionProcessor, SubscriptionController
+from ibind.base.ws_client import WsClient
+from ibind.client import ibkr_definitions
+from ibind.client.ibkr_client import IbkrClient
+from ibind.client.ibkr_utils import extract_conid
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import TimeoutLock, UNDEFINED
 
 _LOGGER = project_logger(__file__)
 

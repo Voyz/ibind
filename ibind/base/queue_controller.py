@@ -2,7 +2,7 @@ from enum import Enum
 from queue import Queue, Empty
 from typing import TypeVar, Generic, Any
 
-from support.py_utils import ensure_list_arg
+from ibind.support.py_utils import ensure_list_arg
 
 T = TypeVar("T", str, Enum)
 

@@ -2,8 +2,8 @@ import os
 import warnings
 from unittest import TestCase
 
-from client.ibkr_client import IbkrClient
-from client.ibkr_utils import StockQuery
+from ibind.client.ibkr_client import IbkrClient
+from ibind.client.ibkr_utils import StockQuery
 from test.integration.client import ibkr_responses
 
 

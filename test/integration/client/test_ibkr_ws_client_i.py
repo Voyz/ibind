@@ -8,11 +8,10 @@ from unittest.mock import MagicMock, patch, call
 
 import requests
 
-import var
-from client.ibkr_client import IbkrClient
-from client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
+from ibind.client.ibkr_client import IbkrClient
+from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
 from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
-from support.logs import project_logger
+from ibind.support.logs import project_logger
 from test_utils import RaiseLogsContext, SafeAssertLogs
 
 
@@ -91,8 +90,8 @@ class TestIbkrWsClient(TestCase):
         self.update_time = 5678765456
 
     def run_in_test_context(self, fn, expected_errors: list[str] = None, expect_logs: bool = True):
-        with patch('base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
-                patch('base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
+        with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
+                patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
                 SafeAssertLogs(self, 'ibind', level='DEBUG', logger_level='DEBUG', no_logs=not expect_logs) as cm, \
                 RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors) as cm2:
 
@@ -172,7 +171,7 @@ class TestIbkrWsClient(TestCase):
         response_mock.status_code = 200
         response_mock.json.return_value = {'session': session_id, 'data_to_be_ignored': '1234'}
 
-        with patch('base.rest_client.requests') as requests_mock:
+        with patch('ibind.base.rest_client.requests') as requests_mock:
             requests_mock.request.return_value = response_mock
             cm, success = self._send_payload(message_data, expected_errors=expected_errors)
 
@@ -335,9 +334,9 @@ class TestIbkrWsClient(TestCase):
             # self.wsa_mock.on_close.side_effect = lambda x, y, z: None
 
             # override time.time, ignore check_ping and take control of has_active_connection
-            with patch('client.ibkr_ws_client.time') as time_mock, \
+            with patch('ibind.client.ibkr_ws_client.time') as time_mock, \
                     patch.object(self.ws_client, 'check_ping', return_value=True), \
-                    patch('base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: override_init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
+                    patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: override_init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
                     patch.object(self.ws_client, '_has_active_connection', side_effect=has_active_connection) as has_active_connection_mock:
                 time_mock.time.side_effect = fake_time
                 self.ws_client._last_heartbeat = self.max_ping_interval * 1000

@@ -1,10 +1,8 @@
 import time
 import unittest
-from collections import deque
-from types import NotImplementedType
 from unittest.mock import MagicMock, patch
 
-from support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until
+from ibind.support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until
 
 
 class TestEnsureListArgU(unittest.TestCase):
@@ -105,7 +103,7 @@ class TestWaitUntilU(unittest.TestCase):
         self.assertFalse(wait_until(condition, timeout=0.1))
         condition.assert_called()
 
-    @patch('support.py_utils._LOGGER.error')
+    @patch('ibind.support.py_utils._LOGGER.error')
     def test_wait_until_timeout_message(self, mock_logger_error):
         condition = MagicMock(return_value=False)
         timeout_message = "Condition not met within timeout"

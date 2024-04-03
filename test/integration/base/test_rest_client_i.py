@@ -3,13 +3,13 @@ from unittest.mock import patch, MagicMock
 
 from requests import ReadTimeout, Timeout
 
-from client.ibkr_client import IbkrClient
-from support.errors import ExternalBrokerError
-from support.logs import project_logger
-from base.rest_client import Result, RestClient
+from ibind.client.ibkr_client import IbkrClient
+from ibind.support.errors import ExternalBrokerError
+from ibind.support.logs import project_logger
+from ibind.base.rest_client import Result, RestClient
 
 
-@patch('base.rest_client.requests')
+@patch('ibind.base.rest_client.requests')
 class TestIbkrClientI(TestCase):
     def setUp(self):
         self.url = 'https://localhost:5000'

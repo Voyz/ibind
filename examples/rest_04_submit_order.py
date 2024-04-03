@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 import ibind
-from client.ibkr_utils import make_order_request, QuestionType
+from ibind.client.ibkr_utils import make_order_request, QuestionType
 from ibind import IbkrClient
 
 ibind.logs.initialize(log_to_file=False)
@@ -49,7 +49,7 @@ print('#### submit_order ####')
 
 # We mock the requests module to prevent submitting orders in this example script.
 # Comment out the next two lines if you'd like to actually submit the orders to IBKR.
-with patch('base.rest_client.requests') as requests_mock:
+with patch('ibind.base.rest_client.requests') as requests_mock:
     requests_mock.request.return_value = MagicMock(json=MagicMock(side_effect=mocked_responses))
 
     response = c.submit_order(order_request, answers, account_id).data

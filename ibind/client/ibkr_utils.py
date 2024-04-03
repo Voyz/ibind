@@ -3,10 +3,10 @@ import pprint
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Union
 
-from base.rest_client import Result, pass_result
-from support.errors import ExternalBrokerError
-from support.logs import project_logger
-from support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum
+from ibind.base.rest_client import Result, pass_result
+from ibind.support.errors import ExternalBrokerError
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum
 
 _LOGGER = project_logger(__file__)
 

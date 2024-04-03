@@ -8,8 +8,8 @@ from unittest._log import _CapturingHandler, _AssertLogsContext
 
 import _testcapi
 
-import var
-from support.py_utils import make_clean_stack
+from ibind import var
+from ibind.support.py_utils import make_clean_stack
 
 
 def raise_from_context(cm, level='WARNING'):

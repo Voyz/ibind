@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Dict
 
-from support.logs import project_logger
-from support.py_utils import wait_until, TimeoutLock, UNDEFINED, exception_to_string
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import wait_until, TimeoutLock, UNDEFINED, exception_to_string
 
 _LOGGER = project_logger(__file__)
 
