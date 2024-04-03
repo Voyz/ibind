@@ -35,7 +35,8 @@ order_request = make_order_request(
 
 answers = {
     QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
-    QuestionType.ORDER_VALUE_LIMIT: True
+    QuestionType.ORDER_VALUE_LIMIT: True,
+    "Unforeseen new question": True,
 }
 
 mocked_responses = [
