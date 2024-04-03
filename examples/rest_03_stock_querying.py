@@ -7,7 +7,7 @@ from ibind import IbkrClient
 
 ibind.logs.initialize(log_to_file=False)
 
-cacert = os.getenv('IBKR_CACERT', None) # insert your cacert path here
+cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here
 c = IbkrClient(
     url='https://localhost:5000/v1/api/',
     cacert=cacert,
