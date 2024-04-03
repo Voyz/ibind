@@ -2,8 +2,7 @@ import os
 import time
 
 import ibind
-from ibind.client.ibkr_definitions import snapshot_keys_to_ids
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient
+from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, snapshot_keys_to_ids
 
 ibind.logs.initialize(log_to_file=False)
 

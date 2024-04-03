@@ -2,8 +2,7 @@ import os
 from pprint import pprint
 
 import ibind
-from ibind.client.ibkr_utils import StockQuery
-from ibind import IbkrClient
+from ibind import IbkrClient, StockQuery
 
 ibind.logs.initialize(log_to_file=False)
 

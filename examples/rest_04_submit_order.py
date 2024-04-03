@@ -3,8 +3,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 import ibind
-from ibind.client.ibkr_utils import make_order_request, QuestionType
-from ibind import IbkrClient
+from ibind import IbkrClient, make_order_request, QuestionType
 
 ibind.logs.initialize(log_to_file=False)
 
