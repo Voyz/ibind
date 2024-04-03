@@ -98,6 +98,8 @@ def new_daily_rotating_file_handler(logger_name, filepath):
             logger.addHandler(handler)
 
         logger.setLevel(logging.DEBUG)
+    else:
+        logger.addHandler(logging.NullHandler())
 
     return logger
 
