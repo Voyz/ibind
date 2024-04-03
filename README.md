@@ -84,7 +84,7 @@ import os
 import time
 
 import ibind
-from client.ibkr_definitions import snapshot_keys_to_ids
+from ibind.client.ibkr_definitions import snapshot_keys_to_ids
 from ibind import IbkrWsKey, IbkrClient, IbkrWsClient
 
 ibind.logs.initialize(log_to_file=False)
@@ -135,10 +135,8 @@ See [LICENSE](https://github.com/Voyz/ibind/blob/master/LICENSE)
 IBind is not built, maintained, or endorsed by the Interactive Brokers.
 
 Use at own discretion. IBind and its authors give no guarantee of uninterrupted run of and access to the Interactive
-Brokers Client Portal Web API Gateway. You should prepare for breaks in connectivity to IBKR servers and should not
-depend on continuous uninterrupted run of the Gateway. IBind requires your private credentials to be exposed to a
-security risk, potentially resulting in, although not limited to interruptions, loss of capital and loss of access to
-your account. To partially reduce the potential risk use Paper Account credentials.
+Brokers Client Portal Web API. You should prepare for breaks in connectivity to IBKR servers and should not
+depend on continuous uninterrupted connection and functionality. To partially reduce the potential risk use Paper Account credentials.
 
 IBind is provided on an AS IS and AS AVAILABLE basis without any representation or endorsement made and without warranty
 of any kind whether express or implied, including but not limited to the implied warranties of satisfactory quality,
