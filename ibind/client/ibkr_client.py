@@ -100,7 +100,7 @@ class IbkrClient(RestClient):
 
     def marketdata_history_by_symbol(
             self,
-            symbol: StockQuery,
+            symbol: Union[str, StockQuery],
             exchange: str = None,
             period: str = None,
             bar: str = None,
