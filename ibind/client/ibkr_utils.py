@@ -1,7 +1,7 @@
 import datetime
 import pprint
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 from base.rest_client import Result, pass_result
 from support.errors import ExternalBrokerError
@@ -139,11 +139,11 @@ def process_query(q, default_filtering: bool = True):
 
 
 class QuestionType(VerboseEnum):
-    PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%.'
+    PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
 
 
-Answers = Dict[QuestionType, bool]
+Answers = Dict[Union[QuestionType, str], bool]
 
 
 def find_answer(question: str, answers: Answers):
