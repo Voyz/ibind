@@ -1,13 +1,14 @@
-import var
+import os
 
-from ibind import IbkrClient
 import ibind
+from ibind import IbkrClient
 
 ibind.logs.initialize()
 
+cacert = os.getenv('IBKR_CACERT', None) # insert your cacert path here
 c = IbkrClient(
     url='https://localhost:5000/v1/api/',
-    cacert=var.IBKR_CACERT,
+    cacert=cacert,
 )
 
 print('\n#### get_accounts ####')

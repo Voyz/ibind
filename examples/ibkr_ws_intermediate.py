@@ -3,24 +3,23 @@ import signal
 import time
 
 import ibind
-import var
 from ibind import IbkrWsKey, IbkrClient, IbkrWsClient
 
 ibind.logs.initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-
+cacert = os.getenv('IBKR_CACERT', None) # insert your cacert path here
 client = IbkrClient(
-    account_id=account_id,
     url='https://localhost:5000/v1/api/',
-    cacert=var.IBKR_CACERT
+    account_id=account_id,
+    cacert=cacert,
 )
 
 ws_client = IbkrWsClient(
     ibkr_client=client,
     account_id=account_id,
     url='wss://localhost:5000/v1/api/ws',
-    cacert=var.IBKR_CACERT,
+    cacert=cacert,
 )
 
 ws_client.start()

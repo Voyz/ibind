@@ -3,17 +3,17 @@ import os
 from unittest.mock import patch, MagicMock
 
 import ibind
-import var
 from client.ibkr_utils import make_order_request, QuestionType
 from ibind import IbkrClient
 
 ibind.logs.initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
+cacert = os.getenv('IBKR_CACERT', None) # insert your cacert path here
 c = IbkrClient(
     url='https://localhost:5000/v1/api/',
     account_id=account_id,
-    cacert=var.IBKR_CACERT,
+    cacert=cacert,
 )
 
 conid = '265598'
