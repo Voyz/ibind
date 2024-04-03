@@ -325,6 +325,14 @@ class IbkrClient(RestClient):
 
         return handle_questions(result, answers, self.reply)
 
+    def modify_order(self, order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
+        if account_id is None:
+            account_id = self.account_id
+
+        result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
+
+        return handle_questions(result, answers, self.reply)
+
     def check_health(self):
         """
         Verifies the health and authentication status of the IBKR Gateway server.
