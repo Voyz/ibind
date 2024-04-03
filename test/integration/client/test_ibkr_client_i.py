@@ -161,15 +161,14 @@ class TestIbkrClientI(TestCase):
 
         # Assertions to verify the correctness of each field in the result
         for symbol, expected in expected_results.items():
+            result = results[symbol][-1]
             self.assertIn(symbol, results)
-            self.assertEqual(results[symbol]['conid'], expected['conid'])
-            self.assertEqual(results[symbol]['symbol'], expected['symbol'])
-            self.assertAlmostEqual(results[symbol]['open'], expected['open'])
-            self.assertAlmostEqual(results[symbol]['high'], expected['high'])
-            self.assertAlmostEqual(results[symbol]['low'], expected['low'])
-            self.assertAlmostEqual(results[symbol]['close'], expected['close'])
-            self.assertAlmostEqual(results[symbol]['volume'], expected['volume'])
-            self.assertEqual(results[symbol]['date'], expected['date'])
+            self.assertAlmostEqual(result['open'], expected['open'])
+            self.assertAlmostEqual(result['high'], expected['high'])
+            self.assertAlmostEqual(result['low'], expected['low'])
+            self.assertAlmostEqual(result['close'], expected['close'])
+            self.assertAlmostEqual(result['volume'], expected['volume'])
+            self.assertEqual(result['date'], expected['date'])
 
     def test_check_health_authenticated_and_connected(self, requests_mock):
         response_data = {
