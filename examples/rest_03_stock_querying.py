@@ -1,10 +1,9 @@
 import os
 from pprint import pprint
 
-import ibind
-from ibind import IbkrClient, StockQuery
+from ibind import IbkrClient, StockQuery, ibind_logs_initialize
 
-ibind.logs.initialize(log_to_file=False)
+ibind_logs_initialize(log_to_file=False)
 
 cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here
 c = IbkrClient(

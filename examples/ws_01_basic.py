@@ -1,10 +1,9 @@
 import os
 import time
 
-import ibind
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, snapshot_keys_to_ids
+from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, snapshot_keys_to_ids, ibind_logs_initialize
 
-ibind.logs.initialize(log_to_file=False)
+ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 

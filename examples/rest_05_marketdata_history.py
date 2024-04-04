@@ -1,10 +1,9 @@
 import os
 import time
 
-import ibind
-from ibind import IbkrClient
+from ibind import IbkrClient, ibind_logs_initialize
 
-ibind.logs.initialize(log_to_file=False)
+ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here

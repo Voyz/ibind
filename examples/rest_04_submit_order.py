@@ -2,10 +2,9 @@ import datetime
 import os
 from unittest.mock import patch, MagicMock
 
-import ibind
-from ibind import IbkrClient, make_order_request, QuestionType
+from ibind import IbkrClient, make_order_request, QuestionType, ibind_logs_initialize
 
-ibind.logs.initialize(log_to_file=False)
+ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here

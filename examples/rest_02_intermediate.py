@@ -1,9 +1,8 @@
 import os
 
-import ibind
-from ibind import IbkrClient
+from ibind import IbkrClient, ibind_logs_initialize
 
-ibind.logs.initialize()
+ibind_logs_initialize()
 
 cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here
 c = IbkrClient(
