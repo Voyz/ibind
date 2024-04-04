@@ -47,10 +47,10 @@ print(c.get_accounts().data)
 ```python
 import var
 
-from ibind import IbkrClient
-import ibind
+from ibind import IbkrClient, ibind_logs_initialize
 
-ibind.logs.initialize()
+
+ibind_logs_initialize()
 
 c = IbkrClient(
     url='https://localhost:5000/v1/api/',
@@ -83,11 +83,11 @@ for position in positions:
 import os
 import time
 
-import ibind
-from ibind.client.ibkr_definitions import snapshot_keys_to_ids
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient
 
-ibind.logs.initialize(log_to_file=False)
+from ibind.client.ibkr_definitions import snapshot_keys_to_ids
+from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+
+ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 
