@@ -6,7 +6,7 @@ from typing import Optional, Dict, Union
 from ibind.base.rest_client import Result, pass_result
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum
+from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany
 
 _LOGGER = project_logger(__file__)
 
@@ -32,6 +32,7 @@ class StockQuery():
     instrument_conditions: Optional[dict] = field(default=None)
     contract_conditions: Optional[dict] = field(default=None)
 
+StockQueries = OneOrMany[Union[StockQuery, str]]
 
 def _filter(data: dict, conditions: dict) -> bool:
     for key, value in conditions.items():
