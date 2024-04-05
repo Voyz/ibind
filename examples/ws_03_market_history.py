@@ -7,7 +7,7 @@ from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrClient, IbkrWsClient
 ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here
+cacert = os.getenv('IBKR_CACERT', False)  # insert your cacert path here
 client = IbkrClient(
     url='https://localhost:5000/v1/api/',
     account_id=account_id,
@@ -23,12 +23,12 @@ ws_client = IbkrWsClient(
 
 
 # override the default subscription processor since we need to use the server id instead of conid
-class IbkrMarketHistorySubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
+class MhSubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
     def make_unsubscribe_payload(self, channel: str, server_id: dict = None) -> str:
         return f'umh+{server_id}'
 
 
-subscription_processor = IbkrMarketHistorySubscriptionProcessor()
+subscription_processor = MhSubscriptionProcessor()
 
 
 def unsubscribe():
@@ -55,6 +55,7 @@ request = {
 ws_client.start()
 
 qa = ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
+
 
 def stop(_, _1):
     unsubscribe()
