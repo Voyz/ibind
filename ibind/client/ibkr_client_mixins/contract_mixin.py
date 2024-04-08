@@ -1,14 +1,137 @@
 import pprint
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import pass_result, Result
 from ibind.client.ibkr_utils import StockQueries, query_to_symbols, filter_stocks
-from ibind.support.py_utils import ensure_list_arg
+from ibind.support.py_utils import ensure_list_arg, OneOrMany, params_dict
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
+
+
 class ContractMixin():
+
+    @ensure_list_arg('conids')
+    def security_definition_by_conid(self: 'IbkrClient', conids: OneOrMany[str]) -> Result:
+        return self.get('trsrv/secdef', {'conids': ",".join(conids)})
+
+    def all_conids_by_exchange(self: 'IbkrClient', exchange: str) -> Result:
+        return self.get('trsrv/all-conids', {'exchange': exchange})
+
+    def contract_information_by_conid(self: 'IbkrClient', conid: str) -> Result:
+        return self.get(f'iserver/contract/{conid}/info')
+
+    def currency_pairs(self: 'IbkrClient', currency: str) -> Result:
+        return self.get(f'iserver/currency/pairs', {'currency': currency})
+
+    def currency_exchange_rate(self: 'IbkrClient', source: str, target: str) -> Result:
+        return self.get(f'iserver/exchangerate', {'source': source, target: target})
+
+    def info_and_rules_by_conid(self: 'IbkrClient', conid: str, is_buy: bool) -> Result:
+        return self.get(f'iserver/contract/{conid}/info-and-rules', {'isBuy': is_buy})
+
+    def algo_params_by_conid(
+            self: 'IbkrClient',
+            conid: str,
+            algos: List[str] = None,
+            add_description: str = None,
+            add_params: str = None
+    ) -> Result:
+        params = params_dict(
+            optional={
+                'algos': algos,
+                'addDescription': add_description,
+                'addParams': add_params
+            }, preprocessors={'algos': ';'.join}
+        )
+
+        return self.get(f'iserver/contract/{conid}/algos', params)
+
+    def search_bond_filter_information(self: 'IbkrClient', symbol: str, issuer_id: str) -> Result:
+        return self.get(f'iserver/secdef/bond-filters', {'symbol': symbol, 'issuerId': issuer_id})
+
+    def search_contract_by_symbol(
+            self: 'IbkrClient',
+            symbol: str,
+            name: bool = None,
+            sec_type: str = None
+    ) -> Result:
+        params = params_dict(
+            {'symbol': symbol},
+            optional={'name': name, 'secType': sec_type}
+        )
+
+        return self.get(f'iserver/secdef/search', params)
+
+    def search_contract_rules(
+            self: 'IbkrClient',
+            conid: int,
+            exchange: str = None,
+            is_buy: bool = None,
+            modify_order: bool = None,
+            order_id: int = None,
+    ) -> Result:
+        params = params_dict(
+            {'conid': conid},
+            optional={
+                'exchange': exchange,
+                'isBuy': is_buy,
+                'modifyOrder': modify_order,
+                'orderId': order_id
+            }
+        )
+
+        return self.post(f'iserver/contract/rules', params)
+
+    def search_secdef_info_by_conid(
+            self: 'IbkrClient',
+            conid: str,
+            sectype: str,
+            month: str,
+            exchange: str = None,
+            strike: str = None,
+            right: str = None,
+            issuer_id: str = None,
+    ) -> Result:
+        params = params_dict(
+            {
+                'conid': conid,
+                'sectype': sectype,
+                'month': month,
+            },
+            optional={
+                'exchange': exchange,
+                'strike': strike,
+                'right': right,
+                'issuerId': issuer_id,
+            }
+        )
+
+        return self.get(f'iserver/secdef/info', params)
+
+    def search_strikes_by_conid(
+            self: 'IbkrClient',
+            conid: str,
+            sectype: str,
+            month: str,
+            exchange: str = None,
+    ) -> Result:
+        params = params_dict(
+            {
+                'conid': conid,
+                'sectype': sectype,
+                'month': month,
+            },
+            optional={'exchange': exchange}
+        )
+
+        return self.get(f'iserver/secdef/strikes', params)
+
+    @ensure_list_arg('symbols')
+    def search_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:
+        return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
+
     @ensure_list_arg('queries')
     def get_stocks(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True) -> Result:
         """
@@ -83,3 +206,17 @@ class ContractMixin():
             conids = [conid for conid in conids.values()]
 
         return pass_result(conids, stocks_result)
+
+    def trading_schedule_by_symbol(
+            self: 'IbkrClient',
+            asset_class: str,
+            symbol: str,
+            exchange: str = None,
+            exchange_filter: str = None,
+    ) -> Result:
+        params = params_dict(
+            {'assetClass': asset_class, 'symbol': symbol, },
+            optional={'exchange': exchange, 'exchangeFilter': exchange_filter}
+        )
+
+        return self.get(f'trsrv/secdef/schedule', params)
