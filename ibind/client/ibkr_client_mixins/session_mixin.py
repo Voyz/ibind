@@ -6,23 +6,30 @@ from ibind.base.rest_client import Result
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 _LOGGER = project_logger(__file__)
 
+
 class SessionMixin():
+    def authentication_status(self: 'IbkrClient') -> Result:  # pragma: no cover
+        return self.post('iserver/auth/status')
+
+    def initialize_brokerage_session(self: 'IbkrClient', publish: bool, compete: bool) -> Result:  # pragma: no cover
+        return self.post('iserver/auth/ssodh/init', {'publish': publish, 'compete': compete})
+
+    def logout(self: 'IbkrClient') -> Result:  # pragma: no cover
+        return self.post('logout')
+
     def tickle(self: 'IbkrClient') -> Result:  # pragma: no cover
         return self.post('tickle', log=False)
-
-    def auth_status(self: 'IbkrClient') -> Result:  # pragma: no cover
-        return self.post('iserver/auth/status')
 
     def reauthenticate(self: 'IbkrClient') -> Result:  # pragma: no cover
         return self.post('iserver/reauthenticate')
 
-    def log_out(self: 'IbkrClient') -> Result:  # pragma: no cover
-        return self.post('logout')
+    def validate(self: 'IbkrClient') -> Result:  # pragma: no cover
+        return self.get('/sso/validate')
 
     def check_health(self: 'IbkrClient'):
         """
