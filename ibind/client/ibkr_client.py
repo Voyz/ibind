@@ -8,7 +8,9 @@ from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
 from ibind.client.ibkr_client_mixins.portfolio_mixin import PortfolioMixin
+from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
 from ibind.client.ibkr_client_mixins.session_mixin import SessionMixin
+from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 
 _LOGGER = project_logger(__file__)
@@ -16,7 +18,7 @@ _LOGGER = project_logger(__file__)
 
 
 
-class IbkrClient(RestClient, MarketdataMixin, ContractMixin, SessionMixin, OrderMixin, PortfolioMixin, AccountsMixin):
+class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
     """
     A client class for interfacing with the Interactive Brokers API, extending the RestClient class.
 
