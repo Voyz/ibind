@@ -50,6 +50,6 @@ print('#### submit_order ####')
 with patch('ibind.base.rest_client.requests') as requests_mock:
     requests_mock.request.return_value = MagicMock(json=MagicMock(side_effect=mocked_responses))
 
-    response = c.submit_order(order_request, answers, account_id).data
+    response = c.place_order(order_request, answers, account_id).data
 
 print(response)

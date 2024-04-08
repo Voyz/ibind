@@ -40,15 +40,15 @@ print('\n\n#### tickle ####')
 print(c.tickle().data)
 
 print('\n\n#### get_accounts ####')
-print(c.get_accounts().data)
+print(c.portfolio_accounts().data)
 ```
 
 ### 02 IbkrClient intermediate
+
 ```python
 import var
 
 from ibind import IbkrClient, ibind_logs_initialize
-
 
 ibind_logs_initialize()
 
@@ -58,7 +58,7 @@ c = IbkrClient(
 )
 
 print('\n#### get_accounts ####')
-accounts = c.get_accounts().data
+accounts = c.portfolio_accounts().data
 c.account_id = accounts[0]['accountId']
 print(accounts)
 
@@ -72,7 +72,7 @@ for currency, subledger in ledger.items():
     print()
 
 print('\n#### get_positions ####')
-positions = c.get_positions().data
+positions = c.positions().data
 for position in positions:
     print(f'\t Position {position["ticker"]}: {position["position"]} (${position["mktValue"]})')
 ```

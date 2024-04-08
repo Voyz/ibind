@@ -13,6 +13,6 @@ print('\n\n#### tickle ####')
 print(c.tickle().data)
 
 print('\n\n#### get_accounts ####')
-print(c.get_accounts().data)
+print(c.portfolio_accounts().data)
 
 

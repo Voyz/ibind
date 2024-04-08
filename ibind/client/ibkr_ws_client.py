@@ -466,8 +466,8 @@ class IbkrWsClient(WsClient):
         if channel == 'or':
             if not self._ibkr_client.check_health():
                 return False
-            self._ibkr_client.get_live_orders(force=True)
-            self._ibkr_client.get_live_orders()
+            self._ibkr_client.live_orders(force=True)
+            self._ibkr_client.live_orders()
         return self._subscription_controller.subscribe(channel, data, needs_confirmation, subscription_processor)
 
     def unsubscribe(

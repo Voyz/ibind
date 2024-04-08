@@ -11,7 +11,7 @@ c = IbkrClient(
 )
 
 print('\n#### get_accounts ####')
-accounts = c.get_accounts().data
+accounts = c.portfolio_accounts().data
 c.account_id = accounts[0]['accountId']
 print(accounts)
 
@@ -25,6 +25,6 @@ for currency, subledger in ledger.items():
     print()
 
 print('\n#### get_positions ####')
-positions = c.get_positions().data
+positions = c.positions().data
 for position in positions:
     print(f'\t Position {position["ticker"]}: {position["position"]} (${position["mktValue"]})')

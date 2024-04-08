@@ -84,24 +84,24 @@ class TestIbkrClientI(TestCase):
 
     def test_get_live_orders_no_filters(self, requests_mock):
         self.client.get = MagicMock(return_value=self.result)
-        self.client.get_live_orders()
+        self.client.live_orders()
         self.client.get.assert_called_with('iserver/account/orders', params=None)
 
     def test_get_live_orders_with_valid_filters(self, requests_mock):
         self.client.get = MagicMock(return_value=self.result)
         filters = ['inactive', 'filled']
-        self.client.get_live_orders(filters=filters)
+        self.client.live_orders(filters=filters)
         self.client.get.assert_called_with('iserver/account/orders', params={'filters': 'inactive,filled'})
 
     def test_get_live_orders_with_single_filter(self, requests_mock):
         self.client.get = MagicMock(return_value=self.result)
-        self.client.get_live_orders(filters='submitted')
+        self.client.live_orders(filters='submitted')
         self.client.get.assert_called_with('iserver/account/orders', params={'filters': 'submitted'})
 
     def test_get_live_orders_with_incorrect_filter_type(self, requests_mock):
         self.client.get = MagicMock(return_value=self.result)
         with self.assertRaises(TypeError):
-            self.client.get_live_orders(filters=123)  # Non-list, non-string filter
+            self.client.live_orders(filters=123)  # Non-list, non-string filter
         self.client.get.assert_not_called()
 
 

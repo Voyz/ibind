@@ -1,28 +1,21 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
 from ibind.client.ibkr_utils import Answers, handle_questions
-from ibind.support.py_utils import OneOrMany
+from ibind.support.py_utils import OneOrMany, params_dict
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
-
 
 
 class OrderMixin():
 
-    def reply(self: 'IbkrClient', question_id: str, reply: bool) -> Result:  # pragma: no cover
-        return self.post(f'iserver/reply/{question_id}', params={"confirmed": reply})
-
-    def get_order(self: 'IbkrClient', order_id: str) -> Result:  # pragma: no cover
-        return self.get(f'iserver/account/order/status/{order_id}')
-
-    def cancel_order(self: 'IbkrClient', order_id: str, account_id: str = None) -> Result:  # pragma: no cover
-        if account_id is None:
-            account_id = self.account_id
-        return self.delete(f'iserver/account/{account_id}/order/{order_id}')
-
-    def get_live_orders(self: 'IbkrClient', filters: OneOrMany[str] = None, force: bool = False) -> Result:
+    def live_orders(
+            self: 'IbkrClient',
+            filters: OneOrMany[str] = None,
+            force: bool = False,
+            account_id: str = None
+    ) -> Result:
         """
         Retrieves live orders with optional filtering. The filters, if provided, should be a list of strings. These filters are then converted and sent as a comma-separated string in the request to the API.
 
@@ -51,20 +44,26 @@ class OrderMixin():
                 There is an initial sort by order state performed so active orders are always above inactive and filled then orders are sorted chronologically.
 
         """
-        if filters is None and force is False:
-            params = None
-        else:
-            params = {}
-            if filters is not None:
-                if not isinstance(filters, list):
-                    filters = [filters]
-                params["filters"] = ",".join(filters)
-            if force is True:
-                params['force'] = True
+        params = params_dict(
+            optional={
+                'filters': filters,
+                'accountId': account_id,
+                'force': force
+            },
+            preprocessors={
+                'filters': ",".join
+            }
+        )
 
         return self.get('iserver/account/orders', params=params)
 
-    def submit_order(self: 'IbkrClient',order_request: dict, answers: Answers, account_id: str = None) -> Result:
+    def order_status(self: 'IbkrClient', order_id: str) -> Result:  # pragma: no cover
+        return self.get(f'iserver/account/order/status/{order_id}')
+
+    def trades(self: 'IbkrClient') -> Result:  # pragma: no cover
+        return self.get(f'iserver/account/trades/')
+
+    def place_order(self: 'IbkrClient', order_request: dict, answers: Answers, account_id: str = None) -> Result:
         """
         Keep this in mind:
         https://interactivebrokers.github.io/tws-api/automated_considerations.html#order_placement
@@ -82,10 +81,30 @@ class OrderMixin():
 
         return handle_questions(result, answers, self.reply)
 
-    def modify_order(self: 'IbkrClient',order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
+    def reply(self: 'IbkrClient', question_id: str, confirmed: bool) -> Result:  # pragma: no cover
+        return self.post(f'iserver/reply/{question_id}', params={"confirmed": confirmed})
+
+    def whatif_order(self: 'IbkrClient', order_request: dict, account_id: str) -> Result:  # pragma: no cover
+        if account_id == None:
+            account_id = self.account_id
+
+        return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [order_request]})
+
+    def cancel_order(self: 'IbkrClient', order_id: str, account_id: str = None) -> Result:  # pragma: no cover
+        if account_id is None:
+            account_id = self.account_id
+        return self.delete(f'iserver/account/{account_id}/order/{order_id}')
+
+    def modify_order(self: 'IbkrClient', order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
         if account_id is None:
             account_id = self.account_id
 
         result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
 
         return handle_questions(result, answers, self.reply)
+
+    def suppress_messages(self: 'IbkrClient', message_ids: List[str]) -> Result:  # pragma: no cover
+        return self.post(f'iserver/questions/suppress', params={"messageIds": message_ids})
+
+    def reset_suppressed_messages(self: 'IbkrClient') -> Result:  # pragma: no cover
+        return self.post(f'/iserver/questions/suppress/reset')
