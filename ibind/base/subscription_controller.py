@@ -1,8 +1,10 @@
 from abc import ABC
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import wait_until, TimeoutLock, UNDEFINED, exception_to_string
+if TYPE_CHECKING:  # pragma: no cover
+    from ibind.base.ws_client import WsClient
 
 _LOGGER = project_logger(__file__)
 
