@@ -296,3 +296,17 @@ def tname():  # pragma: no cover
     """
     return f'{threading.current_thread().name}-{threading.get_ident()}'
 
+
+
+def params_dict(required: dict = None, optional: dict = None, preprocessors: dict = None):
+    d = required if required is not None else {}
+
+    if optional is None:
+        return d
+
+    for key, value in optional.items():
+        if value is not None:
+            if preprocessors is not None and key in preprocessors:
+                value = preprocessors[key](value)
+            d[key] = value
+    return d
