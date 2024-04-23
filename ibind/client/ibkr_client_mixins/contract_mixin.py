@@ -31,7 +31,7 @@ class ContractMixin():
         Note: This is only available for Stock contracts.
 
         Parameters:
-            exchange (String): Specify a single exchange to receive conids for.
+            exchange (str): Specify a single exchange to receive conids for.
         """
         return self.get('trsrv/all-conids', {'exchange': exchange})
 
@@ -40,7 +40,7 @@ class ContractMixin():
         Requests full contract details for the given conid.
 
         Parameters:
-            conid (String): Contract ID for the desired contract information.
+            conid (str): Contract ID for the desired contract information.
         """
         return self.get(f'iserver/contract/{conid}/info')
 
@@ -49,7 +49,7 @@ class ContractMixin():
         Obtains available currency pairs corresponding to the given target currency.
 
         Parameters:
-            currency (String): Specify the target currency you would like to receive official pairs of. Valid Structure: “USD”.
+            currency (str): Specify the target currency you would like to receive official pairs of. Valid Structure: “USD”.
         """
         return self.get(f'iserver/currency/pairs', {'currency': currency})
 
@@ -58,8 +58,8 @@ class ContractMixin():
         Obtains the exchange rates of the currency pair.
 
         Parameters:
-            source (String): Specify the base currency to request data for. Valid Structure: “AUD”
-            target (String): Specify the quote currency to request data for. Valid Structure: “USD”
+            source (str): Specify the base currency to request data for. Valid Structure: “AUD”
+            target (str): Specify the quote currency to request data for. Valid Structure: “USD”
         """
         return self.get(f'iserver/exchangerate', {'source': source, target: target})
 
@@ -68,8 +68,8 @@ class ContractMixin():
         Returns both contract info and rules from a single endpoint.
 
         Parameters:
-            conid (String): Contract identifier for the given contract.
-            is_buy (bool): Optional. Indicates whether you are searching for Buy or Sell order rules. Set to true for Buy Orders, set to false for Sell Orders.
+            conid (str): Contract identifier for the given contract.
+            is_buy (bool, optional): Indicates whether you are searching for Buy or Sell order rules. Set to true for Buy Orders, set to false for Sell Orders.
         """
         return self.get(f'iserver/contract/{conid}/info-and-rules', {'isBuy': is_buy})
 
@@ -84,10 +84,10 @@ class ContractMixin():
         Returns supported IB Algos for contract.
 
         Parameters:
-            conid (String): Contract identifier for the requested contract of interest.
-            algos (String): Optional. List of algo ids. Max of 8 algos ids can be specified. Case sensitive to algo id.
-            add_description (String): Optional. Whether or not to add algo descriptions to response. Set to 1 for yes, 0 for no.
-            add_params (String): Optional. Whether or not to show algo parameters. Set to 1 for yes, 0 for no.
+            conid (str): Contract identifier for the requested contract of interest.
+            algos (str, optional): List of algo ids. Max of 8 algos ids can be specified. Case sensitive to algo id.
+            add_description (str, optional): Whether or not to add algo descriptions to response. Set to 1 for yes, 0 for no.
+            add_params (str, optional): Whether or not to show algo parameters. Set to 1 for yes, 0 for no.
         """
         params = params_dict(
             optional={
@@ -104,8 +104,8 @@ class ContractMixin():
         Request a list of filters relating to a given Bond issuerID.
 
         Parameters:
-            symbol (String): This should always be set to “BOND”
-            issuer_id (String): Specifies the issuerId value used to designate the bond issuer type.
+            symbol (str): This should always be set to “BOND”
+            issuer_id (str): Specifies the issuerId value used to designate the bond issuer type.
         """
         return self.get(f'iserver/secdef/bond-filters', {'symbol': symbol, 'issuerId': issuer_id})
 
@@ -119,9 +119,9 @@ class ContractMixin():
         Search by underlying symbol or company name. Relays back what derivative contract(s) it has. This endpoint must be called before using /secdef/info.
 
         Parameters:
-            symbol (String): Underlying symbol of interest. May also pass company name if 'name' is set to true, or bond issuer type to retrieve bonds.
-            name (bool): Optional. Determines if symbol reflects company name or ticker symbol.
-            sec_type (String): Optional. Valid Values: “STK”, “IND”, “BOND”. Declares underlying security type.
+            symbol (str): Underlying symbol of interest. May also pass company name if 'name' is set to true, or bond issuer type to retrieve bonds.
+            name (bool, optional): Determines if symbol reflects company name or ticker symbol.
+            sec_type (str, optional): Valid Values: “STK”, “IND”, “BOND”. Declares underlying security type.
         """
         params = params_dict(
             {'symbol': symbol},
@@ -143,9 +143,9 @@ class ContractMixin():
 
         Parameters:
             conid (Number): Contract identifier for the interested contract.
-            exchange (String): Optional. Designate the exchange you wish to receive information for in relation to the contract.
-            is_buy (bool): Optional. Side of the market rules apply to. Set to true for Buy Orders, set to false for Sell Orders. Defaults to true or Buy side rules.
-            modify_order (bool): Optional. Used to find trading rules related to an existing order.
+            exchange (str, optional): Designate the exchange you wish to receive information for in relation to the contract.
+            is_buy (bool, optional): Side of the market rules apply to. Set to true for Buy Orders, set to false for Sell Orders. Defaults to true or Buy side rules.
+            modify_order (bool, optional): Used to find trading rules related to an existing order.
             order_id (int): Required for modify_order:true. Specify the order identifier used for tracking a given order.
         """
         params = params_dict(
@@ -174,13 +174,13 @@ class ContractMixin():
         Provides Contract Details of Futures, Options, Warrants, Cash and CFDs based on conid.
 
         Parameters:
-            conid (String): Contract identifier of the underlying. May also pass the final derivative conid directly.
-            sec_type (String): Security type of the requested contract of interest.
-            month (String): Required for Derivatives. Expiration month for the given derivative.
-            exchange (String): Optional. Designate the exchange you wish to receive information for in relation to the contract.
-            strike (String): Required for Options and Futures Options. Set the strike price for the requested contract details.
-            right (String): Required for Options. Set the right for the given contract. Value Format: “C” for Call or “P” for Put.
-            issuer_id (String): Required for Bonds. Set the issuer_id for the given bond issuer type. Example Format: “e1234567”
+            conid (str): Contract identifier of the underlying. May also pass the final derivative conid directly.
+            sec_type (str): Security type of the requested contract of interest.
+            month (str): Required for Derivatives. Expiration month for the given derivative.
+            exchange (str, optional): Designate the exchange you wish to receive information for in relation to the contract.
+            strike (str): Required for Options and Futures Options. Set the strike price for the requested contract details.
+            right (str): Required for Options. Set the right for the given contract. Value Format: “C” for Call or “P” for Put.
+            issuer_id (str): Required for Bonds. Set the issuer_id for the given bond issuer type. Example Format: “e1234567”
         """
 
         params = params_dict(
@@ -210,10 +210,10 @@ class ContractMixin():
         Query to receive a list of potential strikes supported for a given underlying.
 
         Parameters:
-            conid (String): Contract Identifier number for the underlying.
-            sec_type (String): Security type of the derivatives you are looking for. Value Format: “OPT” or “WAR”.
-            month (String): Expiration month and year for the given underlying. Value Format: {3 character month}{2 character year}. Example: AUG23.
-            exchange (String): Optional. Exchange from which derivatives should be retrieved from. Default value is set to SMART.
+            conid (str): Contract Identifier number for the underlying.
+            sec_type (str): Security type of the derivatives you are looking for. Value Format: “OPT” or “WAR”.
+            month (str): Expiration month and year for the given underlying. Value Format: {3 character month}{2 character year}. Example: AUG23.
+            exchange (str, optional): Exchange from which derivatives should be retrieved from. Default value is set to SMART.
         """
         params = params_dict(
             {
@@ -232,7 +232,7 @@ class ContractMixin():
         Returns a list of non-expired future contracts for given symbol(s).
 
         Parameters:
-            symbols (String): Indicate the symbol(s) of the underlier you are trying to retrieve futures on. Accepts list of string of symbols.
+            symbols (str): Indicate the symbol(s) of the underlier you are trying to retrieve futures on. Accepts list of string of symbols.
         """
         return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
 
@@ -322,10 +322,10 @@ class ContractMixin():
         Returns the trading schedule up to a month for the requested contract.
 
         Parameters:
-            asset_class (String): Specify the security type of the given contract. Value Formats: Stock: STK, Option: OPT, Future: FUT, Contract For Difference: CFD, Warrant: WAR, Forex: SWP, Mutual Fund: FND, Bond: BND, Inter-Commodity Spreads: ICS.
-            symbol (String): Specify the symbol for your contract.
-            exchange (String): Optional. Specify the primary exchange of your contract.
-            exchange_filter (String): Optional. Specify all exchanges you want to retrieve data from.
+            asset_class (str): Specify the security type of the given contract. Value Formats: Stock: STK, Option: OPT, Future: FUT, Contract For Difference: CFD, Warrant: WAR, Forex: SWP, Mutual Fund: FND, Bond: BND, Inter-Commodity Spreads: ICS.
+            symbol (str): Specify the symbol for your contract.
+            exchange (str, optional): Specify the primary exchange of your contract.
+            exchange_filter (str, optional): Specify all exchanges you want to retrieve data from.
         """
         params = params_dict(
             {'assetClass': asset_class, 'symbol': symbol, },

@@ -26,7 +26,7 @@ class OrderMixin():
         Parameters:
             filters (List[str], optional): A list of strings representing the filters to be applied. Defaults to None
             force (bool, optional): Force the system to clear saved information and make a fresh request for orders. Submission will appear as a blank array. Defaults to False.
-            account_id (String): For linked accounts, allows users to view orders on sub-accounts as specified.
+            account_id (str): For linked accounts, allows users to view orders on sub-accounts as specified.
 
         Available filters:
             Inactive:
@@ -73,7 +73,7 @@ class OrderMixin():
         Retrieve the given status of an individual order using the orderId returned by the order placement response or the orderId available in the live order response.
 
         Parameters:
-            order_id (String): Order identifier for the placed order. Returned by the order placement response or the order_id available in the live order response.
+            order_id (str): Order identifier for the placed order. Returned by the order placement response or the order_id available in the live order response.
         """
         return self.get(f'iserver/account/order/status/{order_id}')
 
@@ -86,8 +86,8 @@ class OrderMixin():
         Returns a list of trades for the currently selected account for current day and six previous days. It is advised to call this endpoint once per session.
 
         Parameters:
-            days (String): Specify the number of days to receive executions for, up to a maximum of 7 days. If unspecified, only the current day is returned.
-            account_id (String): Include a specific account identifier or allocation group to retrieve trades for.
+            days (str): Specify the number of days to receive executions for, up to a maximum of 7 days. If unspecified, only the current day is returned.
+            account_id (str): Include a specific account identifier or allocation group to retrieve trades for.
         """
         if account_id is None:
             account_id = self.account_id
@@ -109,7 +109,7 @@ class OrderMixin():
         - Developers should not attempt to place another order until the previous order has been fully acknowledged, that is, when no further warnings are received deferring the client to the reply endpoint.
 
         Parameters:
-            account_id (String): The account ID for which account should place the order.
+            account_id (str): The account ID for which account should place the order.
             answers (Answers): List of question-answer pairs for order submission process.
             order_request (dict): Used to the order content.
 
@@ -136,7 +136,7 @@ class OrderMixin():
         Many of the warning notifications within the Client Portal API can be disabled.
 
         Parameters:
-            reply_id (String): Include the id value from the prior order request relating to the particular order’s warning confirmation.
+            reply_id (str): Include the id value from the prior order request relating to the particular order's warning confirmation.
             confirmed (bool): Pass your confirmation to the reply to allow or cancel the order to go through. true will agree to the message transmit the order. false will decline the message and discard the order.
         """
         return self.post(f'iserver/reply/{reply_id}', params={"confirmed": confirmed})
@@ -150,7 +150,7 @@ class OrderMixin():
         The body content of the /whatif endpoint will follow the same structure as the standard /iserver/account/{accountId}/orders endpoint.
 
         Parameters:
-            account_id (String): The account ID for which account should place the order. Financial Advisors may specify.
+            account_id (str): The account ID for which account should place the order. Financial Advisors may specify.
             order_request (dict): Used to the order content.
         """
         if account_id == None:
@@ -166,8 +166,8 @@ class OrderMixin():
         Use /iservers/account/orders endpoint to review open-order(s) and get latest order status.
 
         Parameters:
-            account_id (String): The account ID for which account should place the order.
-            order_id (String): The orderID for that should be modified. Can be retrieved from /iserver/account/orders. Submitting ‘-1’ will cancel all open orders.
+            account_id (str): The account ID for which account should place the order.
+            order_id (str): The orderID for that should be modified. Can be retrieved from /iserver/account/orders. Submitting '-1' will cancel all open orders.
         """
         if account_id is None:
             account_id = self.account_id
@@ -181,10 +181,10 @@ class OrderMixin():
         Use /iservers/account/orders endpoint to review open-order(s).
 
         Parameters:
-            order_id (String): The orderID for that should be modified. Can be retrieved from /iserver/account/orders.
+            order_id (str): The orderID for that should be modified. Can be retrieved from /iserver/account/orders.
             order_request (dict): Used to the order content. The content should mirror the content of the original order.
             answers (Answers): List of question-answer pairs for order submission process.
-            account_id (String): The account ID for which account should place the order.
+            account_id (str): The account ID for which account should place the order.
         """
         if account_id is None:
             account_id = self.account_id

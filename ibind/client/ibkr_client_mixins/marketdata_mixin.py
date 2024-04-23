@@ -47,7 +47,7 @@ class MarketdataMixin():
         WARNING: Each regulatory snapshot made will incur a fee of $0.01 USD to the account. This applies to both live and paper accounts.
 
         Parameters:
-            conid (String): Provide the contract identifier to retrieve market data for.
+            conid (str): Provide the contract identifier to retrieve market data for.
 
         Note:
             - If you are already paying for, or are subscribed to, a specific US Network subscription, your account will not be charged.
@@ -65,18 +65,18 @@ class MarketdataMixin():
             start_time: datetime.datetime = None
     ) -> Result:  # pragma: no cover
         """
-        Get historical market Data for given conid, length of data is controlled by ‘period’ and ‘bar’.
+        Get historical market Data for given conid, length of data is controlled by 'period' and 'bar'.
 
         Parameters:
-            conid (String): Contract identifier for the ticker symbol of interest.
-            exchange (String): Optional. Returns the exchange you want to receive data from.
-            period (String): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-            bar (String): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
-            start_time (datetime.datetime): Optional. Starting date of the request duration.
-            outside_rth (bool): Optional. Determine if you want data after regular trading hours.
+            conid (str): Contract identifier for the ticker symbol of interest.
+            exchange (str, optional): Returns the exchange you want to receive data from.
+            period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+            start_time (datetime.datetime, optional): Starting date of the request duration.
+            outside_rth (bool, optional): Determine if you want data after regular trading hours.
 
         Note:
-            - There’s a limit of 5 concurrent requests. Excessive requests will return a ‘Too many requests’ status 429 response.
+            - There's a limit of 5 concurrent requests. Excessive requests will return a 'Too many requests' status 429 response.
         """
         params = params_dict(
             {
@@ -110,13 +110,13 @@ class MarketdataMixin():
         Using a direct connection to the market data farm, will provide a list of historical market data for given conid.
 
         Parameters:
-            conid (String): The contract identifier for which data should be requested.
-            period (String): The duration for which data should be requested. Available Values: See HMDS Period Units.
-            bar (String): The bar size for which bars should be returned. Available Values: See HMDS Bar Sizes.
-            outside_rth (bool): Optional. Define if data should be returned for trades outside regular trading hours.
-            start_time (datetime.datetime): Optional. Specify the value from where historical data should be taken. Value Format: UTC; YYYYMMDD-HH:mm:dd. Defaults to the current date and time.
-            direction (String): Optional. Specify the direction from which market data should be returned. Available Values: -1: time from the start_time to now; 1: time from now to the end of the period. Defaults to 1.
-            bar_type (String): Optional. Returns valid bar types for which data may be requested. Available Values: Last, Bid, Ask, Midpoint, FeeRate, Inventory. Defaults to Last for Stocks, Options, Futures, and Futures Options.
+            conid (str): The contract identifier for which data should be requested.
+            period (str): The duration for which data should be requested. Available Values: See HMDS Period Units.
+            bar (str): The bar size for which bars should be returned. Available Values: See HMDS Bar Sizes.
+            outside_rth (bool, optional): Define if data should be returned for trades outside regular trading hours.
+            start_time (datetime.datetime, optional): Specify the value from where historical data should be taken. Value Format: UTC; YYYYMMDD-HH:mm:dd. Defaults to the current date and time.
+            direction (str, optional): Specify the direction from which market data should be returned. Available Values: -1: time from the start_time to now; 1: time from now to the end of the period. Defaults to 1.
+            bar_type (str, optional): Returns valid bar types for which data may be requested. Available Values: Last, Bid, Ask, Midpoint, FeeRate, Inventory. Defaults to Last for Stocks, Options, Futures, and Futures Options.
 
         Note:
             - The first time a user makes a request to the /hmds/history endpoints will result in a 404 error. This initial request instantiates the historical market data services allowing future requests to return data. Subsequent requests will return data as expected.
