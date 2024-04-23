@@ -15,9 +15,25 @@ _LOGGER = project_logger(__file__)
 
 
 class MarketdataMixin():
+    """
+    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
+    """
 
     @ensure_list_arg('conids')
     def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:
+        """
+        Get Market Data for the given conid(s).
+
+        A pre-flight request must be made prior to ever receiving data.
+
+        Parameters:
+            conids (OneOrMany[str]): Contract identifier(s) for the contract of interest.
+            fields (OneOrMany[str]): Specify a series of tick values to be returned.
+
+        Note:
+            - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
+            - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
+        """
         params = {
             'conids': ','.join(conids),
             'fields': ','.join(fields)
@@ -25,6 +41,18 @@ class MarketdataMixin():
         return self.get(f'iserver/secdef/search', params)
 
     def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:
+        """
+        Send a request for a regulatory snapshot. This will cost $0.01 USD per request unless you are subscribed to the direct exchange market data already.
+
+        WARNING: Each regulatory snapshot made will incur a fee of $0.01 USD to the account. This applies to both live and paper accounts.
+
+        Parameters:
+            conid (String): Provide the contract identifier to retrieve market data for.
+
+        Note:
+            - If you are already paying for, or are subscribed to, a specific US Network subscription, your account will not be charged.
+            - For stocks, there are individual exchange-specific market data subscriptions necessary to receive streaming quotes.
+        """
         return self.get(f'md/regsnapshot', {'conid': conid})
 
     def marketdata_history_by_conid(
@@ -37,8 +65,18 @@ class MarketdataMixin():
             start_time: datetime.datetime = None
     ) -> Result:  # pragma: no cover
         """
-        period: {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y
-        bar: 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m
+        Get historical market Data for given conid, length of data is controlled by ‘period’ and ‘bar’.
+
+        Parameters:
+            conid (String): Contract identifier for the ticker symbol of interest.
+            exchange (String): Optional. Returns the exchange you want to receive data from.
+            period (String): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+            bar (String): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+            start_time (datetime.datetime): Optional. Starting date of the request duration.
+            outside_rth (bool): Optional. Determine if you want data after regular trading hours.
+
+        Note:
+            - There’s a limit of 5 concurrent requests. Excessive requests will return a ‘Too many requests’ status 429 response.
         """
         params = params_dict(
             {
@@ -52,7 +90,7 @@ class MarketdataMixin():
                 'startTime': start_time
             },
             preprocessors={
-                'startTime': lambda x: x.strftime('')
+                'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')
             }
         )
 
@@ -69,8 +107,19 @@ class MarketdataMixin():
             bar_type: str = None,
     ) -> Result:  # pragma: no cover
         """
-        period: {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y
-        bar: 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m
+        Using a direct connection to the market data farm, will provide a list of historical market data for given conid.
+
+        Parameters:
+            conid (String): The contract identifier for which data should be requested.
+            period (String): The duration for which data should be requested. Available Values: See HMDS Period Units.
+            bar (String): The bar size for which bars should be returned. Available Values: See HMDS Bar Sizes.
+            outside_rth (bool): Optional. Define if data should be returned for trades outside regular trading hours.
+            start_time (datetime.datetime): Optional. Specify the value from where historical data should be taken. Value Format: UTC; YYYYMMDD-HH:mm:dd. Defaults to the current date and time.
+            direction (String): Optional. Specify the direction from which market data should be returned. Available Values: -1: time from the start_time to now; 1: time from now to the end of the period. Defaults to 1.
+            bar_type (String): Optional. Returns valid bar types for which data may be requested. Available Values: Last, Bid, Ask, Midpoint, FeeRate, Inventory. Defaults to Last for Stocks, Options, Futures, and Futures Options.
+
+        Note:
+            - The first time a user makes a request to the /hmds/history endpoints will result in a 404 error. This initial request instantiates the historical market data services allowing future requests to return data. Subsequent requests will return data as expected.
         """
         params = params_dict(
             {
@@ -85,7 +134,7 @@ class MarketdataMixin():
                 'barType': bar_type,
             },
             preprocessors={
-                'startTime': lambda x: x.strftime('')
+                'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')
             }
         )
 
@@ -104,6 +153,12 @@ class MarketdataMixin():
 
     @ensure_list_arg('conids')
     def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]):
+        """
+        Cancel market data for given conid(s).
+
+        Parameters:
+            conids (OneOrMany[int]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
+        """
         # we unsubscribe from all conids simultaneously
         unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
         results = execute_in_parallel(self.post, unsubscribe_requests)
@@ -118,6 +173,9 @@ class MarketdataMixin():
         return results
 
     def marketdata_unsubscribe_all(self: 'IbkrClient') -> Result:  # pragma: no cover
+        """
+        Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
+        """
         return self.get(f'iserver/marketdata/unsubscribeall')
 
     @ensure_list_arg('queries')
@@ -127,6 +185,8 @@ class MarketdataMixin():
             period: str = "1min",
             bar: str = "1min",
             outside_rth: bool = True
+            # todo: add start_time
+            # todo: add inline docs
     ) -> dict:
         conids = self.get_conids(queries).data
 
