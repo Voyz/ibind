@@ -145,11 +145,7 @@ class IbkrWsClient(WsClient):
             url: str = var.IBKR_WS_URL,
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
-            # SubscriptionControllerClass: Type[SubscriptionController] = SubscriptionController,
             log_raw_messages: bool = var.IBKR_WS_LOG_RAW_MESSAGES,
-            # subscription controller
-            subscription_retries: int = var.IBKR_WS_SUBSCRIPTION_RETRIES,
-            subscription_timeout: float = var.IBKR_WS_SUBSCRIPTION_TIMEOUT,
             # inherited
             ping_interval: int = var.IBKR_WS_PING_INTERVAL,
             max_ping_interval: int = var.IBKR_WS_MAX_PING_INTERVAL,
@@ -158,6 +154,9 @@ class IbkrWsClient(WsClient):
             restart_on_critical: bool = True,
             max_connection_attempts: int = 10,
             cacert: Union[str, bool] = var.IBKR_CACERT,
+            # subscription controller
+            subscription_retries: int = var.IBKR_WS_SUBSCRIPTION_RETRIES,
+            subscription_timeout: float = var.IBKR_WS_SUBSCRIPTION_TIMEOUT,
     ) -> None:
         """
         Initializes the IbkrWsClient, an Interactive Brokers WebSocket client.
@@ -188,12 +187,7 @@ class IbkrWsClient(WsClient):
 
         self._queue_controller = QueueControllerClass()
         self._subscription_processor = SubscriptionProcessorClass()
-        # self._subscription_controller = SubscriptionControllerClass(
-        #     subscription_processor=self._subscription_processor,
-        #     ws_client=self,
-        #     subscription_retries=subscription_retries,
-        #     subscription_timeout=subscription_timeout
-        # )
+
         self._log_raw_messages = log_raw_messages
 
         super().__init__(
@@ -472,61 +466,3 @@ class IbkrWsClient(WsClient):
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
         return super().subscribe(channel, data, needs_confirmation, subscription_processor)
-    #
-    # def unsubscribe(
-    #         self,
-    #         channel: str,
-    #         data: dict = None,
-    #         needs_confirmation: bool = False,
-    #         subscription_processor: SubscriptionProcessor = None,
-    # ) -> bool:  # pragma: no cover
-    #     """
-    #     Unsubscribes from a specific channel in the Interactive Brokers WebSocket.
-    #
-    #     Initiates an unsubscription request for a given channel, optionally including additional data. Interactive Brokers
-    #     WebSocket typically does not send unsubscription confirmations, hence by default confirmation is not expected, and we assume it always succeeds.
-    #
-    #     Parameters:
-    #         channel (str): The channel to unsubscribe from.
-    #         data (dict, optional): Additional data to be included in the unsubscription request. Defaults to None.
-    #         needs_confirmation (bool, optional): Specifies whether the unsubscription requires confirmation from the server. Defaults to False.
-    #         subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
-    #                                                                   default one if provided. Defaults to None.
-    #
-    #     Returns:
-    #         bool: True allways, as we currently don't need a confirmation.
-    #     """
-    #     return self.unsubscribe(channel, data, needs_confirmation, subscription_processor)
-    #
-    # def modify_subscription(
-    #         self,
-    #         channel: str,
-    #         status: bool = UNDEFINED,
-    #         data: dict = UNDEFINED,
-    #         needs_confirmation: bool = UNDEFINED
-    # ):  # pragma: no cover
-    #
-    #     """
-    #     Modifies an existing subscription.
-    #
-    #     Updates the properties of an existing subscription. If a property is set to UNDEFINED, it remains unchanged.
-    #
-    #     Parameters:
-    #         channel (str): The channel whose subscription is to be modified.
-    #         status (bool, optional): The new status of the subscription. Set as UNDEFINED to leave unchanged.
-    #         data (dict, optional): The new data associated with the subscription. Set as UNDEFINED to leave unchanged.
-    #         needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation.
-    #                                              Set as UNDEFINED to leave unchanged.
-    #         subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
-    #                                                                   default one if provided. Defaults to None.
-    #
-    #     Raises:
-    #         KeyError: If the specified channel does not have an existing subscription.
-    #     """
-    #     return self.modify_subscription(channel, status, data, needs_confirmation)
-    #
-    # def is_subscription_active(self, channel: str) -> bool:  # pragma: no cover
-    #     return self.is_subscription_active(channel)
-    #
-    # def has_active_subscriptions(self) -> bool:  # pragma: no cover
-    #     return self.has_active_subscriptions()

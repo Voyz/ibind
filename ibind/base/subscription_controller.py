@@ -356,7 +356,3 @@ class SubscriptionController():
 
     def has_subscription(self, channel: str) -> bool:  # pragma: no cover
         return channel in self._subscriptions
-
-    # def __str__(self):  # pragma: no cover
-    #     # slightly hacky way, ensuring the logs are consistent for the WsClient
-    #     return str(self._ws_client)
