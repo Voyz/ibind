@@ -259,7 +259,7 @@ class TestIbkrWsClient(TestCase):
             self.assertTrue(success)
 
         self.assertEqual(self._logs_subscriptions(full_channel), [r.msg for r in cm.records])
-        self.assertEqual(response['args'], queue.get())
+        self.assertEqual(response, queue.get())
 
     def test_on_message_orders_channel_handling(self):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.ORDERS)
@@ -275,7 +275,7 @@ class TestIbkrWsClient(TestCase):
             self.assertTrue(success)
 
         self.assertEqual(self._logs_subscriptions(full_channel), [r.msg for r in cm.records])
-        self.assertEqual(response['args'], queue.get())
+        self.assertEqual(response, queue.get())
 
     def test_subscription_without_confirmation(self):
         channel = 'fake'

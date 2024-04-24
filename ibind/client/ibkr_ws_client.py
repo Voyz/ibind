@@ -8,7 +8,7 @@ from websocket import WebSocketApp
 
 from ibind import var
 from ibind.base.queue_controller import QueueController, QueueAccessor
-from ibind.base.subscription_controller import SubscriptionProcessor, SubscriptionController
+from ibind.base.subscription_controller import SubscriptionProcessor
 from ibind.base.ws_client import WsClient
 from ibind.client import ibkr_definitions
 from ibind.client.ibkr_client import IbkrClient
@@ -21,20 +21,30 @@ _LOGGER = project_logger(__file__)
 
 class IbkrWsKey(Enum):
     """
+    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+
     Enumeration of key types for Interactive Brokers WebSocket channels.
 
     This Enum class represents various types of data or subscription channels for Interactive Brokers WebSocket API.
 
     Enum Members:
-        TRADES: Represents the 'TRADES' subscription.
+        ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
+        ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription.
         MARKET_DATA: Represents the 'MARKET_DATA' subscription.
         MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription.
+        PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
         ORDERS: Represents the 'ORDERS' subscription.
+        PNL: Represents the 'PNL' subscription.
+        TRADES: Represents the 'TRADES' subscription.
     """
-    TRADES = 'TRADES'
+    ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
+    ACCOUNT_LEDGER = 'ACCOUNT_LEDGER'
     MARKET_DATA = 'MARKET_DATA'
     MARKET_HISTORY = 'MARKET_HISTORY'
+    PRICE_LADDER = 'PRICE_LADDER'
     ORDERS = 'ORDERS'
+    PNL = 'PNL'
+    TRADES = 'TRADES'
 
     @classmethod
     def from_channel(cls, channel):
@@ -51,10 +61,14 @@ class IbkrWsKey(Enum):
              ValueError: If no enum member is associated with the provided channel.
          """
         channel_to_key = {
-            'tr': IbkrWsKey.TRADES,
+            'sd': IbkrWsKey.ACCOUNT_SUMMARY,
+            'ld': IbkrWsKey.ACCOUNT_LEDGER,
             'md': IbkrWsKey.MARKET_DATA,
             'mh': IbkrWsKey.MARKET_HISTORY,
+            'bd': IbkrWsKey.PRICE_LADDER,
             'or': IbkrWsKey.ORDERS,
+            'pl': IbkrWsKey.PNL,
+            'tr': IbkrWsKey.TRADES,
         }
         if channel in channel_to_key:
             return channel_to_key[channel]
@@ -69,10 +83,14 @@ class IbkrWsKey(Enum):
             str: The channel string corresponding to the enum member.
         """
         return {
-            IbkrWsKey.TRADES: 'tr',
+            IbkrWsKey.ACCOUNT_SUMMARY: 'sd',
+            IbkrWsKey.ACCOUNT_LEDGER: 'ld',
             IbkrWsKey.MARKET_DATA: 'md',
             IbkrWsKey.MARKET_HISTORY: 'mh',
+            IbkrWsKey.PRICE_LADDER: 'bd',
             IbkrWsKey.ORDERS: 'or',
+            IbkrWsKey.PNL: 'pl',
+            IbkrWsKey.TRADES: 'tr',
         }[self]
 
 
@@ -222,10 +240,7 @@ class IbkrWsClient(WsClient):
         self._logged_in = False
         self.recreate_subscriptions()
 
-    def _handle_trades_message(self, message: dict) -> None:
-        self._queue_controller.put_to_queue(IbkrWsKey.from_channel('tr'), message['args'])
-
-    def _handle_market_data_message(self, message: dict) -> None:
+    def _preprocess_market_data_message(self, message: dict):
         """
         API will only return fields that were updated. If you are not receiving certain fields in the response - means that they remain unchanged.
         """
@@ -237,29 +252,28 @@ class IbkrWsClient(WsClient):
         for key, value in message.items():
             if key in ibkr_definitions.snapshot_by_id:
                 result[ibkr_definitions.snapshot_by_id[key]] = value
-        self._queue_controller.put_to_queue(IbkrWsKey.from_channel('md'), {message['conid']: result})
+        return {message['conid']: result}
 
-    def _handle_market_history_message(self, message: dict) -> None:
+    def _preprocess_market_history_message(self, message: dict):
         mh_server_id_conid_pairs = self.server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
         if 'serverId' in message and message['serverId'] not in mh_server_id_conid_pairs:
             mh_server_id_conid_pairs[message['serverId']] = extract_conid(message)
 
-        self._queue_controller.put_to_queue(IbkrWsKey.from_channel('mh'), message)
-
-    def _handle_orders_message(self, message: dict) -> None:
-        self._queue_controller.put_to_queue(IbkrWsKey.from_channel('or'), message['args'])
+        return message
 
     def _handle_subscribed_message(self, channel: str, message: dict):
-        if channel.startswith('md'):  # market data
-            self._handle_market_data_message(message)
-        elif channel.startswith('or'):  # orders
-            self._handle_orders_message(message)
-        elif channel.startswith('tr'):  # trades
-            self._handle_trades_message(message)
-        elif channel.startswith('mh'):  # market history
-            self._handle_market_history_message(message)
-        else:
+        try:
+            ibkr_ws_key = IbkrWsKey.from_channel(channel[:2])
+        except ValueError:
+            # ValueError means we don't support this channel
             return False
+
+        if ibkr_ws_key == IbkrWsKey.MARKET_DATA:
+            message = self._preprocess_market_data_message(message)
+        elif ibkr_ws_key == IbkrWsKey.MARKET_HISTORY:
+            message = self._preprocess_market_history_message(message)
+
+        self._queue_controller.put_to_queue(ibkr_ws_key, message)
 
         return True
 
@@ -449,6 +463,8 @@ class IbkrWsClient(WsClient):
 
         Initiates a subscription to a given channel, optionally including additional data in the subscription
         request. The method delegates the subscription logic to the SubscriptionController.
+
+        From docs: "To receive all orders for the current day the endpoint /iserver/account/orders can be used. It is advised to query all orders for the current day first before subscribing to live orders."
 
         Parameters:
             channel (str): The channel to subscribe to.
