@@ -284,7 +284,7 @@ class TestIbkrClientI(TestCase):
             12345: MagicMock(status_code=500),  # Simulate server error
         }
         requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
-        self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: ExternalBrokerError(status_code=500), __name__='client_get_mock')
+        self.client.post = MagicMock(side_effect=lambda url, *args, **kwargs: ExternalBrokerError(status_code=500), __name__='client_get_mock')
 
         with self.assertRaises(ExternalBrokerError):
             self.client.marketdata_unsubscribe(conids)

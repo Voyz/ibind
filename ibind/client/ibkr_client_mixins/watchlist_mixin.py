@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, Union, Dict, List
 
 from ibind.support.logs import project_logger
+from ibind.base.rest_client import Result
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ibind import IbkrClient, Result
+    from ibind import IbkrClient
 
 _LOGGER = project_logger(__file__)
 

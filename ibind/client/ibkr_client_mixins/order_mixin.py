@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
 from ibind.client.ibkr_utils import Answers, handle_questions
-from ibind.support.py_utils import OneOrMany, params_dict
+from ibind.support.py_utils import OneOrMany, params_dict, ensure_list_arg
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
@@ -14,10 +14,11 @@ class OrderMixin():
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
     """
 
+    @ensure_list_arg('filters')
     def live_orders(
             self: 'IbkrClient',
             filters: OneOrMany[str] = None,
-            force: bool = False,
+            force: bool = None,
             account_id: str = None
     ) -> Result:
         """
@@ -52,8 +53,6 @@ class OrderMixin():
             - This endpoint requires a pre-flight request. Orders is the list of live orders (cancelled, filled, submitted).
 
         """
-        if account_id is None:
-            account_id = self.account_id
 
         params = params_dict(
             optional={

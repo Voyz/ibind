@@ -309,4 +309,8 @@ def params_dict(required: dict = None, optional: dict = None, preprocessors: dic
             if preprocessors is not None and key in preprocessors:
                 value = preprocessors[key](value)
             d[key] = value
+
+    if d == {}:
+        return None
+
     return d

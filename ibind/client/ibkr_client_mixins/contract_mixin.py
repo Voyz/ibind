@@ -328,7 +328,7 @@ class ContractMixin():
             exchange_filter (str, optional): Specify all exchanges you want to retrieve data from.
         """
         params = params_dict(
-            {'assetClass': asset_class, 'symbol': symbol, },
+            {'assetClass': asset_class, 'symbol': symbol},
             optional={'exchange': exchange, 'exchangeFilter': exchange_filter}
         )
 
