@@ -2,7 +2,7 @@ import json
 import time
 from collections import defaultdict
 from enum import Enum
-from typing import Union, Type, Dict
+from typing import Union, Type, Dict, List
 
 from websocket import WebSocketApp
 
@@ -36,7 +36,15 @@ class IbkrWsKey(Enum):
         ORDERS: Represents the 'ORDERS' subscription.
         PNL: Represents the 'PNL' subscription.
         TRADES: Represents the 'TRADES' subscription.
+
+        ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
+        AUTHENTICATION: Represents the 'AUTHENTICATION' unsolicited message.
+        BULLETINS: Represents the 'BULLETINS' unsolicited message.
+        ERROR: Represents the 'ERROR' unsolicited message.
+        SYSTEM: Represents the 'SYSTEM' unsolicited message.
+        NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
     """
+    # subscription-based
     ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
     ACCOUNT_LEDGER = 'ACCOUNT_LEDGER'
     MARKET_DATA = 'MARKET_DATA'
@@ -45,6 +53,14 @@ class IbkrWsKey(Enum):
     ORDERS = 'ORDERS'
     PNL = 'PNL'
     TRADES = 'TRADES'
+
+    # unsolicited
+    ACCOUNT_UPDATES = 'ACCOUNT_UPDATES'
+    AUTHENTICATION_STATUS = 'AUTHENTICATION_STATUS'
+    BULLETINS = 'BULLETINS'
+    ERROR = 'ERROR'
+    SYSTEM = 'SYSTEM'
+    NOTIFICATIONS = 'NOTIFICATIONS'
 
     @classmethod
     def from_channel(cls, channel):
@@ -164,6 +180,7 @@ class IbkrWsClient(WsClient):
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBKR_WS_LOG_RAW_MESSAGES,
+            unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             # inherited
             ping_interval: int = var.IBKR_WS_PING_INTERVAL,
             max_ping_interval: int = var.IBKR_WS_MAX_PING_INTERVAL,
@@ -187,18 +204,12 @@ class IbkrWsClient(WsClient):
             account_id (str): Account ID for subscription management.
             SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
             QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
-            SubscriptionControllerClass (Type[SubscriptionController], optional): The class to control subscriptions. Defaults to SubscriptionController.
-
-
-            # Subscription controller parameters:
-
-            subscription_retries (int, optional): Number of retries for subscription requests. Defaults to IBKR_WS_SUBSCRIPTION_RETRIES.
-            subscription_timeout (float, optional): Timeout for subscription requests. Defaults to IBKR_WS_SUBSCRIPTION_TIMEOUT.
+            unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
 
 
             # Inherited parameters from WsClient:
 
-            ping_interval, max_ping_interval, timeout, restart_on_close, restart_on_critical, max_connection_attempts, cacert
+            ping_interval, max_ping_interval, timeout, restart_on_close, restart_on_critical, max_connection_attempts, cacert, subscription_retries, subscription_timeout
         """
         self._ibkr_client = ibkr_client
         self._account_id = account_id
@@ -207,6 +218,7 @@ class IbkrWsClient(WsClient):
         self._subscription_processor = SubscriptionProcessorClass()
 
         self._log_raw_messages = log_raw_messages
+        self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
 
         super().__init__(
             subscription_processor=self._subscription_processor,
@@ -277,7 +289,12 @@ class IbkrWsClient(WsClient):
 
         return True
 
-    def _handle_account(self, message, data):
+    def _handle_unsolicited_message(self, ibkr_ws_key: IbkrWsKey, message: dict):
+        if ibkr_ws_key in self._unsolicited_channels_to_be_queued:
+            self._queue_controller.put_to_queue(ibkr_ws_key, message)
+
+    def _handle_account_update(self, message, data):
+        self._handle_unsolicited_message(IbkrWsKey.ACCOUNT_UPDATES, message)
         if 'accounts' not in data:
             _LOGGER.error(f'{self}: Unknown account response: {message}')
             return
@@ -285,14 +302,9 @@ class IbkrWsClient(WsClient):
         if self._account_id not in data['accounts']:
             _LOGGER.error(f'{self}: Account ID mismatch: expected={self._account_id}, received={data["accounts"]}')
 
-    def _handle_bulletin(self, message):  # pragma: no cover
-        ...
+    def _handle_authentication_status(self, message, data):
+        self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
 
-    def _handle_notification(self, data):  # pragma: no cover
-        for notification in data:
-            _LOGGER.info(f'{self}: IBKR notification: {notification}')
-
-    def _handle_status(self, message, data):
         if 'authenticated' not in data:
             _LOGGER.info(f'{self}: Unknown status response: {message}')
             return
@@ -303,8 +315,17 @@ class IbkrWsClient(WsClient):
         else:
             self._logged_in = True
 
+    def _handle_bulletin(self, message):  # pragma: no cover
+        self._handle_unsolicited_message(IbkrWsKey.BULLETINS, message)
+
     def _handle_error(self, message):
+        self._handle_unsolicited_message(IbkrWsKey.ERROR, message)
         _LOGGER.error(f'{self}: on_message error: {message}')
+
+    def _handle_notification(self, data):  # pragma: no cover
+        self._handle_unsolicited_message(IbkrWsKey.NOTIFICATIONS, data)
+        for notification in data:
+            _LOGGER.info(f'{self}: IBKR notification: {notification}')
 
     def _handle_market_history_unsubscribe(self, data):
         server_id = data['message'].split('Unsubscribed ')[-1]
@@ -364,7 +385,7 @@ class IbkrWsClient(WsClient):
                 self._last_heartbeat = message['hb']
 
         elif topic == 'act':
-            self._handle_account(message, data)
+            self._handle_account_update(message, data)
 
         elif topic == 'blt':
             self._handle_bulletin(message)
@@ -373,7 +394,7 @@ class IbkrWsClient(WsClient):
             self._handle_notification(data)
 
         elif topic == 'sts':
-            self._handle_status(message, data)
+            self._handle_authentication_status(message, data)
 
         elif topic == 'error':
             _LOGGER.error(f'{self}: Error message:  {message}')
