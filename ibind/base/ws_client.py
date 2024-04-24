@@ -55,6 +55,7 @@ class WsClient(SubscriptionController):
     ):
         """
         Parameters:
+            subscription_processor (SubscriptionProcessor): The processor to create subscription payloads.
             url (str): The WebSocket URL to connect to.
             timeout (float, optional): Timeout for waiting on operations like connection and shutdown. Defaults to _DEFAULT_TIMEOUT.
             restart_on_close (bool, optional): Flag to restart the connection if it closes unexpectedly. Defaults to True.
@@ -63,6 +64,8 @@ class WsClient(SubscriptionController):
             max_ping_interval (int, optional): Maximum interval in seconds to wait for a ping response. Defaults to _DEFAULT_MAX_PING_INTERVAL.
             max_connection_attempts (int, optional): Maximum number of attempts for connecting to the WebSocket. Defaults to 10.
             cacert (Union[str, bool], optional): Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
+            subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
+            subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
         if url is None:
             raise ValueError("url must not be None")

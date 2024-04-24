@@ -184,13 +184,13 @@ class MarketdataMixin():
             queries: StockQueries,
             period: str = "1min",
             bar: str = "1min",
-            outside_rth: bool = True
-            # todo: add start_time
+            outside_rth: bool = True,
+            start_time: datetime.datetime = None,
             # todo: add inline docs
     ) -> dict:
         conids = self.get_conids(queries).data
 
-        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth}
+        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
         requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}
 
         # /iserver/marketdata/history accepts 5 concurrent requests at a time

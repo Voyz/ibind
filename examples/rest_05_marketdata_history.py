@@ -19,8 +19,6 @@ diff_one_conid = time.time() - st
 print('#### One conid ####')
 print(f'{history}')
 
-# c.marketdata_history_by_conid()
-
 
 st = time.time()
 history = c.marketdata_history_by_symbol('AAPL', period='1min', bar='1min', outside_rth=True)
