@@ -17,6 +17,7 @@ class TestWsClient(TestCase):
         self.error_message = 'TEST_ERROR'
 
         self.ws_client = WsClient(
+            subscription_processor=None,
             url=self.url,
             cacert=False,
             timeout=0.01,

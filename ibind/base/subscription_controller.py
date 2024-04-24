@@ -1,8 +1,9 @@
 from abc import ABC
-from typing import Dict, TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING, Optional
 
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import wait_until, TimeoutLock, UNDEFINED, exception_to_string
+
 if TYPE_CHECKING:  # pragma: no cover
     from ibind.base.ws_client import WsClient
 
@@ -31,7 +32,7 @@ class SubscriptionProcessor(ABC):  # pragma: no cover
 
 class SubscriptionController():
     """
-    Manages subscriptions to different channels using the WsClient.
+    Mixin which manages subscriptions to different channels using the WsClient.
 
     This class handles the logic for subscribing and unsubscribing to various channels. It maintains a
     record of active subscriptions and provides methods to modify them. The class relies on a
@@ -39,7 +40,6 @@ class SubscriptionController():
 
     Constructor Parameters:
         subscription_processor (SubscriptionProcessor): The processor to create subscription payloads.
-        ws_client (WsClient): The WebSocket client used to send subscription requests.
         subscription_retries (int, optional): The number of retries for subscription requests. Defaults to 5.
         subscription_timeout (float, optional): The timeout in seconds for subscription requests. Defaults to 2.
     """
@@ -47,22 +47,20 @@ class SubscriptionController():
     def __init__(
             self,
             subscription_processor: SubscriptionProcessor,
-            ws_client: 'WsClient',
             subscription_retries: int = 5,
             subscription_timeout: float = 2,
     ):
 
         self._subscription_processor = subscription_processor
-        self._ws_client = ws_client
         self._subscription_retries = subscription_retries
         self._subscription_timeout = subscription_timeout
 
         self._subscriptions: Dict[str, dict] = {}
         self._operational_lock = TimeoutLock(60)
 
-    def _send_payload(self, payload) -> bool:
+    def _send_payload(self: 'WsClient', payload) -> bool:
         try:
-            success = self._ws_client.send(payload)
+            success = self.send(payload)
             if not success:
                 _LOGGER.info(f'{self}: Sending payload unsuccessful: {payload}')
             return success
@@ -80,11 +78,11 @@ class SubscriptionController():
         self._subscriptions[channel]['status'] = True
         return True
 
-    def _attempt_subscribing_repeated(self, channel: str, payload: str) -> bool:
+    def _attempt_subscribing_repeated(self: 'WsClient', channel: str, payload: str) -> bool:
         # attempt to subscribe several times
         for attempt in range(self._subscription_retries):
             # if the client got shut down in the meantime, we just stop trying
-            if not self._ws_client.running:
+            if not self.running:
                 return False
 
             if attempt > 0:
@@ -108,7 +106,7 @@ class SubscriptionController():
             data: dict = None,
             needs_confirmation: bool = True,
             subscription_processor: SubscriptionProcessor = None,
-            ) -> bool:
+    ) -> bool:
         if subscription_processor is None:
             subscription_processor = self._subscription_processor
 
@@ -128,7 +126,7 @@ class SubscriptionController():
             data: dict = None,
             needs_confirmation: bool = True,
             subscription_processor: SubscriptionProcessor = None,
-            ) -> bool:
+    ) -> bool:
         """
         Subscribes to a specified channel.
 
@@ -170,11 +168,11 @@ class SubscriptionController():
         _LOGGER.info(f'{self}: Unsubscribed: {payload} without confirmation.')
         return True
 
-    def _attempt_unsubscribing_repeated(self, channel: str, payload: str) -> bool:
+    def _attempt_unsubscribing_repeated(self: 'WsClient', channel: str, payload: str) -> bool:
         # attempt to unsubscribe several times
         for attempt in range(self._subscription_retries):
             # if the client got shut down in the meantime, we just stop trying
-            if not self._ws_client.running:
+            if not self.running:
                 return False
 
             if attempt > 0:
@@ -189,7 +187,7 @@ class SubscriptionController():
                 return True
 
         # if all failed, notify and return
-        _LOGGER.error(f'{self}: Unsubscribing after {self._subscription_retries} attempts: {payload}')
+        _LOGGER.error(f'{self}: Unsubscribing failed after {self._subscription_retries} attempts: {payload}')
         return False
 
     def _attempt_unsubscribing(
@@ -198,7 +196,7 @@ class SubscriptionController():
             data: dict = None,
             needs_confirmation: bool = True,
             subscription_processor: SubscriptionProcessor = None,
-            ) -> bool:
+    ) -> bool:
 
         if subscription_processor is None:
             subscription_processor = self._subscription_processor
@@ -217,9 +215,9 @@ class SubscriptionController():
             self,
             channel: str,
             data: dict = None,
-            needs_confirmation: bool = True,
+            needs_confirmation: bool = False,
             subscription_processor: SubscriptionProcessor = None,
-            ) -> bool:
+    ) -> bool:
         """
         Unsubscribes from a specified channel.
 
@@ -347,7 +345,7 @@ class SubscriptionController():
                 self._subscriptions[channel]['status'] = False
                 _LOGGER.info(f'{self}: Invalidated subscription: {channel}')
 
-    def is_subscription_active(self, channel: str) -> bool:  # pragma: no cover
+    def is_subscription_active(self, channel: str) -> Optional[bool]:  # pragma: no cover
         return self._subscriptions.get(channel, {}).get('status', None)
 
     def has_active_subscriptions(self) -> bool:  # pragma: no cover
@@ -359,6 +357,6 @@ class SubscriptionController():
     def has_subscription(self, channel: str) -> bool:  # pragma: no cover
         return channel in self._subscriptions
 
-    def __str__(self):  # pragma: no cover
-        # slightly hacky way, ensuring the logs are consistent for the WsClient
-        return str(self._ws_client)
+    # def __str__(self):  # pragma: no cover
+    #     # slightly hacky way, ensuring the logs are consistent for the WsClient
+    #     return str(self._ws_client)

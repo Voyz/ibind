@@ -220,7 +220,7 @@ class TestIbkrWsClient(TestCase):
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
-        with patch.object(self.ws_client._subscription_controller, 'has_subscription', return_value=True):
+        with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
@@ -237,7 +237,7 @@ class TestIbkrWsClient(TestCase):
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
-        with patch.object(self.ws_client._subscription_controller, 'has_subscription', return_value=True):
+        with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
@@ -254,7 +254,7 @@ class TestIbkrWsClient(TestCase):
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
-        with patch.object(self.ws_client._subscription_controller, 'has_subscription', return_value=True):
+        with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
@@ -270,7 +270,7 @@ class TestIbkrWsClient(TestCase):
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
-        with patch.object(self.ws_client._subscription_controller, 'has_subscription', return_value=True):
+        with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
@@ -287,7 +287,7 @@ class TestIbkrWsClient(TestCase):
             f'IbkrWsClient: Channel subscription timeout: s{full_channel} after {self.subscription_retries} attempts.'
         ]
 
-        with patch.object(self.ws_client._subscription_controller, 'has_subscription', return_value=True):
+        with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response, expected_errors=expected_errors)
             self.assertTrue(success)
 

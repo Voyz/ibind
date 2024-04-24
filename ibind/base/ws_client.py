@@ -7,6 +7,7 @@ from typing import Optional, Union, Dict, List
 
 from websocket import WebSocketApp
 
+from ibind.base.subscription_controller import SubscriptionController, SubscriptionProcessor
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string, wait_until, tname
 
@@ -17,7 +18,7 @@ _DEFAULT_PING_INTERVAL = 45
 _DEFAULT_MAX_PING_INTERVAL = 60
 
 
-class WsClient:
+class WsClient(SubscriptionController):
     """
     A client class for handling WebSocket connections.
 
@@ -40,6 +41,7 @@ class WsClient:
 
     def __init__(
             self,
+            subscription_processor: SubscriptionProcessor,
             url: str,
             timeout: float = _DEFAULT_TIMEOUT,
             restart_on_close: bool = True,
@@ -48,6 +50,8 @@ class WsClient:
             max_ping_interval: int = _DEFAULT_MAX_PING_INTERVAL,
             max_connection_attempts: int = 10,
             cacert: Union[str, bool] = False,
+            subscription_retries: int = 5,
+            subscription_timeout: float = 2,
     ):
         """
         Parameters:
@@ -70,6 +74,12 @@ class WsClient:
         self._max_ping_interval = max_ping_interval
         self._ping_interval = ping_interval
         self._max_connection_attempts = max_connection_attempts
+
+        super().__init__(
+            subscription_processor=subscription_processor,
+            subscription_retries=subscription_retries,
+            subscription_timeout=subscription_timeout
+        )
 
         self._connected = False
         self._running = False
