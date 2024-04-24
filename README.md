@@ -149,7 +149,7 @@ or destructive.
 
 ## Acknowledgement
 
-IBind has been enriched by incorporating work developed in collaboration with  [Kinetic](https://www.kinetic.xyz/), which now forms part of the initial open-source release. I appreciate their significant contribution to this community-driven initiative. Cheers Kinetic! 🍻
+IBind has been enriched by incorporating work developed in collaboration with  [Kinetic](https://www.kinetic.xyz/) and [Grant Stenger](https://github.com/GrantStenger), which now forms part of the initial open-source release. I appreciate their significant contribution to this community-driven initiative. Cheers Kinetic! 🍻
 
 ## Built by Voy
 
