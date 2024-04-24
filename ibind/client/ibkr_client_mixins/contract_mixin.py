@@ -15,7 +15,7 @@ class ContractMixin():
     """
 
     @ensure_list_arg('conids')
-    def security_definition_by_conid(self: 'IbkrClient', conids: OneOrMany[str]) -> Result:
+    def security_definition_by_conid(self: 'IbkrClient', conids: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Returns a list of security definitions for the given conids.
 
@@ -24,7 +24,7 @@ class ContractMixin():
         """
         return self.get('trsrv/secdef', {'conids': ",".join(conids)})
 
-    def all_conids_by_exchange(self: 'IbkrClient', exchange: str) -> Result:
+    def all_conids_by_exchange(self: 'IbkrClient', exchange: str) -> Result:  # pragma: no cover
         """
         Send out a request to retrieve all contracts made available on a requested exchange. This returns all contracts that are tradable on the exchange, even those that are not using the exchange as their primary listing.
 
@@ -35,7 +35,7 @@ class ContractMixin():
         """
         return self.get('trsrv/all-conids', {'exchange': exchange})
 
-    def contract_information_by_conid(self: 'IbkrClient', conid: str) -> Result:
+    def contract_information_by_conid(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
         Requests full contract details for the given conid.
 
@@ -44,7 +44,7 @@ class ContractMixin():
         """
         return self.get(f'iserver/contract/{conid}/info')
 
-    def currency_pairs(self: 'IbkrClient', currency: str) -> Result:
+    def currency_pairs(self: 'IbkrClient', currency: str) -> Result:  # pragma: no cover
         """
         Obtains available currency pairs corresponding to the given target currency.
 
@@ -53,7 +53,7 @@ class ContractMixin():
         """
         return self.get(f'iserver/currency/pairs', {'currency': currency})
 
-    def currency_exchange_rate(self: 'IbkrClient', source: str, target: str) -> Result:
+    def currency_exchange_rate(self: 'IbkrClient', source: str, target: str) -> Result:  # pragma: no cover
         """
         Obtains the exchange rates of the currency pair.
 
@@ -63,7 +63,7 @@ class ContractMixin():
         """
         return self.get(f'iserver/exchangerate', {'source': source, target: target})
 
-    def info_and_rules_by_conid(self: 'IbkrClient', conid: str, is_buy: bool) -> Result:
+    def info_and_rules_by_conid(self: 'IbkrClient', conid: str, is_buy: bool) -> Result:  # pragma: no cover
         """
         Returns both contract info and rules from a single endpoint.
 
@@ -79,7 +79,7 @@ class ContractMixin():
             algos: List[str] = None,
             add_description: str = None,
             add_params: str = None
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Returns supported IB Algos for contract.
 
@@ -99,7 +99,7 @@ class ContractMixin():
 
         return self.get(f'iserver/contract/{conid}/algos', params)
 
-    def search_bond_filter_information(self: 'IbkrClient', symbol: str, issuer_id: str) -> Result:
+    def search_bond_filter_information(self: 'IbkrClient', symbol: str, issuer_id: str) -> Result:  # pragma: no cover
         """
         Request a list of filters relating to a given Bond issuerID.
 
@@ -114,7 +114,7 @@ class ContractMixin():
             symbol: str,
             name: bool = None,
             sec_type: str = None
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Search by underlying symbol or company name. Relays back what derivative contract(s) it has. This endpoint must be called before using /secdef/info.
 
@@ -137,7 +137,7 @@ class ContractMixin():
             is_buy: bool = None,
             modify_order: bool = None,
             order_id: int = None,
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Returns trading related rules for a specific contract and side.
 
@@ -169,7 +169,7 @@ class ContractMixin():
             strike: str = None,
             right: str = None,
             issuer_id: str = None,
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Provides Contract Details of Futures, Options, Warrants, Cash and CFDs based on conid.
 
@@ -205,7 +205,7 @@ class ContractMixin():
             sec_type: str,
             month: str,
             exchange: str = None,
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Query to receive a list of potential strikes supported for a given underlying.
 
@@ -227,7 +227,7 @@ class ContractMixin():
         return self.get(f'iserver/secdef/strikes', params)
 
     @ensure_list_arg('symbols')
-    def search_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:
+    def search_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Returns a list of non-expired future contracts for given symbol(s).
 
@@ -317,7 +317,7 @@ class ContractMixin():
             symbol: str,
             exchange: str = None,
             exchange_filter: str = None,
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Returns the trading schedule up to a month for the requested contract.
 

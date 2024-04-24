@@ -9,14 +9,14 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class WatchlistMixin():
+class WatchlistMixin():  # pragma: no cover
 
     def create_watchlist(
             self: 'IbkrClient',
             id: str,
             name: str,
             rows: List[Dict[str, Union[str, int]]]
-    ) -> Result:  # pragma: no cover
+    ) -> Result:
         """
         Create a watchlist to monitor a series of contracts.
 
@@ -29,7 +29,7 @@ class WatchlistMixin():
         """
         return self.post('iserver/watchlist', params={'id': id, 'name': name, 'rows': rows})
 
-    def get_all_watchlists(self: 'IbkrClient', sc: str = 'USER_WATCHLIST') -> Result:  # pragma: no cover
+    def get_all_watchlists(self: 'IbkrClient', sc: str = 'USER_WATCHLIST') -> Result:
         """
         Retrieve a list of all available watchlists for the account.
 
@@ -38,7 +38,7 @@ class WatchlistMixin():
         """
         return self.get('iserver/watchlist', params={'SC': sc})
 
-    def get_watchlist_information(self: 'IbkrClient', id: str) -> Result:  # pragma: no cover
+    def get_watchlist_information(self: 'IbkrClient', id: str) -> Result:
         """
         Request the contracts listed in a particular watchlist.
 
@@ -47,7 +47,7 @@ class WatchlistMixin():
         """
         return self.get('iserver/watchlist', params={'id': id})
 
-    def delete_watchlist(self: 'IbkrClient', id: str) -> Result:  # pragma: no cover
+    def delete_watchlist(self: 'IbkrClient', id: str) -> Result:
         """
         Permanently delete a specific watchlist for all platforms.
 

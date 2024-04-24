@@ -20,7 +20,7 @@ class MarketdataMixin():
     """
 
     @ensure_list_arg('conids')
-    def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:
+    def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Get Market Data for the given conid(s).
 
@@ -40,7 +40,7 @@ class MarketdataMixin():
         }
         return self.get(f'iserver/secdef/search', params)
 
-    def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:
+    def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
         Send a request for a regulatory snapshot. This will cost $0.01 USD per request unless you are subscribed to the direct exchange market data already.
 

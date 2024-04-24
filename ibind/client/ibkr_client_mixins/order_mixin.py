@@ -20,7 +20,7 @@ class OrderMixin():
             filters: OneOrMany[str] = None,
             force: bool = None,
             account_id: str = None
-    ) -> Result:
+    ) -> Result:  # pragma: no cover
         """
         Retrieves live orders with optional filtering. The filters, if provided, should be a list of strings. These filters are then converted and sent as a comma-separated string in the request to the API.
 

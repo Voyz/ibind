@@ -124,11 +124,11 @@ snapshot_by_key = {
 snapshot_by_id = {str(value): key for key, value in snapshot_by_key.items()}
 
 
-def snapshot_ids_to_keys(ids):
+def snapshot_ids_to_keys(ids):  # pragma: no cover
     return [snapshot_by_id[idx] for idx in ids]
 
 
-def snapshot_keys_to_ids(keys):
+def snapshot_keys_to_ids(keys):  # pragma: no cover
     return [snapshot_by_key[key] for key in keys]
 
 

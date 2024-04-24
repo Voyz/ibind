@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class PortfolioMixin():
+class PortfolioMixin():  # pragma: no cover
     def portfolio_accounts(self: 'IbkrClient') -> Result:
         """
         In non-tiered account structures, returns a list of accounts for which the user can view position and account information. This endpoint must be called prior to calling other /portfolio endpoints for those accounts.

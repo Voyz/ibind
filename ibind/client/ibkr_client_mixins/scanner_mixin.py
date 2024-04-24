@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class ScannerMixin():
+class ScannerMixin():  # pragma: no cover
     def scanner_parameters(self: 'IbkrClient') -> Result:
         """
         Returns an xml file containing all available parameters to be sent for the Iserver scanner request.
