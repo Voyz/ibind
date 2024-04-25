@@ -31,11 +31,11 @@ class TestIbkrClientE(TestCase):
 
 
     def test_get_conids(self):
-        result = self.client.get_conids(self.query)
+        result = self.client.stock_conid_by_symbol(self.query)
         self.assertEqual(result.data, ibkr_responses.responses['conids'])
 
     def test_get_stocks(self):
-        result = self.client.get_stocks(self.query, default_filtering=False)
+        result = self.client.security_stocks_by_symbol(self.query, default_filtering=False)
         self.assertEqual(result.data, ibkr_responses.responses['stocks'])
 
 

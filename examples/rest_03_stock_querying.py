@@ -13,17 +13,17 @@ c = IbkrClient(
 
 
 print('#### get_stocks ####')
-stocks = c.get_stocks('AAPL').data
+stocks = c.security_stocks_by_symbol('AAPL').data
 print(stocks)
 
 
 print('\n#### get_conids ####')
-conids = c.get_conids('AAPL').data
+conids = c.stock_conid_by_symbol('AAPL').data
 print(conids)
 
 
 print('\n#### using StockQuery ####')
-conids = c.get_conids(StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}), default_filtering=False).data
+conids = c.stock_conid_by_symbol(StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}), default_filtering=False).data
 pprint(conids)
 
 
@@ -33,7 +33,7 @@ stock_queries = [
     'HUBS',
     StockQuery('GOOG', name_match='ALPHABET INC - CDR')
 ]
-conids = c.get_conids(stock_queries, default_filtering=False).data
+conids = c.stock_conid_by_symbol(stock_queries, default_filtering=False).data
 pprint(conids)
 
 

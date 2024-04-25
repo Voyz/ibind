@@ -148,7 +148,7 @@ class MarketdataMixin():
             bar: str = None,
             outside_rth: bool = None
     ) -> Result:  # pragma: no cover
-        conid = self.get_conids(symbol).data[symbol]
+        conid = self.stock_conid_by_symbol(symbol).data[symbol]
         return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth)
 
     @ensure_list_arg('conids')
@@ -188,7 +188,7 @@ class MarketdataMixin():
             start_time: datetime.datetime = None,
             # todo: add inline docs
     ) -> dict:
-        conids = self.get_conids(queries).data
+        conids = self.stock_conid_by_symbol(queries).data
 
         static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
         requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}

@@ -58,7 +58,7 @@ class TestIbkrClientI(TestCase):
         ]
 
         with self.assertLogs(project_logger(), level='INFO') as cm:
-            rv = self.client.get_conids(queries, default_filtering=False)
+            rv = self.client.stock_conid_by_symbol(queries, default_filtering=False)
 
         for symbol, conid in rv.data.items():
             self.assertIn(symbol, ibkr_responses.responses['filtered_conids'])
@@ -74,7 +74,7 @@ class TestIbkrClientI(TestCase):
         instruments = filter_stocks(query, Result(data={symbol: ibkr_responses.responses["stocks"][symbol]}), default_filtering=False).data[symbol]
 
         with self.assertRaises(RuntimeError) as cm_err:
-            rv = self.client.get_conids(query, default_filtering=False)
+            rv = self.client.stock_conid_by_symbol(query, default_filtering=False)
 
         self.maxDiff = None
         self.assertEqual(

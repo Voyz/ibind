@@ -227,7 +227,7 @@ class ContractMixin():
         return self.get(f'iserver/secdef/strikes', params)
 
     @ensure_list_arg('symbols')
-    def search_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:  # pragma: no cover
+    def security_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Returns a list of non-expired future contracts for given symbol(s).
 
@@ -237,7 +237,7 @@ class ContractMixin():
         return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
 
     @ensure_list_arg('queries')
-    def get_stocks(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True) -> Result:
+    def security_stocks_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True) -> Result:
         """
         Retrieves and filters stock information based on specified queries.
 
@@ -268,7 +268,7 @@ class ContractMixin():
         return filtered_stocks_result
 
     @ensure_list_arg('queries')
-    def get_conids(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True, return_type: str = 'dict') -> Result:
+    def stock_conid_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True, return_type: str = 'dict') -> Result:
         """
         Retrieves contract IDs (conids) for given stock queries, ensuring only one conid per query.
 
@@ -294,7 +294,7 @@ class ContractMixin():
             StockQuery: for details on how to construct queries for filtering stocks.
         """
 
-        stocks_result = self.get_stocks(queries, default_filtering)
+        stocks_result = self.security_stocks_by_symbol(queries, default_filtering)
 
         conids = {}
         for i, (symbol, instruments), in enumerate(stocks_result.data.items()):
