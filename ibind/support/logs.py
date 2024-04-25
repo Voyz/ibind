@@ -30,9 +30,9 @@ _LOGGER = project_logger()
 
 def initialize(
         log_to_console: bool = var.LOG_TO_CONSOLE,
-        log_format: str = var.LOG_FORMAT,
-        log_level: str = var.LOG_LEVEL,
         log_to_file: bool = var.LOG_TO_FILE,
+        log_level: str = var.LOG_LEVEL,
+        log_format: str = var.LOG_FORMAT,
 ):
     global _initialized
     if _initialized: return
@@ -54,11 +54,11 @@ def initialize(
         h1.setFormatter(formatter)
         logger.addHandler(h1)
 
-    # stderr handler, for WARNING and above:
-    h2 = logging.StreamHandler(stream=sys.stderr)
-    h2.setLevel(logging.WARNING)
-    h2.setFormatter(formatter)
-    logger.addHandler(h2)
+        # stderr handler, for WARNING and above:
+        h2 = logging.StreamHandler(stream=sys.stderr)
+        h2.setLevel(logging.WARNING)
+        h2.setFormatter(formatter)
+        logger.addHandler(h2)
 
     if not _log_to_file:
         logging.getLogger('ibind_fh').addFilter(lambda record: False)
