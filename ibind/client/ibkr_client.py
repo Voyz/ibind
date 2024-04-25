@@ -34,12 +34,12 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
     def __init__(
             self,
-            account_id: Optional[str] = var.IBKR_ACCOUNT_ID,
-            url: str = var.IBKR_URL,
+            account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
+            url: str = var.IBIND_REST_URL,
             host: str = 'localhost',
             port: str = '5000',
             base_route: str = '/v1/api/',
-            cacert: Union[str, os.PathLike, bool] = var.IBKR_CACERT,
+            cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
             timeout: float = 10,
             max_retries: int = 3,
     ) -> None:

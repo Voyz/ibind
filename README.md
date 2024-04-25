@@ -54,7 +54,7 @@ ibind_logs_initialize()
 
 c = IbkrClient(
     url='https://localhost:5000/v1/api/',
-    cacert=var.IBKR_CACERT,
+    cacert=var.IBIND_CACERT,
 )
 
 print('\n#### get_accounts ####')

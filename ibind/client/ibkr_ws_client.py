@@ -175,26 +175,26 @@ class IbkrWsClient(WsClient):
     def __init__(
             self,
             ibkr_client: IbkrClient,
-            account_id: str = var.IBKR_ACCOUNT_ID,
-            url: str = var.IBKR_WS_URL,
+            account_id: str = var.IBIND_ACCOUNT_ID,
+            url: str = var.IBIND_WS_URL,
             host: str = 'localhost',
             port: str = '5000',
             base_route: str = '/v1/api/ws',
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
-            log_raw_messages: bool = var.IBKR_WS_LOG_RAW_MESSAGES,
+            log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             # inherited
-            ping_interval: int = var.IBKR_WS_PING_INTERVAL,
-            max_ping_interval: int = var.IBKR_WS_MAX_PING_INTERVAL,
-            timeout: float = var.IBKR_WS_TIMEOUT,
+            ping_interval: int = var.IBIND_WS_PING_INTERVAL,
+            max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
+            timeout: float = var.IBIND_WS_TIMEOUT,
             restart_on_close: bool = True,
             restart_on_critical: bool = True,
             max_connection_attempts: int = 10,
-            cacert: Union[str, bool] = var.IBKR_CACERT,
+            cacert: Union[str, bool] = var.IBIND_CACERT,
             # subscription controller
-            subscription_retries: int = var.IBKR_WS_SUBSCRIPTION_RETRIES,
-            subscription_timeout: float = var.IBKR_WS_SUBSCRIPTION_TIMEOUT,
+            subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
+            subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
     ) -> None:
         """
         Initializes the IbkrWsClient, an Interactive Brokers WebSocket client.
