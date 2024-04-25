@@ -36,6 +36,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self,
             account_id: Optional[str] = var.IBKR_ACCOUNT_ID,
             url: str = var.IBKR_URL,
+            host: str = 'localhost',
+            port: str = '5000',
+            base_route: str = '/v1/api/',
             cacert: Union[str, os.PathLike, bool] = var.IBKR_CACERT,
             timeout: float = 10,
             max_retries: int = 3,
@@ -49,6 +52,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
+
+        if url is None:
+            url = f'https://{host}:{port}{base_route}'
 
         self.account_id = account_id
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)

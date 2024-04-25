@@ -177,6 +177,9 @@ class IbkrWsClient(WsClient):
             ibkr_client: IbkrClient,
             account_id: str = var.IBKR_ACCOUNT_ID,
             url: str = var.IBKR_WS_URL,
+            host: str = 'localhost',
+            port: str = '5000',
+            base_route: str = '/v1/api/ws',
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBKR_WS_LOG_RAW_MESSAGES,
@@ -213,6 +216,8 @@ class IbkrWsClient(WsClient):
         """
         self._ibkr_client = ibkr_client
         self._account_id = account_id
+        if url is None:
+            url = f'wss://{host}:{port}{base_route}'
 
         self._queue_controller = QueueControllerClass()
         self._subscription_processor = SubscriptionProcessorClass()

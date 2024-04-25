@@ -1,6 +1,6 @@
 """
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
-See: https://interactivebrokers.github.io/cpwebapi/endpoints
+See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
 """
 
 snapshot_by_key = {
