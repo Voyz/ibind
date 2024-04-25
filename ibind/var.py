@@ -1,5 +1,6 @@
 import os
 import tempfile
+
 from distutils.util import strtobool
 
 
@@ -10,9 +11,12 @@ def to_bool(value):
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))
-"""Whether logs should be streamed to the standard output."""
+""" Whether logs should be streamed to the standard output. """
 
-LOG_LEVEL = os.getenv('IBIND_LOG_LEVEL', 'DEBUG')
+LOG_TO_FILE = to_bool(os.environ.get('IBIND_LOG_TO_FILE', True))
+""" Whether logs should be saved to a file. """
+
+LOG_LEVEL = os.getenv('IBIND_LOG_LEVEL', 'INFO')
 """ The global log level for the StreamHandler. """
 
 LOG_FORMAT = os.getenv('IBIND_LOG_FORMAT', '%(asctime)s|%(levelname)-.1s| %(message)s')
@@ -20,9 +24,6 @@ LOG_FORMAT = os.getenv('IBIND_LOG_FORMAT', '%(asctime)s|%(levelname)-.1s| %(mess
 
 LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 """ Directory of file logs produced. """
-
-LOG_TO_FILE = to_bool(os.environ.get('IBIND_LOG_TO_FILE', True))
-"""Whether logs should be saved to a file."""
 
 ##### IBKR #####
 
@@ -54,4 +55,4 @@ IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2
 """ Timeout for WebSocket subscription verifications. """
 
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
-"""Whether raw WebSocket messages should be logged."""
+""" Whether raw WebSocket messages should be logged. """
