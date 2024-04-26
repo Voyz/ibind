@@ -89,7 +89,7 @@ from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBKR_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
+account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 
 client = IbkrClient(
     account_id=account_id,

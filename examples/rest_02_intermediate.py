@@ -4,11 +4,8 @@ from ibind import IbkrClient, ibind_logs_initialize
 
 ibind_logs_initialize()
 
-cacert = os.getenv('IBKR_CACERT', False) # insert your cacert path here
-c = IbkrClient(
-    url='https://localhost:5000/v1/api/',
-    cacert=cacert,
-)
+cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
+c = IbkrClient(cacert=cacert)
 
 print('\n#### get_accounts ####')
 accounts = c.portfolio_accounts().data
