@@ -151,33 +151,6 @@ class MarketdataMixin():
         conid = self.stock_conid_by_symbol(symbol).data[symbol]
         return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth)
 
-    @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]):
-        """
-        Cancel market data for given conid(s).
-
-        Parameters:
-            conids (OneOrMany[int]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
-        """
-        # we unsubscribe from all conids simultaneously
-        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
-        results = execute_in_parallel(self.post, unsubscribe_requests)
-
-        for conid, result in results.items():
-            if isinstance(result, Exception):
-                # 404 means that no such subscription was found in first place, which we ignore
-                if isinstance(result, ExternalBrokerError) and result.status_code == 404:
-                    continue
-                raise result
-
-        return results
-
-    def marketdata_unsubscribe_all(self: 'IbkrClient') -> Result:  # pragma: no cover
-        """
-        Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
-        """
-        return self.get(f'iserver/marketdata/unsubscribeall')
-
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
             self: 'IbkrClient',
@@ -220,3 +193,30 @@ class MarketdataMixin():
             results[symbol] = records
 
         return results
+
+    @ensure_list_arg('conids')
+    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]):
+        """
+        Cancel market data for given conid(s).
+
+        Parameters:
+            conids (OneOrMany[int]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
+        """
+        # we unsubscribe from all conids simultaneously
+        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
+        results = execute_in_parallel(self.post, unsubscribe_requests)
+
+        for conid, result in results.items():
+            if isinstance(result, Exception):
+                # 404 means that no such subscription was found in first place, which we ignore
+                if isinstance(result, ExternalBrokerError) and result.status_code == 404:
+                    continue
+                raise result
+
+        return results
+
+    def marketdata_unsubscribe_all(self: 'IbkrClient') -> Result:  # pragma: no cover
+        """
+        Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
+        """
+        return self.get(f'iserver/marketdata/unsubscribeall')

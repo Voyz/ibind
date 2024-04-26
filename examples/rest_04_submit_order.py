@@ -23,10 +23,10 @@ order_tag = f'my_order-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}'
 
 order_request = make_order_request(
     conid=conid,
-    side=str(side),
-    quantity=float(size),
+    side=side,
+    quantity=size,
     order_type=order_type,
-    price=float(price),
+    price=price,
     acct_id=account_id,
     coid=order_tag
 )

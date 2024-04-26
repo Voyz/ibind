@@ -170,6 +170,7 @@ class OrderMixin():
         """
         if account_id is None:
             account_id = self.account_id
+
         return self.delete(f'iserver/account/{account_id}/order/{order_id}')
 
     def modify_order(self: 'IbkrClient', order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
