@@ -7,16 +7,8 @@ ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 
-client = IbkrClient(
-    account_id=account_id,
-    url='https://localhost:5000/v1/api/',
-)
-
-ws_client = IbkrWsClient(
-    ibkr_client=client,
-    account_id=account_id,
-    url='wss://localhost:5000/v1/api/ws'
-)
+client = IbkrClient(account_id=account_id)
+ws_client = IbkrWsClient(ibkr_client=client, account_id=account_id)
 
 ws_client.start()
 channel = 'md+265598'

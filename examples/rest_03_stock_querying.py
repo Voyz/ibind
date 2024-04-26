@@ -6,10 +6,7 @@ from ibind import IbkrClient, StockQuery, ibind_logs_initialize
 ibind_logs_initialize(log_to_file=False)
 
 cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
-c = IbkrClient(
-    url='https://localhost:5000/v1/api/',
-    cacert=cacert,
-)
+c = IbkrClient(cacert=cacert)
 
 
 print('#### get_stocks ####')
