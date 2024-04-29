@@ -1,7 +1,6 @@
 import os
-import time
 
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, snapshot_keys_to_ids, ibind_logs_initialize
+from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -11,23 +10,20 @@ client = IbkrClient(account_id=account_id)
 ws_client = IbkrWsClient(ibkr_client=client, account_id=account_id)
 
 ws_client.start()
-channel = 'md+265598'
-fields = [str(x) for x in snapshot_keys_to_ids(['symbol', 'open', 'high', 'low', 'close', 'volume',])]
 
-qa = ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
+qa = ws_client.new_queue_accessor(IbkrWsKey.ORDERS)
 
-ws_client.subscribe(channel, {'fields': fields}, needs_confirmation=False)
+ws_client.subscribe(channel='or', data=None, needs_confirmation=False)
 
-while ws_client.running:
+while True:
     try:
         while not qa.empty():
             print(str(qa), qa.get())
 
-        time.sleep(1)
     except KeyboardInterrupt:
         print('KeyboardInterrupt')
         break
 
-ws_client.unsubscribe(channel, {'fields': fields}, needs_confirmation=False)
+ws_client.unsubscribe(channel='or', data=None, needs_confirmation=False)
 
 ws_client.shutdown()

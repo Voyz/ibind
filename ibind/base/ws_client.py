@@ -248,13 +248,13 @@ class WsClient(SubscriptionController):
         pass
 
     def on_reconnect(self):  # pragma: no cover
-        pass
+        self.recreate_subscriptions()
 
     def on_open(self, was: WebSocketApp):  # pragma: no cover
         pass
 
     def on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
-        pass
+        self.invalidate_subscriptions()
 
     def on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
         pass

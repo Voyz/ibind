@@ -2,7 +2,7 @@ from enum import Enum
 from queue import Queue, Empty
 from typing import TypeVar, Generic, Any
 
-from ibind.support.py_utils import ensure_list_arg
+from ibind.support.py_utils import ensure_list_arg, OneOrMany
 
 T = TypeVar("T", str, Enum)
 
@@ -86,7 +86,7 @@ class QueueController(Generic[T]):
         self._queues = {}
 
     @ensure_list_arg('keys')
-    def register_queues(self, keys: [T]):
+    def register_queues(self, keys: OneOrMany[T]):
         """
         Registers new queues associated with the given keys.
 

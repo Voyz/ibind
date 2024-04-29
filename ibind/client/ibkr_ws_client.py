@@ -255,7 +255,7 @@ class IbkrWsClient(WsClient):
 
     def on_reconnect(self):
         self._logged_in = False
-        self.recreate_subscriptions()
+        super().on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
         """
@@ -416,9 +416,6 @@ class IbkrWsClient(WsClient):
                 _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
             else:
                 _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
-
-    def on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
-        self.invalidate_subscriptions()
 
     def check_health(self) -> bool:
         """
