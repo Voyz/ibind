@@ -34,24 +34,20 @@ Use [IBeam][ibeam] along with this library for easier authentication with IBKR.
 
 See full [IBind documentation][wiki].
 
-Or more specifically:
 * [Installation][wiki-installation]
 * [Basic Concepts][wiki-basic-concepts]
 * [IBind Configuration][wiki-ibind-configuration]
-* [IbkrClient][wiki-ibkr-client]
-* [IbkrWsClient][wiki-ibkr-ws-client]
+* [IbkrClient][wiki-ibkr-client] - REST Python client for [IBKR REST API][ibkr-endpoints].
+* [IbkrWsClient][wiki-ibkr-ws-client] - WebSocket Python client for [IBKR WebSocket API][ibkr-websocket].
 
-## Features:
-
-* **REST Python client** - for [IBKR REST API][ibkr-endpoints].
-* **WebSocket Python client** - for [IBKR WebSocket API][ibkr-websocket].
-* **Feature rich REST**:
+Features:
+* REST:
   * [Automated question/answer handling][wiki-question-answer]
   * [Parallel requests][wiki-parallel-requests]
   * [Rate limiting][wiki-rate-limiting]
   * [Conid unpacking][wiki-conid-unpacking]
   * [and more][wiki-advanced-api]
-* **Feature rich WebSocket**:
+* WebSocket:
   * [WebSocket thread lifecycle handling][wiki-ws-lifecycle]
   * [Thread-safe Queue data stream][wiki-ws-queues]
   * [Internal subscription tracking][wiki-ws-subscriptions]
