@@ -17,7 +17,7 @@ wrong? [Create an issue and let us know!][issues]*
     </a>
 </p>
 
-IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
+IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][ibkr-docs]
 
 ## Installation
 
@@ -38,15 +38,25 @@ Or more specifically:
 * [Installation][wiki-installation]
 * [Basic Concepts][wiki-basic-concepts]
 * [IBind Configuration][wiki-ibind-configuration]
-* [IbkrClient][wiki-ibkr-client] - for REST API
-* [IbkrWsClient][wiki-ibkr-ws-client] - for WebSocket API
+* [IbkrClient][wiki-ibkr-client]
+* [IbkrWsClient][wiki-ibkr-ws-client]
 
 ## Features:
 
-* **REST Python client** - for IBKR REST API.
-* **WebSocket Python client** - for IBKR WebSocket API.
-* **Feature rich REST** - automated question/answer handling, parallel requests, rate limiting, conid unpacking, and more.
-* **Feature rich WebSocket** - WebSocket thread lifecycle handling, thread-safe Queue data stream, internal subscription tracking, heartbeat monitoring, and more.
+* **REST Python client** - for [IBKR REST API][ibkr-endpoints].
+* **WebSocket Python client** - for [IBKR WebSocket API][ibkr-websocket].
+* **Feature rich REST**:
+  * [Automated question/answer handling][wiki-question-answer]
+  * [Parallel requests][wiki-parallel-requests]
+  * [Rate limiting][wiki-rate-limiting]
+  * [Conid unpacking][wiki-conid-unpacking]
+  * [and more][wiki-advanced-api]
+* **Feature rich WebSocket**:
+  * [WebSocket thread lifecycle handling][wiki-ws-lifecycle]
+  * [Thread-safe Queue data stream][wiki-ws-queues]
+  * [Internal subscription tracking][wiki-ws-subscriptions]
+  * [Health monitoring][wiki-ws-health-monitoring]
+  * [and more][wiki-advanced-websocket]
 
 
 ## Examples
@@ -202,10 +212,25 @@ Thanks and have an awesome day 👋
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
 
-[gateway]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
+[ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
+[ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
+[ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+
 [wiki]: https://github.com/Voyz/ibind/wiki
 [wiki-installation]: https://github.com/Voyz/ibind/wiki/Installation
 [wiki-basic-concepts]: https://github.com/Voyz/ibind/wiki/Basic-Concepts
 [wiki-ibind-configuration]: https://github.com/Voyz/ibind/wiki/IBind-Configuration
 [wiki-ibkr-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
 [wiki-ibkr-ws-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
+
+[wiki-question-answer]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-place_order
+[wiki-parallel-requests]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-marketdata_history_by_symbols
+[wiki-rate-limiting]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-marketdata_history_by_symbols
+[wiki-conid-unpacking]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-security_stocks_by_symbol
+[wiki-advanced-api]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#advanced-api
+
+[wiki-ws-lifecycle]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-managing-the-lifecycle
+[wiki-ws-queues]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-consuming-data
+[wiki-ws-subscriptions]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-subscribing-and-unsubscribing
+[wiki-ws-health-monitoring]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#health-monitoring
+[wiki-advanced-websocket]: https://github.com/Voyz/ibind/wiki/Advanced-WebSocket
