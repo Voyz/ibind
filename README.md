@@ -3,6 +3,12 @@ wrong? [Create an issue and let us know!][issues]*
 
 # IBind
 
+<p align="center">
+    <a id="ibind" href="#ibind">
+        <img src="https://github.com/Voyz/ibind/blob/master/media/ibind_logo.png" alt="IBind logo" title="IBind logo" width="600"/>
+    </a>
+</p>
+
 IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
 
 I recommend using this library along with [IBeam][ibeam] for easier authentication with IBKR.
