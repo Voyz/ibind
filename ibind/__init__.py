@@ -1,5 +1,6 @@
 from ibind.base.queue_controller import QueueAccessor
 from ibind.base.rest_client import Result
+from ibind.base.subscription_controller import SubscriptionProcessor
 from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_ws_client import IbkrWsClient
 from ibind.client.ibkr_ws_client import IbkrWsKey
@@ -16,6 +17,7 @@ __all__ = [
     'IbkrWsClient',
     'IbkrWsKey',
     'IbkrSubscriptionProcessor',
+    'SubscriptionProcessor',
     'StockQuery',
     'make_order_request',
     'QuestionType',

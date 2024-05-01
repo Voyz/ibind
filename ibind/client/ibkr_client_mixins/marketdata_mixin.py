@@ -161,6 +161,11 @@ class MarketdataMixin():
             start_time: datetime.datetime = None,
             # todo: add inline docs
     ) -> dict:
+        """
+
+        Note:
+            - This method returns data directly without the `Result` dataclass.
+        """
         conids = self.stock_conid_by_symbol(queries).data
 
         static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
