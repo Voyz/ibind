@@ -10,7 +10,7 @@ wrong? [Create an issue and let us know!][issues]*
 </p>
 <p align="center">
     <a href="https://opensource.org/licenses/Apache-2.0">
-        <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/> 
+        <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/>
     </a>
     <a href="https://github.com/Voyz/ibind/releases">
         <img src="https://img.shields.io/pypi/v/ibind?label=version"/> 
@@ -19,12 +19,29 @@ wrong? [Create an issue and let us know!][issues]*
 
 IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][gateway]
 
-I recommend using this library along with [IBeam][ibeam] for easier authentication with IBKR.
+## Installation
+
+```rich
+pip install ibind
+```
+
+Use [IBeam][ibeam] along with this library for easier authentication with IBKR.
 
 ## NOTICE
 ### This library is a work in progres. I haven't published it yet. Many things are due to change without any notice. 
 
-Features:
+## Documentation
+
+See full [IBind documentation][wiki].
+
+Or more specifically:
+* [Installation][wiki-installation]
+* [Basic Concepts][wiki-basic-concepts]
+* [IBind Configuration][wiki-ibind-configuration]
+* [IbkrClient][wiki-ibkr-client] - for REST API
+* [IbkrWsClient][wiki-ibkr-ws-client] - for WebSocket API
+
+## Features:
 
 * **REST Python client** - for IBKR REST API.
 * **WebSocket Python client** - for IBKR WebSocket API.
@@ -186,3 +203,9 @@ Thanks and have an awesome day 👋
 [issues]: https://github.com/Voyz/ibind/issues
 
 [gateway]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
+[wiki]: https://github.com/Voyz/ibind/wiki
+[wiki-installation]: https://github.com/Voyz/ibind/wiki/Installation
+[wiki-basic-concepts]: https://github.com/Voyz/ibind/wiki/Basic-Concepts
+[wiki-ibind-configuration]: https://github.com/Voyz/ibind/wiki/IBind-Configuration
+[wiki-ibkr-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
+[wiki-ibkr-ws-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
