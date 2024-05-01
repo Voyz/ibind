@@ -1,11 +1,19 @@
 *This library is currently being developed. See something that's broken? Did we get something
 wrong? [Create an issue and let us know!][issues]*
 
-# IBind
+
 
 <p align="center">
     <a id="ibind" href="#ibind">
         <img src="https://github.com/Voyz/ibind/blob/master/media/ibind_logo.png" alt="IBind logo" title="IBind logo" width="600"/>
+    </a>
+</p>
+<p align="center">
+    <a href="https://opensource.org/licenses/Apache-2.0">
+        <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/> 
+    </a>
+    <a href="https://github.com/Voyz/ibind/releases">
+        <img src="https://img.shields.io/pypi/v/ibind?label=version"/> 
     </a>
 </p>
 
