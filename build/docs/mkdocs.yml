@@ -1,7 +1,0 @@
-docs_dir: content
-nav:
-- API IbkrClient: ibkr_client.md
-- API IbkWsClient: ibkr_ws_client.md
-- API Utils: utils.md
-output_directory: ./docs
-site_name: My Project
