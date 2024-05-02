@@ -1,4 +1,4 @@
-*This library is currently being developed. See something that's broken? Did we get something
+*This library is currently being beta-tested. See something that's broken? Did we get something
 wrong? [Create an issue and let us know!][issues]*
 
 
@@ -27,9 +27,6 @@ pip install ibind
 
 Use [IBeam][ibeam] along with this library for easier authentication with IBKR.
 
-## NOTICE
-### This library is a work in progres. I haven't published it yet. Many things are due to change without any notice. 
-
 ## Documentation
 
 See full [IBind documentation][wiki].
@@ -39,6 +36,7 @@ See full [IBind documentation][wiki].
 * [IBind Configuration][wiki-ibind-configuration]
 * [IbkrClient][wiki-ibkr-client] - REST Python client for [IBKR REST API][ibkr-endpoints].
 * [IbkrWsClient][wiki-ibkr-ws-client] - WebSocket Python client for [IBKR WebSocket API][ibkr-websocket].
+* [API Reference][api-ibkr-client]
 
 Features:
 * REST:
@@ -54,110 +52,76 @@ Features:
   * [Health monitoring][wiki-ws-health-monitoring]
   * [and more][wiki-advanced-websocket]
 
+## Overview
+
+IBind's core functionality consists of two client classes:
+
+* [`IbkrClient`][ibkr-client-docs] - for [IBKR REST API][ibkr-endpoints]
+
+  Using the `IbkrClient` requires constructing it with appropriate arguments, then calling the API methods.
+
+* [`IbkrWsClient`][ibkr-ws-client-docs] - for [IBKR WebSocket API][ibkr-websocket]
+
+  Using the `IbkrWsClient` involves handling three areas:
+
+  * Managing its lifecycle. It is asynchronous and it will run on a separate thread, hence we need to construct it, start it and then manage its lifecycle on the originating thread.
+  * Subscribing and unsubscribing. It is subscription-based, hence we need to specify which channels we want to subscribe to and remember to unsubscribe later.
+  * Consuming data. It uses a queue system, hence we need to access these queues and consume their data.
+
+Their usage differs substantially. Users are encouraged to familiarise themselves with the `IbkrClient` class first.
 
 ## Examples
 
-See [all examples][examples]
+See [all examples][examples].
 
-### 01 IbkrClient basic
+### Basic REST Example
 
 ```python
 import warnings
 
 from ibind import IbkrClient
 
+# In this example we provide no CAcert, hence we need to silence this warning.
 warnings.filterwarnings("ignore", message="Unverified HTTPS request is being made to host 'localhost'")
 
-c = IbkrClient(url='https://localhost:5000/v1/api/')
+client = IbkrClient()
 
 print('\n#### check_health ####')
-print(c.check_health())
+print(client.check_health())
 
 print('\n\n#### tickle ####')
-print(c.tickle().data)
+print(client.tickle().data)
 
 print('\n\n#### get_accounts ####')
-print(c.portfolio_accounts().data)
+print(client.portfolio_accounts().data)
 ```
 
-### 02 IbkrClient intermediate
+### WebSocket Basic Example
 
 ```python
-import var
-
-from ibind import IbkrClient, ibind_logs_initialize
-
-ibind_logs_initialize()
-
-c = IbkrClient(
-    url='https://localhost:5000/v1/api/',
-    cacert=var.IBIND_CACERT,
-)
-
-print('\n#### get_accounts ####')
-accounts = c.portfolio_accounts().data
-c.account_id = accounts[0]['accountId']
-print(accounts)
-
-print('\n\n#### get_ledger ####')
-ledger = c.get_ledger().data
-for currency, subledger in ledger.items():
-    print(f'\t Ledger currency: {currency}')
-    print(f'\t cash balance: {subledger["cashbalance"]}')
-    print(f'\t net liquidation value: {subledger["netliquidationvalue"]}')
-    print(f'\t stock market value: {subledger["stockmarketvalue"]}')
-    print()
-
-print('\n#### get_positions ####')
-positions = c.positions().data
-for position in positions:
-    print(f'\t Position {position["ticker"]}: {position["position"]} (${position["mktValue"]})')
-```
-
-### IbkrWsClient basic
-
-```python
-import os
-import time
-
-
-from ibind.client.ibkr_definitions import snapshot_keys_to_ids
 from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-
-client = IbkrClient(
-    account_id=account_id,
-    url='https://localhost:5000/v1/api/',
-)
-
-ws_client = IbkrWsClient(
-    ibkr_client=client,
-    account_id=account_id,
-    url='wss://localhost:5000/v1/api/ws'
-)
+client = IbkrClient()
+ws_client = IbkrWsClient(ibkr_client=client)
 
 ws_client.start()
-channel = 'md+265598'
-fields = [str(x) for x in snapshot_keys_to_ids(['symbol', 'open', 'high', 'low', 'close', 'volume',])]
 
-qa = ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
+qa = ws_client.new_queue_accessor(IbkrWsKey.ORDERS)
 
-ws_client.subscribe(channel, {'fields': fields}, needs_confirmation=False)
+ws_client.subscribe(channel='or', data=None, needs_confirmation=False)
 
-while ws_client.running:
-    try:
-        while not qa.empty():
-            print(str(qa), qa.get())
+while True:
+  try:
+    while not qa.empty():
+      print(str(qa), qa.get())
 
-        time.sleep(1)
-    except KeyboardInterrupt:
-        print('KeyboardInterrupt')
-        break
+  except KeyboardInterrupt:
+    print('KeyboardInterrupt')
+    break
 
-ws_client.unsubscribe(channel, {'fields': fields}, needs_confirmation=False)
+ws_client.unsubscribe(channel='or', data=None, needs_confirmation=False)
 
 ws_client.shutdown()
 ```
@@ -207,10 +171,14 @@ Thanks and have an awesome day 👋
 [ibeam]: https://github.com/Voyz/ibeam
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
+[api-ibkr-client]: https://github.com/Voyz/ibind/wiki/API-Reference-%E2%80%90-IbkrClient
+[ibkr-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
+[ibkr-ws-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
 
 [ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
 [ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
 [ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+
 
 [wiki]: https://github.com/Voyz/ibind/wiki
 [wiki-installation]: https://github.com/Voyz/ibind/wiki/Installation
