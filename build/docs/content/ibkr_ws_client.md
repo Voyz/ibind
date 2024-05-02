@@ -1,11 +1,12 @@
 # Table of Contents
 
+* [QueueAccessor](#base.queue_controller.QueueAccessor)
+  * [\_\_init\_\_](#base.queue_controller.QueueAccessor.__init__)
+  * [get](#base.queue_controller.QueueAccessor.get)
+  * [empty](#base.queue_controller.QueueAccessor.empty)
 * [IbkrWsKey](#client.ibkr_ws_client.IbkrWsKey)
   * [from\_channel](#client.ibkr_ws_client.IbkrWsKey.from_channel)
   * [channel](#client.ibkr_ws_client.IbkrWsKey.channel)
-* [IbkrSubscriptionProcessor](#client.ibkr_ws_client.IbkrSubscriptionProcessor)
-  * [make\_subscribe\_payload](#client.ibkr_ws_client.IbkrSubscriptionProcessor.make_subscribe_payload)
-  * [make\_unsubscribe\_payload](#client.ibkr_ws_client.IbkrSubscriptionProcessor.make_unsubscribe_payload)
 * [IbkrWsClient](#client.ibkr_ws_client.IbkrWsClient)
   * [\_\_init\_\_](#client.ibkr_ws_client.IbkrWsClient.__init__)
   * [check\_health](#client.ibkr_ws_client.IbkrWsClient.check_health)
@@ -20,6 +21,9 @@
   * [start](#base.ws_client.WsClient.start)
   * [shutdown](#base.ws_client.WsClient.shutdown)
   * [check\_ping](#base.ws_client.WsClient.check_ping)
+  * [connected](#base.ws_client.WsClient.connected)
+  * [ready](#base.ws_client.WsClient.ready)
+  * [running](#base.ws_client.WsClient.running)
 
 <a id="base.queue_controller.QueueAccessor"></a>
 
@@ -30,9 +34,58 @@ Provides access to a queue with an associated key.
 This class encapsulates a queue and provides methods to interact with it, such as retrieving items
 and checking if the queue is empty. It is generic and can be associated with a key of any type.
 
-Constructor Parameters:
-queue (Queue): The queue to be accessed.
-key (T): The key associated with this queue accessor.
+<a id="base.queue_controller.QueueAccessor.__init__"></a>
+
+### \_\_init\_\_
+
+```python
+def __init__(queue: Queue, key: T)
+```
+
+Arguments:
+
+- `queue` _Queue_ - The queue to be accessed.
+- `key` _T_ - The key associated with this queue accessor.
+
+<a id="base.queue_controller.QueueAccessor.get"></a>
+
+### get
+
+```python
+def get(block: bool = False, timeout=None) -> Any
+```
+
+Attempts to retrieve an item from the queue.
+
+This method tries to get an item from the queue. If the queue is empty and 'block' is False,
+it immediately returns None. Otherwise, it blocks until an item is available or until the
+timeout (if provided in 'kwargs') elapses.
+
+Arguments:
+
+- `block` _bool, optional_ - Whether to block if the queue is empty. Defaults to False.
+- `timeout` _Optional[float]_ - The maximum time in seconds to block waiting for an item.
+  A value of None indicates an indefinite wait. Only effective if 'block' is True.
+  
+  
+
+Returns:
+
+  The item retrieved from the queue, or None if the queue is empty and 'block' is False.
+
+<a id="base.queue_controller.QueueAccessor.empty"></a>
+
+### empty
+
+```python
+def empty() -> bool
+```
+
+Checks if the queue is empty.
+
+Returns:
+
+- `bool` - True if the queue is empty, False otherwise.
 
 <a id="client.ibkr_ws_client.IbkrWsKey"></a>
 
@@ -71,7 +124,7 @@ Unsolicited Enums:
 def from_channel(cls, channel)
 ```
 
-Converts a channel string to its corresponding IbkrWsKey enum member.
+Converts a solicited channel string to its corresponding IbkrWsKey enum member.
 
 Arguments:
 
@@ -96,75 +149,11 @@ Raises:
 def channel()
 ```
 
-Gets the channel string associated with the enum member.
+Gets the solicited channel string associated with the enum member.
 
 Returns:
 
 - `str` - The channel string corresponding to the enum member.
-
-<a id="client.ibkr_ws_client.IbkrSubscriptionProcessor"></a>
-
-## IbkrSubscriptionProcessor
-
-A subscription processor for Interactive Brokers WebSocket channels. This class extends the SubscriptionProcessor.
-
-<a id="client.ibkr_ws_client.IbkrSubscriptionProcessor.make_subscribe_payload"></a>
-
-### make\_subscribe\_payload
-
-```python
-def make_subscribe_payload(channel: str, data: dict = None) -> str
-```
-
-Constructs a subscription payload for a specific channel with optional data.
-
-The payload format is a combination of a prefix 's', the channel identifier, and the JSON-serialized
-data if provided.
-
-Arguments:
-
-- `channel` _str_ - The channel identifier to subscribe to.
-- `data` _dict, optional_ - Additional data to be included in the subscription payload. Defaults to None.
-  
-
-Returns:
-
-- `str` - A formatted subscription payload for the Interactive Brokers WebSocket.
-  
-
-**Example**:
-
-  - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
-  - Without data: make_subscribe_payload('md') returns "smd"
-
-<a id="client.ibkr_ws_client.IbkrSubscriptionProcessor.make_unsubscribe_payload"></a>
-
-### make\_unsubscribe\_payload
-
-```python
-def make_unsubscribe_payload(channel: str, data: dict = None) -> str
-```
-
-Constructs an unsubscription payload for a specific channel with optional data.
-
-The payload format is a combination of a prefix 'u', the channel identifier, and the JSON-serialized
-data. If data is not provided, an empty dictionary is used.
-
-Arguments:
-
-- `channel` _str_ - The channel identifier to unsubscribe from.
-- `data` _dict, optional_ - Additional data to be included in the unsubscription payload. Defaults to None.
-  
-
-Returns:
-
-- `str` - A formatted unsubscription payload for the Interactive Brokers WebSocket.
-  
-
-**Example**:
-
-  - With data: make_unsubscribe_payload('md', {'foo': 'bar'}) returns "umd+{"foo": "bar"}"
-  - Without data: make_unsubscribe_payload('md') returns "umd+{}"
 
 <a id="client.ibkr_ws_client.IbkrWsClient"></a>
 
@@ -507,3 +496,47 @@ Returns:
 Notes:
 
 - A ping interval exceeding 'max_ping_interval' indicates potential issues with the WebsocketApp connection.
+
+<a id="base.ws_client.WsClient.connected"></a>
+
+### connected
+
+```python
+@property
+def connected() -> bool
+```
+
+Whether the WebSocketApp connection is active.
+
+Returns:
+
+- bool: True if the WebSocketApp is connected, False otherwise.
+
+<a id="base.ws_client.WsClient.ready"></a>
+
+### ready
+
+```python
+def ready() -> bool
+```
+
+Whether the WsClient is ready for use.
+
+Returns:
+
+- bool: True if the WsClient is ready for use, False otherwise.
+
+<a id="base.ws_client.WsClient.running"></a>
+
+### running
+
+```python
+@property
+def running() -> bool
+```
+
+Whether the WsClient has been started.
+
+Returns:
+
+- bool: True if the WsClient is running, False otherwise.

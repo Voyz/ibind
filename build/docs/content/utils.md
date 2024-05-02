@@ -25,7 +25,7 @@ Attributes:
 
 <a id="client.ibkr_utils.make_order_request"></a>
 
-### make\_order\_request
+## make\_order\_request
 
 ```python
 def make_order_request(conid: str,
@@ -90,7 +90,7 @@ Arguments:
 
 <a id="support.logs.ibind_logs_initialize"></a>
 
-### ibind\_logs\_initialize
+## ibind\_logs\_initialize
 
 ```python
 def ibind_logs_initialize(log_to_console: bool = var.LOG_TO_CONSOLE,
@@ -110,13 +110,13 @@ Arguments:
 
 <a id="support.py_utils.execute_in_parallel"></a>
 
-### execute\_in\_parallel
+## execute\_in\_parallel
 
 ```python
 def execute_in_parallel(func: callable,
                         requests: Union[List[dict], Dict[str, dict]],
                         max_workers: int = None,
-                        max_per_second: int = 20)
+                        max_per_second: int = 20) -> Union[dict, list]
 ```
 
 Executes a function in parallel using multiple sets of arguments with rate limiting.
@@ -137,7 +137,7 @@ Arguments:
 
 Returns:
 
--   Union[dict, list]: A collection of results from the function executions, keyed by the same keys as
+  Union[dict, list]: A collection of results from the function executions, keyed by the same keys as
   'requests' if it is a dictionary, or a list in the same order as the 'requests' list.
   The function returns results in a dictionary if 'requests' was a dictionary, and a list if  'requests' was a list.
 

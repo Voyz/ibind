@@ -41,8 +41,8 @@ renderer:
     - title: API IbkWsClient
       name: ibkr_ws_client
       contents:
-        - client.ibkr_ws_client.IbkrWsClient
-        - client.ibkr_ws_client.IbkrWsKey
+        - client.ibkr_ws_client.IbkrWsClient.*
+        - client.ibkr_ws_client.IbkrWsKey.*
         - base.subscription_controller.SubscriptionController.unsubscribe
         - base.subscription_controller.SubscriptionController.modify_subscription
         - base.subscription_controller.SubscriptionController.recreate_subscriptions

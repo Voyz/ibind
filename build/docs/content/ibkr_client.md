@@ -1,7 +1,6 @@
 # Table of Contents
 
 * [Result](#base.rest_client.Result)
-  * [copy](#base.rest_client.Result.copy)
 * [IbkrClient](#client.ibkr_client.IbkrClient)
   * [\_\_init\_\_](#client.ibkr_client.IbkrClient.__init__)
 * [AccountsMixin](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin)
@@ -33,6 +32,7 @@
   * [regulatory\_snapshot](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.regulatory_snapshot)
   * [marketdata\_history\_by\_conid](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_conid)
   * [historical\_marketdata\_beta](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.historical_marketdata_beta)
+  * [marketdata\_history\_by\_symbol](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbol)
   * [marketdata\_history\_by\_symbols](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbols)
   * [marketdata\_unsubscribe](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_unsubscribe)
   * [marketdata\_unsubscribe\_all](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_unsubscribe_all)
@@ -94,29 +94,6 @@ Attributes:
 
 - `data` _Optional[Union[list, dict]]_ - The data returned from the operation. Can be either a list or a dictionary.
 - `request` _Optional[dict]_ - Details of the request that resulted in this data.
-
-<a id="base.rest_client.Result.copy"></a>
-
-### copy
-
-```python
-def copy(data: Optional[Union[list, dict]] = UNDEFINED,
-         request: Optional[dict] = UNDEFINED) -> 'Result'
-```
-
-Creates a copy of the current Result instance with optional modifications to its data or request.
-
-Arguments:
-
-- `data` _Optional[Union[list, dict]], optional_ - The new data to be set in the copied Result.
-  If 'UNDEFINED',the original data is retained. Defaults to UNDEFINED.
-- `request` _Optional[dict], optional_ - The new request details to be set in the copied Result.
-  If 'UNDEFINED', the original request is retained. Defaults to UNDEFINED.
-  
-
-Returns:
-
-- `Result` - A new Result instance with the specified modifications.
 
 <a id="client.ibkr_client.IbkrClient"></a>
 
@@ -649,8 +626,8 @@ Arguments:
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
 - `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
 - `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
-- `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
+- `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
   
 
 Notes:
@@ -688,6 +665,31 @@ Notes:
 
   - The first time a user makes a request to the /hmds/history endpoints will result in a 404 error. This initial request instantiates the historical market data services allowing future requests to return data. Subsequent requests will return data as expected.
 
+<a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbol"></a>
+
+### marketdata\_history\_by\_symbol
+
+```python
+def marketdata_history_by_symbol(
+        symbol: Union[str, StockQuery],
+        exchange: str = None,
+        period: str = None,
+        bar: str = None,
+        outside_rth: bool = None,
+        start_time: datetime.datetime = None) -> Result
+```
+
+Get historical market Data for given symbol, length of data is controlled by 'period' and 'bar'.
+
+Arguments:
+
+- `symbol` _Union[str, StockQuery]_ - StockQuery or str symbol for the ticker of interest.
+- `exchange` _str, optional_ - Returns the exchange you want to receive data from.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
+- `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
+
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbols"></a>
 
 ### marketdata\_history\_by\_symbols
@@ -702,6 +704,20 @@ def marketdata_history_by_symbols(
         start_time: datetime.datetime = None) -> dict
 ```
 
+An extended version of the marketdata_history_by_symbol method.
+
+For each StockQuery provided, it queries the marketdata history for the specified symbols in parallel. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+
+Arguments:
+
+- `queries` _List[StockQuery]_ - A list of StockQuery objects to specify filtering criteria for stocks.
+- `exchange` _str, optional_ - Returns the exchange you want to receive data from.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
+- `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
+  
+
 Notes:
 
   - This method returns data directly without the `Result` dataclass.
@@ -712,7 +728,7 @@ Notes:
 
 ```python
 @ensure_list_arg('conids')
-def marketdata_unsubscribe(conids: OneOrMany[int])
+def marketdata_unsubscribe(conids: OneOrMany[int]) -> List[Result]
 ```
 
 Cancel market data for given conid(s).
