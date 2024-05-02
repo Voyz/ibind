@@ -5,7 +5,7 @@ wrong? [Create an issue and let us know!][issues]*
 
 <p align="center">
     <a id="ibind" href="#ibind">
-        <img src="https://github.com/Voyz/ibind/blob/master/media/ibind_logo.png" alt="IBind logo" title="IBind logo" width="600"/>
+        <img src="https://raw.githubusercontent.com/Voyz/ibind/master/media/ibind_logo.png" alt="IBind logo" title="IBind logo" width="600"/>
     </a>
 </p>
 <p align="center">
