@@ -10,6 +10,9 @@ _LOGGER = project_logger(__file__)
 
 
 class WatchlistMixin():  # pragma: no cover
+    """
+    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
+    """
 
     def create_watchlist(
             self: 'IbkrClient',

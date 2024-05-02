@@ -11,6 +11,10 @@ _LOGGER = project_logger(__file__)
 
 
 class ScannerMixin():  # pragma: no cover
+    """
+    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#scanner
+    """
+
     def scanner_parameters(self: 'IbkrClient') -> Result:
         """
         Returns an xml file containing all available parameters to be sent for the Iserver scanner request.

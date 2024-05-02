@@ -30,6 +30,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     fetching stock data, submitting orders, and managing account information.
 
     See: https://interactivebrokers.github.io/cpwebapi/endpoints
+
+    Note:
+        - All endpoint mappings are defined as class mixins, categorised similar to the IBKR REST API documentation. See appropriate mixins for more information. 
     """
 
     def __init__(

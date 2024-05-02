@@ -10,8 +10,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 class OrderMixin():
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
+    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
+    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
     """
 
     @ensure_list_arg('filters')

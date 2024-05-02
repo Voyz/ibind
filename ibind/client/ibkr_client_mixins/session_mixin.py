@@ -13,6 +13,10 @@ _LOGGER = project_logger(__file__)
 
 
 class SessionMixin():
+    """
+    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
+    """
+
     def authentication_status(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Current Authentication status to the Brokerage system. Market Data and Trading is not possible if not authenticated, e.g. authenticated shows false.
