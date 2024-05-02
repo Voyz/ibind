@@ -1,0 +1,29 @@
+[project]
+name = "ibind"
+version = "0.0.3"
+authors = [
+    { name="Voy Zan", email="voy1982@yahoo.co.uk" },
+]
+description = "IBind is a REST and WebSocket client library for Interactive Brokers Client Portal Web API."
+readme = "README.md"
+requires-python = ">=3.8"
+license={ file = "LICENSE" }
+dependencies = [
+    "requests==2.31.*",
+    "websocket-client==1.7.*"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'ibkr web api', 'ib api', 'ibkr api', 'algo trading', 'algorithmic trading', 'quant', 'trading']
+
+[project.urls]
+Homepage = "https://github.com/Voyz/ibind"
+
+[build-system]
+requires = [
+    "setuptools"
+]
