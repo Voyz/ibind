@@ -38,10 +38,15 @@ def ibind_logs_initialize(
     Initialises the logging system.
 
     Parameters:
-        log_to_console (bool): Whether logs should be streamed to the standard output.
-        log_to_file (bool): Whether logs should be saved to a file.
-        log_level (str): The global log level for the StreamHandler.
-        log_format (str): Log format that is used by IBind.
+        log_to_console (bool): Whether the logs should be output to the current console, `True` by default
+        log_to_file (bool): Whether the logs should be written to a daily log file, `True` by default.
+        log_level (str): What is the minimum log level of `ibind` logs, `INFO` by default.
+        log_format (str): What is the log format to be used, `'%(asctime)s|%(levelname)-.1s| %(message)s'` by default.
+
+    Note:
+        - All of these parameters are read from the environment variables by default.
+        - The daily file logs are saved in the directory specified by the `IBIND_LOGS_DIR` environment variable, the system temp directory by default.
+        - To get more verbose logs, set either the `log_level` parameter or the `IBIND_LOG_LEVEL` environment variable to `'DEBUG'`
     """
     global _initialized
     if _initialized: return
