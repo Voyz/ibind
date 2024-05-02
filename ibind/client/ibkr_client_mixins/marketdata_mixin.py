@@ -1,5 +1,5 @@
 import datetime
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
 from ibind.client.ibkr_definitions import decode_data_availability
@@ -72,8 +72,8 @@ class MarketdataMixin():
             exchange (str, optional): Returns the exchange you want to receive data from.
             period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
             bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
-            start_time (datetime.datetime, optional): Starting date of the request duration.
             outside_rth (bool, optional): Determine if you want data after regular trading hours.
+            start_time (datetime.datetime, optional): Starting date of the request duration.
 
         Note:
             - There's a limit of 5 concurrent requests. Excessive requests will return a 'Too many requests' status 429 response.
@@ -146,10 +146,23 @@ class MarketdataMixin():
             exchange: str = None,
             period: str = None,
             bar: str = None,
-            outside_rth: bool = None
+            outside_rth: bool = None,
+            start_time: datetime.datetime = None,
     ) -> Result:  # pragma: no cover
+        """
+        Get historical market Data for given symbol, length of data is controlled by 'period' and 'bar'.
+
+        Parameters:
+            symbol (Union[str, StockQuery]): StockQuery or str symbol for the ticker of interest.
+            exchange (str, optional): Returns the exchange you want to receive data from.
+            period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+            outside_rth (bool, optional): Determine if you want data after regular trading hours.
+            start_time (datetime.datetime, optional): Starting date of the request duration.
+
+        """
         conid = self.stock_conid_by_symbol(symbol).data[symbol]
-        return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth)
+        return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth, start_time)
 
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
@@ -159,9 +172,19 @@ class MarketdataMixin():
             bar: str = "1min",
             outside_rth: bool = True,
             start_time: datetime.datetime = None,
-            # todo: add inline docs
     ) -> dict:
         """
+        An extended version of the marketdata_history_by_symbol method.
+
+        For each StockQuery provided, it queries the marketdata history for the specified symbols in parallel. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+
+        Parameters:
+            queries (List[StockQuery]): A list of StockQuery objects to specify filtering criteria for stocks.
+            exchange (str, optional): Returns the exchange you want to receive data from.
+            period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+            outside_rth (bool, optional): Determine if you want data after regular trading hours.
+            start_time (datetime.datetime, optional): Starting date of the request duration.
 
         Note:
             - This method returns data directly without the `Result` dataclass.
@@ -200,7 +223,7 @@ class MarketdataMixin():
         return results
 
     @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]):
+    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]) -> List[Result]:
         """
         Cancel market data for given conid(s).
 

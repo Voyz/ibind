@@ -25,16 +25,6 @@ class WsClient(SubscriptionController):
     This class manages WebSocket connections, providing functionalities to start, manage, and shut down
     the WebSocketApp. It supports automatic reconnection, sending payloads, and managing the connection state.
 
-    Methods:
-        start(): Starts the WebSocket client.
-        shutdown(): Shuts down the WebSocket client.
-        send(payload: str): Sends a payload over the WebSocket.
-        send_json(payload: Union[List, Dict]): Sends a JSON payload over the WebSocket.
-        disconnect(): Disconnects the WebSocket.
-        check_ping(): Checks if the last ping was within the acceptable interval.
-        on_message(wsa: WebSocketApp, message): Callback for WebSocket messages. To be implemented by subclasses.
-        on_reconnect(): Callback for when the WebSocket reconnects. To be implemented by subclasses.
-
     Note:
         - This class is designed to be used as a base class and extended with specific logic for message handling and other WebSocket events.
     """
@@ -435,13 +425,31 @@ class WsClient(SubscriptionController):
 
     @property
     def connected(self) -> bool:  # pragma: no cover
+        """
+        Whether the WebSocketApp connection is active.
+
+        Returns:
+            - bool: True if the WebSocketApp is connected, False otherwise.
+        """
         return self._connected
 
     def ready(self) -> bool:  # pragma: no cover
+        """
+        Whether the WsClient is ready for use.
+
+        Returns:
+            - bool: True if the WsClient is ready for use, False otherwise.
+        """
         return self._connected and self._running and self._wsa is not None
 
     @property
     def running(self) -> bool:  # pragma: no cover
+        """
+        Whether the WsClient has been started.
+
+        Returns:
+            - bool: True if the WsClient is running, False otherwise.
+        """
         return self._running
 
     def __str__(self):

@@ -27,22 +27,23 @@ class IbkrWsKey(Enum):
 
     This Enum class represents various types of data or subscription channels for Interactive Brokers WebSocket API.
 
-    Enum Members:
-        ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
-        ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription.
-        MARKET_DATA: Represents the 'MARKET_DATA' subscription.
-        MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription.
-        PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
-        ORDERS: Represents the 'ORDERS' subscription.
-        PNL: Represents the 'PNL' subscription.
-        TRADES: Represents the 'TRADES' subscription.
+    Subscriptions Enums:
+        * ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
+        * ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription.
+        * MARKET_DATA: Represents the 'MARKET_DATA' subscription.
+        * MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription.
+        * PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
+        * ORDERS: Represents the 'ORDERS' subscription.
+        * PNL: Represents the 'PNL' subscription.
+        * TRADES: Represents the 'TRADES' subscription.
 
-        ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
-        AUTHENTICATION: Represents the 'AUTHENTICATION' unsolicited message.
-        BULLETINS: Represents the 'BULLETINS' unsolicited message.
-        ERROR: Represents the 'ERROR' unsolicited message.
-        SYSTEM: Represents the 'SYSTEM' unsolicited message.
-        NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
+    Unsolicited Enums:
+        * ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
+        * AUTHENTICATION: Represents the 'AUTHENTICATION' unsolicited message.
+        * BULLETINS: Represents the 'BULLETINS' unsolicited message.
+        * ERROR: Represents the 'ERROR' unsolicited message.
+        * SYSTEM: Represents the 'SYSTEM' unsolicited message.
+        * NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
     """
     # subscription-based
     ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
@@ -65,7 +66,7 @@ class IbkrWsKey(Enum):
     @classmethod
     def from_channel(cls, channel):
         """
-         Converts a channel string to its corresponding IbkrWsKey enum member.
+         Converts a solicited channel string to its corresponding IbkrWsKey enum member.
 
          Parameters:
              channel (str): The channel string to be converted.
@@ -93,7 +94,7 @@ class IbkrWsKey(Enum):
     @property
     def channel(self):
         """
-        Gets the channel string associated with the enum member.
+        Gets the solicited channel string associated with the enum member.
 
         Returns:
             str: The channel string corresponding to the enum member.
@@ -210,9 +211,17 @@ class IbkrWsClient(WsClient):
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
 
 
-            # Inherited parameters from WsClient:
+            Inherited parameters from WsClient:
 
-            ping_interval, max_ping_interval, timeout, restart_on_close, restart_on_critical, max_connection_attempts, cacert, subscription_retries, subscription_timeout
+            timeout (float, optional): Timeout for waiting on operations like connection and shutdown. Defaults to _DEFAULT_TIMEOUT.
+            restart_on_close (bool, optional): Flag to restart the connection if it closes unexpectedly. Defaults to True.
+            restart_on_critical (bool, optional): Flag to restart the connection on critical errors. Defaults to True.
+            ping_interval (int, optional): Interval in seconds for sending pings to keep the connection alive. Defaults to _DEFAULT_PING_INTERVAL.
+            max_ping_interval (int, optional): Maximum interval in seconds to wait for a ping response. Defaults to _DEFAULT_MAX_PING_INTERVAL.
+            max_connection_attempts (int, optional): Maximum number of attempts for connecting to the WebSocket. Defaults to 10.
+            cacert (Union[str, bool], optional): Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
+            subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
+            subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
         self._ibkr_client = ibkr_client
         self._account_id = account_id

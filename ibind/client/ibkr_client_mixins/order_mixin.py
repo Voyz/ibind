@@ -30,23 +30,23 @@ class OrderMixin():
             account_id (str): For linked accounts, allows users to view orders on sub-accounts as specified.
 
         Available filters:
-            Inactive:
+            * Inactive:
                 Order was received by the system but is no longer active because it was rejected or cancelled.
-            PendingSubmit:
+            * PendingSubmit:
                 Order has been transmitted but have not received confirmation yet that order accepted by destination exchange or venue.
-            PreSubmitted:
+            * PreSubmitted:
                 Simulated order transmitted but the order has yet to be elected. Order is held by IB system until election criteria are met.
-            Submitted:
+            * Submitted:
                 Order has been accepted by the system.
-            Filled:
+            * Filled:
                 Order has been completely filled.
-            PendingCancel:
+            * PendingCancel:
                 Sent an order cancellation request but have not yet received confirmation order cancelled by destination exchange or venue.
-            Cancelled:
+            * Cancelled:
                 The balance of your order has been confirmed canceled by the system.
-            WarnState:
+            * WarnState:
                 Order has a specific warning message such as for basket orders.
-            SortByTime:
+            * SortByTime:
                 There is an initial sort by order state performed so active orders are always above inactive and filled then orders are sorted chronologically.
 
         Note:

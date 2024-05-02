@@ -278,33 +278,34 @@ def make_order_request(
     """
      Create an order request object. Arguments set as None will not be included.
 
-     :param conid: Identifier of the security to trade.
-     :param side: Order side, either 'SELL' or 'BUY'.
-     :param quantity: Order quantity in number of shares.
-     :param order_type: Type of the order (e.g., LMT, MKT, STP).
-     :param price: Order limit price, depends on order type.
-     :param coid:  Customer Order ID, unique for a 24h span.
-     :param acctId: Optional. Account ID, defaults to the first account if not provided.
+    Parameters:
+        conid (str): Identifier of the security to trade.
+        side (str): Order side, either 'SELL' or 'BUY'.
+        quantity (int): Order quantity in number of shares.
+        order_type (str): Type of the order (e.g., LMT, MKT, STP).
+        price (float): Order limit price, depends on order type.
+        coid (str): Customer Order ID, unique for a 24h span.
+        acctId (str, optional): Account ID, defaults to the first account if not provided.
 
-     :param conidex: Concatenated value of contract identifier and exchange.
-     :param sec_type: Concatenated value of contract-identifier and security type.
-     :param parent_id: Used for child orders in bracket orders, must match the parent's cOID.
-     :param listing_exchange: Optional. Exchange for order routing, default is "SMART".
-     :param is_single_group: Set to True for placing single group orders (OCA).
-     :param outside_rth: Set to True if the order can be executed outside regular trading hours.
-     :param aux_price: Auxiliary price parameter.
-     :param ticker: Underlying symbol for the contract.
-     :param tif: Time-In-Force for the order (e.g., GTC, OPG, DAY, IOC). Default: "GTC"
-     :param trailing_amt: Trailing amount for TRAIL or TRAILLMT orders.
-     :param trailing_type: Trailing type ('amt' or '%') for TRAIL or TRAILLMT orders.
-     :param referrer: Custom order reference.
-     :param cash_qty: Cash Quantity for the order.
-     :param fx_qty: Cash quantity for Currency Conversion Orders.
-     :param use_adaptive: Set to True to use the Price Management Algo.
-     :param is_ccy_conv: Set to True for FX conversion orders.
-     :param allocation_method: Allocation method for FA account orders.
-     :param strategy: IB Algo algorithm to use for the order.
-     :param strategy_parameters: Parameters for the specified IB Algo algorithm.
+        conidex (str, Optional): Concatenated value of contract identifier and exchange.
+        sec_type (str, Optional): Concatenated value of contract-identifier and security type.
+        parent_id (str, Optional): Used for child orders in bracket orders, must match the parent's cOID.
+        listing_exchange (str, Optional, optional): Exchange for order routing, default is "SMART".
+        is_single_group (bool, Optional): Set to True for placing single group orders (OCA).
+        outside_rth (bool, Optional): Set to True if the order can be executed outside regular trading hours.
+        aux_price (float, Optional): Auxiliary price parameter.
+        ticker (str, Optional): Underlying symbol for the contract.
+        tif (str, Optional): Time-In-Force for the order (e.g., GTC, OPG, DAY, IOC). Default: "GTC".
+        trailing_amt (float, Optional): Trailing amount for TRAIL or TRAILLMT orders.
+        trailing_type (str, Optional): Trailing type ('amt' or '%') for TRAIL or TRAILLMT orders.
+        referrer (str, Optional): Custom order reference.
+        cash_qty (float, Optional): Cash Quantity for the order.
+        fx_qty (float, Optional): Cash quantity for Currency Conversion Orders.
+        use_adaptive (bool, Optional): Set to True to use the Price Management Algo.
+        is_ccy_conv (bool, Optional): Set to True for FX conversion orders.
+        allocation_method (str, Optional): Allocation method for FA account orders.
+        strategy (str, Optional): IB Algo algorithm to use for the order.
+        strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
      """
 
     order_request = {}

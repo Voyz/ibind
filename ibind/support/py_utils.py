@@ -112,7 +112,7 @@ def execute_with_key(key, func, *args, **kwargs):  # pragma: no cover
         return key, e
 
 
-def execute_in_parallel(func: callable, requests: Union[List[dict], Dict[str, dict]], max_workers: int = None, max_per_second: int = 20):
+def execute_in_parallel(func: callable, requests: Union[List[dict], Dict[str, dict]], max_workers: int = None, max_per_second: int = 20) -> Union[dict, list]:
     """
     Executes a function in parallel using multiple sets of arguments with rate limiting.
 
@@ -129,7 +129,7 @@ def execute_in_parallel(func: callable, requests: Union[List[dict], Dict[str, di
 
 
     Returns:
-        dict or list: A collection of results from the function executions, keyed by the same keys as
+        Union[dict, list]: A collection of results from the function executions, keyed by the same keys as
         'requests' if it is a dictionary, or a list in the same order as the 'requests' list.
         The function returns results in a dictionary if 'requests' was a dictionary, and a list if  'requests' was a list.
     """

@@ -13,13 +13,14 @@ class QueueAccessor(Generic[T]):  # pragma: no cover
 
     This class encapsulates a queue and provides methods to interact with it, such as retrieving items
     and checking if the queue is empty. It is generic and can be associated with a key of any type.
-
-    Constructor Parameters:
-        queue (Queue): The queue to be accessed.
-        key (T): The key associated with this queue accessor.
     """
 
     def __init__(self, queue: Queue, key: T):
+        """
+        Parameters:
+            queue (Queue): The queue to be accessed.
+            key (T): The key associated with this queue accessor.
+        """
         self.__queue__ = queue
         self._key = key
 

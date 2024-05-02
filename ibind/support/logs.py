@@ -28,12 +28,21 @@ def project_logger(filepath=None):
 
 _LOGGER = project_logger()
 
-def initialize(
+def ibind_logs_initialize(
         log_to_console: bool = var.LOG_TO_CONSOLE,
         log_to_file: bool = var.LOG_TO_FILE,
         log_level: str = var.LOG_LEVEL,
         log_format: str = var.LOG_FORMAT,
 ):
+    """
+    Initialises the logging system.
+
+    Parameters:
+        log_to_console (bool): Whether logs should be streamed to the standard output.
+        log_to_file (bool): Whether logs should be saved to a file.
+        log_level (str): The global log level for the StreamHandler.
+        log_format (str): Log format that is used by IBind.
+    """
     global _initialized
     if _initialized: return
     _initialized = True
