@@ -110,6 +110,10 @@ fetching stock data, submitting orders, and managing account information.
 
 See: https://interactivebrokers.github.io/cpwebapi/endpoints
 
+Notes:
+
+  - All endpoint mappings are defined as class mixins, categorised similar to the IBKR REST API documentation. See appropriate mixins for more information.
+
 <a id="client.ibkr_client.IbkrClient.__init__"></a>
 
 ### \_\_init\_\_
@@ -751,8 +755,8 @@ Cancel all market data request(s). To cancel market data for a specific conid, s
 
 ## OrderMixin
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
+* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
+* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.live_orders"></a>
 
@@ -958,6 +962,9 @@ Resets all messages disabled by the Suppress Messages endpoint.
 <a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin"></a>
 
 ## PortfolioMixin
+
+* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#portfolio
+* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
 
 <a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.portfolio_accounts"></a>
 
@@ -1168,6 +1175,8 @@ Arguments:
 
 ## ScannerMixin
 
+https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#scanner
+
 <a id="client.ibkr_client_mixins.scanner_mixin.ScannerMixin.scanner_parameters"></a>
 
 ### scanner\_parameters
@@ -1239,6 +1248,8 @@ Arguments:
 <a id="client.ibkr_client_mixins.session_mixin.SessionMixin"></a>
 
 ## SessionMixin
+
+https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
 
 <a id="client.ibkr_client_mixins.session_mixin.SessionMixin.authentication_status"></a>
 
@@ -1312,7 +1323,7 @@ Validates the current session for the SSO user.
 ### check\_health
 
 ```python
-def check_health()
+def check_health() -> bool
 ```
 
 Verifies the health and authentication status of the IBKR Gateway server.
@@ -1328,10 +1339,17 @@ Returns:
 Raises:
 
 - `AttributeError` - If the Gateway health check request returns invalid data.
+  
+
+Notes:
+
+  - This method returns a boolean directly without the `Result` dataclass.
 
 <a id="client.ibkr_client_mixins.watchlist_mixin.WatchlistMixin"></a>
 
 ## WatchlistMixin
+
+https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
 
 <a id="client.ibkr_client_mixins.watchlist_mixin.WatchlistMixin.create_watchlist"></a>
 
