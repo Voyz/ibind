@@ -1,3 +1,13 @@
+"""
+REST Submit Order
+
+In this example we:
+
+* Set up an order_request using make_order_request() method
+* Prepare the place_order answers based on the QuestionType enum
+* Mock the place_order endpoint to prevent submitting an actual order
+* Call the place_order() method
+"""
 import datetime
 import os
 from unittest.mock import patch, MagicMock
@@ -8,7 +18,7 @@ ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
-c = IbkrClient(account_id=account_id, cacert=cacert)
+client = IbkrClient(cacert=cacert)
 
 conid = '265598'
 side = 'BUY'
@@ -46,6 +56,6 @@ print('#### submit_order ####')
 with patch('ibind.base.rest_client.requests') as requests_mock:
     requests_mock.request.return_value = MagicMock(json=MagicMock(side_effect=mocked_responses))
 
-    response = c.place_order(order_request, answers, account_id).data
+    response = client.place_order(order_request, answers, account_id).data
 
 print(response)

@@ -1,3 +1,12 @@
+"""
+WebSocket Intermediate
+
+In this example we:
+
+* Demonstrate subscription to multiple channels
+* Use the 'signal' module to ensure we unsubscribe and shutdown upon the program termination
+"""
+
 import os
 import signal
 import time
@@ -6,16 +15,10 @@ from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
+cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 
-client = IbkrClient(account_id=account_id, cacert=cacert)
-
-ws_client = IbkrWsClient(
-    ibkr_client=client,
-    account_id=account_id,
-    cacert=cacert,
-)
+client = IbkrClient(cacert=cacert)
+ws_client = IbkrWsClient(ibkr_client=client, cacert=cacert)
 
 ws_client.start()
 

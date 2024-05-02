@@ -1,3 +1,14 @@
+"""
+WebSocket Market Data History
+
+In this example we:
+
+* Create a custom SubscriptionProcessor that overrides the default make_unsubscribe_payload method to use the server id instead of the conid
+* Use a custom unsubscribe method to iterate over all server ids for market history and attempt to unsubscribe
+* Demonstrate using the Market Data History channel
+* Use the 'signal' module to ensure we unsubscribe and shutdown upon the program termination
+"""
+
 import os
 import signal
 import time
@@ -6,20 +17,10 @@ from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrClient, IbkrWsClient
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
-client = IbkrClient(
-    url='https://localhost:5000/v1/api/',
-    account_id=account_id,
-    cacert=cacert,
-)
 
-ws_client = IbkrWsClient(
-    ibkr_client=client,
-    account_id=account_id,
-    url='wss://localhost:5000/v1/api/ws',
-    cacert=cacert,
-)
+client = IbkrClient(cacert=cacert)
+ws_client = IbkrWsClient(ibkr_client=client, cacert=cacert)
 
 
 # override the default subscription processor since we need to use the server id instead of conid

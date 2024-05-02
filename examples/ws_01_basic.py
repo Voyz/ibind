@@ -1,13 +1,20 @@
-import os
+"""
+WebSocket Basic
 
+In this example we:
+
+* Demonstrate the basic usage of the IbkrWsClient
+* Acquire a QueueAccessor for Orders channel
+* Subscribe to the Orders channel
+* Wait for a new order. If there are no orders being created there will be no data printed.
+* Upon a KeyboardInterrupt we unsubscribe from the Orders channel and shutdown the client
+"""
 from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-
-client = IbkrClient(account_id=account_id)
-ws_client = IbkrWsClient(ibkr_client=client, account_id=account_id)
+client = IbkrClient()
+ws_client = IbkrWsClient(ibkr_client=client)
 
 ws_client.start()
 
