@@ -2,3 +2,5 @@
 *.iml
 __pycache__
 ibeam.egg-info
+build/docs/.generated-files.txt
+build/docs/mkdocs.yml
