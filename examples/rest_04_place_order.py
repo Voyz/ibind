@@ -1,5 +1,5 @@
 """
-REST Submit Order
+REST Place Order
 
 In this example we:
 

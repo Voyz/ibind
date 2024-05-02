@@ -55,7 +55,7 @@ class SessionMixin():
         """
         return self.get('/sso/validate')
 
-    def check_health(self: 'IbkrClient'):
+    def check_health(self: 'IbkrClient') -> bool:
         """
         Verifies the health and authentication status of the IBKR Gateway server.
 
@@ -67,6 +67,9 @@ class SessionMixin():
 
         Raises:
             AttributeError: If the Gateway health check request returns invalid data.
+
+        Note:
+            - This method returns a boolean directly without the `Result` dataclass.
         """
         try:
             result = self.tickle()
