@@ -1,0 +1,64 @@
+loaders:
+  - type: python
+    search_path: ["ibind"]
+
+processors:
+  - type: filter
+  - type: google
+
+# Cleanup regex: (\*\*)(Arguments|Notes|Raises|Returns|Attributes)(\*\*)
+renderer:
+  type: mkdocs
+  mkdocs_config:
+    output_directory: ./docs
+  markdown:
+    encoding: utf-8
+    descriptive_module_title: True
+    render_module_header: False
+    insert_header_anchors: True
+    code_headers: False
+    descriptive_class_title: False
+    add_module_prefix: False
+    add_method_class_prefix: False
+    signature_code_block: True
+    render_page_title: False
+    classdef_code_block: False
+    render_toc: True
+    use_fixed_header_levels: True
+    header_level_by_type:
+      Module: 1
+      Class: 2
+      Method: 3
+      Function: 2
+      Data: 4
+  pages:
+    - title: API IbkrClient
+      name: ibkr_client
+      contents:
+        - client.ibkr_client.IbkrClient.*
+        - client.ibkr_client_mixins.*
+        - base.rest_client.Result
+    - title: API IbkWsClient
+      name: ibkr_ws_client
+      contents:
+        - client.ibkr_ws_client.IbkrWsClient
+        - client.ibkr_ws_client.IbkrWsKey
+        - base.subscription_controller.SubscriptionController.unsubscribe
+        - base.subscription_controller.SubscriptionController.modify_subscription
+        - base.subscription_controller.SubscriptionController.recreate_subscriptions
+        - base.queue_controller.QueueAccessor.*
+        - base.ws_client.WsClient.start
+        - base.ws_client.WsClient.shutdown
+        - base.ws_client.WsClient.disconnect
+        - base.ws_client.WsClient.check_ping
+        - base.ws_client.WsClient.hard_reset
+        - base.ws_client.WsClient.connected
+        - base.ws_client.WsClient.ready
+        - base.ws_client.WsClient.running
+    - title: API Utils
+      name: utils
+      contents:
+        - client.ibkr_utils.StockQuery
+        - client.ibkr_utils.make_order_request
+        - support.py_utils.execute_in_parallel
+        - support.logs.ibind_logs_initialize
