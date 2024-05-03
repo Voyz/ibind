@@ -14,9 +14,8 @@ from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
 # Initialise the logger
 ibind_logs_initialize(log_to_file=False)
 
-# Construct the clients
-client = IbkrClient()
-ws_client = IbkrWsClient(ibkr_client=client)
+# Construct the client
+ws_client = IbkrWsClient()
 
 # Start the WebSocket worker thread
 ws_client.start()

@@ -19,8 +19,7 @@ ibind_logs_initialize(log_to_file=False)
 
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 
-client = IbkrClient(cacert=cacert)
-ws_client = IbkrWsClient(ibkr_client=client, cacert=cacert)
+ws_client = IbkrWsClient(cacert=cacert)
 
 
 # override the default subscription processor since we need to use the server id instead of conid
