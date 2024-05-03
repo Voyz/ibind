@@ -1,6 +1,6 @@
 [project]
 name = "ibind"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
     { name="Voy Zan", email="voy1982@yahoo.co.uk" },
 ]
@@ -15,8 +15,10 @@ dependencies = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Office/Business :: Financial :: Investment",
 ]
 keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'ibkr web api', 'ib api', 'ibkr api', 'algo trading', 'algorithmic trading', 'quant', 'trading']
 
