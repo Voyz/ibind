@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch, call
 
 import requests
 
+from ibind import Result
 from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
 from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
@@ -59,12 +60,12 @@ class TestIbkrWsClient(TestCase):
         self.timeout = 8
         self.max_retries = 4
         self.subscription_retries = 3
-        self.client = IbkrClient(
+        self.client = MagicMock(spec=IbkrClient(
             url=self.url_rest,
             account_id=self.account_id,
             timeout=self.timeout,
             max_retries=self.max_retries,
-        )
+        ))
 
         self.SubscriptionProcessorClass = IbkrSubscriptionProcessor
 
@@ -129,8 +130,8 @@ class TestIbkrWsClient(TestCase):
 
             self.ws_client.start()
             self.wsa_mock.on_message.side_effect = override_on_message
-            rv = self.ws_client.subscribe(**request)
-            self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'data': request.get('data')})
+            rv = self.ws_client.subscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation':request.get('needs_confirmation')})
+            self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation': request.get('confirms_unsubscription')})
             self.ws_client.shutdown()
             return rv
 
@@ -170,6 +171,8 @@ class TestIbkrWsClient(TestCase):
         response_mock = MagicMock(spec=requests.Response)
         response_mock.status_code = 200
         response_mock.json.return_value = {'session': session_id, 'data_to_be_ignored': '1234'}
+
+        self.client.tickle.return_value = Result(data=response_mock.json.return_value)
 
         with patch('ibind.base.rest_client.requests') as requests_mock:
             requests_mock.request.return_value = response_mock
@@ -232,7 +235,7 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
         server_id = 87567
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'data': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}}
+        request = {'channel': f'{full_channel}', 'data': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription':False}
         response = {'topic': f's{full_channel}', 'serverId': server_id, '_updated': self.update_time, 'conid': self.conid, 'foo': 'bar'}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
@@ -274,13 +277,13 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel), [r.msg for r in cm.records])
+        self.assertEqual(self._logs_subscriptions(full_channel, None, True, True), [r.msg for r in cm.records])
         self.assertEqual(response, queue.get())
 
     def test_subscription_without_confirmation(self):
         channel = 'fake'
         full_channel = f'{channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'needs_confirmation': False}
+        request = {'channel': f'{full_channel}', 'needs_confirmation': False, 'confirms_unsubscription':False}
         response = None
 
         expected_errors = [
