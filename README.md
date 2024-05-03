@@ -77,12 +77,7 @@ See [all examples][examples].
 ### Basic REST Example
 
 ```python
-import warnings
-
 from ibind import IbkrClient
-
-# In this example we provide no CAcert, hence we need to silence this warning.
-warnings.filterwarnings("ignore", message="Unverified HTTPS request is being made to host 'localhost'")
 
 # Construct the client
 client = IbkrClient()
@@ -101,39 +96,34 @@ print(client.portfolio_accounts().data)
 ### Basic WebSocket Example
 
 ```python
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind import IbkrWsKey, IbkrWsClient, ibind_logs_initialize
 
 # Initialise the logger
 ibind_logs_initialize(log_to_file=False)
 
-# Construct the clients
-client = IbkrClient()
-ws_client = IbkrWsClient(ibkr_client=client)
+# Construct the client. Assumes IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
+ws_client = IbkrWsClient(start=True)
 
-# Start the WebSocket worker thread
-ws_client.start()
+# Choose the WebSocket channel
+ibkr_ws_key = IbkrWsKey.PNL
 
-# Acquire a QueueAccessor for the Orders channel
-qa = ws_client.new_queue_accessor(IbkrWsKey.ORDERS)
+# Subscribe to the PNL channel
+ws_client.subscribe(channel=ibkr_ws_key.channel)
 
-# Subscribe to the Orders channel
-ws_client.subscribe(channel='or', data=None, needs_confirmation=False)
-
-# Wait for new items in the Orders queue.
+# Wait for new items in the PNL queue.
 while True:
-  try:
-    while not qa.empty():
-      print(str(qa), qa.get())
+    try:
+        while not ws_client.empty(ibkr_ws_key):
+            print(ws_client.get(ibkr_ws_key))
 
-  except KeyboardInterrupt:
-    print('KeyboardInterrupt')
-    break
+    except KeyboardInterrupt:
+        print('KeyboardInterrupt')
+        break
 
-# Unsubscribe from the Orders channel and shutdown the client
-ws_client.unsubscribe(channel='or', data=None, needs_confirmation=False)
+# Unsubscribe from the PNL channel and shutdown the client
+ws_client.unsubscribe(channel=ibkr_ws_key.channel)
 
 ws_client.shutdown()
-
 ```
 
 
