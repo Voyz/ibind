@@ -23,9 +23,9 @@ class IbkrWsKey(Enum):
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
 
-    Enumeration of key types for Interactive Brokers WebSocket channels.
+    Enumeration of key types for IBKR WebSocket channels.
 
-    This Enum class represents various types of data or subscription channels for Interactive Brokers WebSocket API.
+    This Enum class represents various types of data or subscription channels for IBKR WebSocket API.
 
     Subscriptions Enums:
         * ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
@@ -113,7 +113,7 @@ class IbkrWsKey(Enum):
 
 class IbkrSubscriptionProcessor(SubscriptionProcessor):
     """
-    A subscription processor for Interactive Brokers WebSocket channels. This class extends the SubscriptionProcessor.
+    A subscription processor for IBKR WebSocket channels. This class extends the SubscriptionProcessor.
     """
 
     def make_subscribe_payload(self, channel: str, data: dict = None) -> str:
@@ -128,7 +128,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             data (dict, optional): Additional data to be included in the subscription payload. Defaults to None.
 
         Returns:
-            str: A formatted subscription payload for the Interactive Brokers WebSocket.
+            str: A formatted subscription payload for the IBKR WebSocket.
 
         Example:
             - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
@@ -153,7 +153,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             data (dict, optional): Additional data to be included in the unsubscription payload. Defaults to None.
 
         Returns:
-            str: A formatted unsubscription payload for the Interactive Brokers WebSocket.
+            str: A formatted unsubscription payload for the IBKR WebSocket.
 
         Example:
             - With data: make_unsubscribe_payload('md', {'foo': 'bar'}) returns "umd+{"foo": "bar"}"
@@ -165,9 +165,9 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
 
 class IbkrWsClient(WsClient):
     """
-    A WebSocket client for Interactive Brokers, extending WsClient.
+    A WebSocket client for IBKR, extending WsClient.
 
-    This class handles WebSocket communications specific to Interactive Brokers, managing subscriptions,
+    This class handles WebSocket communications specific to IBKR, managing subscriptions,
     message processing, and maintaining the health of the WebSocket connection.
 
     See: https://interactivebrokers.github.io/cpwebapi/websockets
@@ -175,12 +175,12 @@ class IbkrWsClient(WsClient):
 
     def __init__(
             self,
-            ibkr_client: IbkrClient,
             account_id: str = var.IBIND_ACCOUNT_ID,
             url: str = var.IBIND_WS_URL,
             host: str = 'localhost',
             port: str = '5000',
             base_route: str = '/v1/api/ws',
+            ibkr_client: IbkrClient = None,
             SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
@@ -198,14 +198,17 @@ class IbkrWsClient(WsClient):
             subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
     ) -> None:
         """
-        Initializes the IbkrWsClient, an Interactive Brokers WebSocket client.
+        Initializes the IbkrWsClient, an IBKR WebSocket client.
 
-        Sets up the client with necessary configurations for connecting to and interacting with the Interactive Brokers WebSocket.
+        Sets up the client with necessary configurations for connecting to and interacting with the IBKR WebSocket.
 
         Parameters:
-            url (str): URL for the Interactive Brokers WebSocket.
-            ibkr_client (IbkrClient): An instance of the IbkrClient for related operations.
-            account_id (str): Account ID for subscription management.
+            url (str, optional): URL for the IBKR WebSocket.
+            host (str, optional): Host for the IBKR WebSocket API. Defaults to 'localhost'.
+            port (str, optional): Port for the IBKR WebSocket API. Defaults to '5000'
+            base_route (str, optional): Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
+            account_id (str, optional): Account ID for subscription management.
+            ibkr_client (IbkrClient, optional): An instance of the IbkrClient for related operations.
             SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
             QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
@@ -223,10 +226,16 @@ class IbkrWsClient(WsClient):
             subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
-        self._ibkr_client = ibkr_client
+
+
         self._account_id = account_id
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
+
+        if ibkr_client is None:
+            ibkr_client = IbkrClient(account_id=account_id, url=url, host=host, port=port, cacert=cacert)
+
+        self._ibkr_client = ibkr_client
 
         self._queue_controller = QueueControllerClass()
         self._subscription_processor = SubscriptionProcessorClass()
@@ -431,7 +440,7 @@ class IbkrWsClient(WsClient):
         Checks the overall health of the IbkrWsClient and its WebSocket connection.
 
         Verifies the health of the WebSocket connection by checking ping responses and heartbeat messages
-        from Interactive Brokers. If the connection is found to be unhealthy, a hard reset is initiated.
+        from IBKR. If the connection is found to be unhealthy, a hard reset is initiated.
 
         Returns:
             bool: True if the WebSocket connection is healthy, False otherwise.
@@ -491,7 +500,7 @@ class IbkrWsClient(WsClient):
             subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
-        Subscribes to a specific channel in the Interactive Brokers WebSocket.
+        Subscribes to a specific channel in the IBKR WebSocket.
 
         Initiates a subscription to a given channel, optionally including additional data in the subscription
         request. The method delegates the subscription logic to the SubscriptionController.
