@@ -4,6 +4,7 @@ WebSocket Intermediate
 In this example we:
 
 * Demonstrate subscription to multiple channels
+* Utilise queue accessors
 * Use the 'signal' module to ensure we unsubscribe and shutdown upon the program termination
 """
 
@@ -23,12 +24,12 @@ ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 ws_client.start()
 
 requests = [
-    {'channel': 'md+265598', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}, 'needs_confirmation': False},
-    {'channel': 'or', 'data': None, 'needs_confirmation': False},
-    {'channel': 'tr', 'data': None, 'needs_confirmation': False},
-    {'channel': f'sd+{account_id}', 'data': None, 'needs_confirmation': False},
-    {'channel': f'ld+{account_id}', 'data': None, 'needs_confirmation': False},
-    {'channel': 'pl', 'data': None, 'needs_confirmation': False},
+    {'channel': 'md+265598', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
+    {'channel': 'or'},
+    {'channel': 'tr'},
+    {'channel': f'sd+{account_id}'},
+    {'channel': f'ld+{account_id}'},
+    {'channel': 'pl'},
 ]
 queue_accessors = [
     ws_client.new_queue_accessor(IbkrWsKey.TRADES),

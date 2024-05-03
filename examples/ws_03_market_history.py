@@ -48,8 +48,7 @@ def unsubscribe():
 
 request = {
     'channel': 'mh+265598',
-    'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"},
-    'needs_confirmation': True
+    'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
 }
 
 ws_client.start()
