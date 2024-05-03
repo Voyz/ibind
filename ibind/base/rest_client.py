@@ -7,8 +7,8 @@ import requests
 from requests import ReadTimeout, Timeout
 
 from ibind import var
-from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 from ibind.support.errors import ExternalBrokerError
+from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 from ibind.support.py_utils import filter_none, UNDEFINED
 
 _LOGGER = project_logger(__file__)
@@ -73,12 +73,13 @@ class RestClient:
         - Logging is integrated into request methods, and each request is logged with the specified details.
     """
 
-    def __init__(self,
-                 url: str,
-                 cacert: Union[os.PathLike, bool] = False,
-                 timeout: float = 10,
-                 max_retries: int = 3,
-                 ) -> None:
+    def __init__(
+            self,
+            url: str,
+            cacert: Union[os.PathLike, bool] = False,
+            timeout: float = 10,
+            max_retries: int = 3,
+            ) -> None:
         """
         Parameters:
             url (str): The base URL for the REST API.
@@ -110,10 +111,9 @@ class RestClient:
     def logger(self):
         try:
             return self._logger
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             self.make_logger()
             return self._logger
-
 
     def get(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
         return self.request('GET', path, log=log, params=params)
