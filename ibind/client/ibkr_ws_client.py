@@ -28,14 +28,14 @@ class IbkrWsKey(Enum):
     This Enum class represents various types of data or subscription channels for IBKR WebSocket API.
 
     Subscriptions Enums:
-        * ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
-        * ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription.
-        * MARKET_DATA: Represents the 'MARKET_DATA' subscription.
-        * MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription.
+        * ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription. (S) (U)
+        * ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription. (S) (U)
+        * MARKET_DATA: Represents the 'MARKET_DATA' subscription. (S)
+        * MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription. (S) (U)
         * PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
         * ORDERS: Represents the 'ORDERS' subscription.
-        * PNL: Represents the 'PNL' subscription.
-        * TRADES: Represents the 'TRADES' subscription.
+        * PNL: Represents the 'PNL' subscription. (S)
+        * TRADES: Represents the 'TRADES' subscription. (S)
 
     Unsolicited Enums:
         * ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
@@ -44,6 +44,8 @@ class IbkrWsKey(Enum):
         * ERROR: Represents the 'ERROR' unsolicited message.
         * SYSTEM: Represents the 'SYSTEM' unsolicited message.
         * NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
+
+    (S) marker indicates that the channel confirms its subscription, while (U) marker indicates that it confirms its unsubscription.
     """
     # subscription-based
     ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
@@ -108,6 +110,32 @@ class IbkrWsKey(Enum):
             IbkrWsKey.ORDERS: 'or',
             IbkrWsKey.PNL: 'pl',
             IbkrWsKey.TRADES: 'tr',
+        }[self]
+
+    @property
+    def confirms_subscribing(self):
+        return {
+            IbkrWsKey.ACCOUNT_SUMMARY: True,
+            IbkrWsKey.ACCOUNT_LEDGER: True,
+            IbkrWsKey.MARKET_DATA: True,
+            IbkrWsKey.MARKET_HISTORY: True,
+            IbkrWsKey.PRICE_LADDER: False,
+            IbkrWsKey.ORDERS: False,
+            IbkrWsKey.PNL: True,
+            IbkrWsKey.TRADES: True,
+        }[self]
+
+    @property
+    def confirms_unsubscribing(self):
+        return {
+            IbkrWsKey.ACCOUNT_SUMMARY: True,
+            IbkrWsKey.ACCOUNT_LEDGER: True,
+            IbkrWsKey.MARKET_DATA: False,
+            IbkrWsKey.MARKET_HISTORY: True,
+            IbkrWsKey.PRICE_LADDER: False,
+            IbkrWsKey.ORDERS: False,
+            IbkrWsKey.PNL: False,
+            IbkrWsKey.TRADES: False,
         }[self]
 
 
@@ -185,6 +213,7 @@ class IbkrWsClient(WsClient):
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
+            start: bool = False,
             # inherited
             ping_interval: int = var.IBIND_WS_PING_INTERVAL,
             max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
@@ -212,6 +241,7 @@ class IbkrWsClient(WsClient):
             SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
             QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
+            start (bool, optional): Flag to start the client immediately after initialization. Defaults to False.
 
 
             Inherited parameters from WsClient:
@@ -227,13 +257,12 @@ class IbkrWsClient(WsClient):
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
 
-
         self._account_id = account_id
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
 
         if ibkr_client is None:
-            ibkr_client = IbkrClient(account_id=account_id, url=url, host=host, port=port, cacert=cacert)
+            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert)
 
         self._ibkr_client = ibkr_client
 
@@ -263,7 +292,11 @@ class IbkrWsClient(WsClient):
 
         self._logged_in = False
         self._last_heartbeat = 0
-        self.server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
+        self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
+        self._queue_accessors: Dict[IbkrWsKey, QueueAccessor] = {}
+
+        if start:
+            self.start()
 
     def _login(self):
         status = self._ibkr_client.tickle()
@@ -290,7 +323,7 @@ class IbkrWsClient(WsClient):
         return {message['conid']: result}
 
     def _preprocess_market_history_message(self, message: dict):
-        mh_server_id_conid_pairs = self.server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
+        mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
         if 'serverId' in message and message['serverId'] not in mh_server_id_conid_pairs:
             mh_server_id_conid_pairs[message['serverId']] = extract_conid(message)
 
@@ -352,7 +385,7 @@ class IbkrWsClient(WsClient):
 
     def _handle_market_history_unsubscribe(self, data):
         server_id = data['message'].split('Unsubscribed ')[-1]
-        mh_server_id_conid_pairs = self.server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
+        mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
         if server_id in mh_server_id_conid_pairs:
             conid = mh_server_id_conid_pairs[server_id]
             _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}/conid={conid!r}.')
@@ -372,6 +405,11 @@ class IbkrWsClient(WsClient):
             elif message['message'] == 'waiting for session':
                 _LOGGER.info(f'{self}: Waiting for an active IBKR session.')
                 return
+        elif 'result' in message:
+            if message['result'] == 'unsubscribed from summary':
+                return self.modify_subscription(f'sd+{self._account_id}', status=False)
+            elif message['result'] == 'unsubscribed from ledger':
+                return self.modify_subscription(f'ld+{self._account_id}', status=False)
 
         _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
 
@@ -475,7 +513,7 @@ class IbkrWsClient(WsClient):
         Returns:
             Optional[Dict[str, int]: The server IDs associated with the given key, or None if no server IDs are available.
         """
-        return self.server_id_conid_pairs[key]
+        return self._server_id_conid_pairs[key]
 
     def new_queue_accessor(self, key: IbkrWsKey) -> QueueAccessor[IbkrWsKey]:  # pragma: no cover
         """
@@ -496,7 +534,7 @@ class IbkrWsClient(WsClient):
             self,
             channel: str,
             data: dict = None,
-            needs_confirmation: bool = True,
+            needs_confirmation: bool = None,
             subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
@@ -510,16 +548,89 @@ class IbkrWsClient(WsClient):
         Parameters:
             channel (str): The channel to subscribe to.
             data (dict, optional): Additional data to be included in the subscription request. Defaults to None.
-            needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation from the server. Defaults to True.
+            needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
             subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
                                                                       default one if provided. Defaults to None.
 
         Returns:
             bool: True if the subscription was successful, False otherwise.
         """
-        if channel == 'or':
+        if channel[:2] == 'or':
             if not self._ibkr_client.check_health():
                 return False
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
+
+        if needs_confirmation is None:
+            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_subscribing
+
         return super().subscribe(channel, data, needs_confirmation, subscription_processor)
+
+    def unsubscribe(
+            self,
+            channel: str,
+            data: dict = None,
+            needs_confirmation: bool = None,
+            subscription_processor: SubscriptionProcessor = None,
+    ) -> bool:  # pragma: no cover
+        """
+        Unsubscribes from a specified channel.
+
+        Attempts to unsubscribe from a given channel using the WsClient. The method manages the
+        unsubscription logic, including sending the unsubscription payload and handling retries and timeouts.
+        The subscription status is updated accordingly within the class.
+
+        Parameters:
+            channel (str): The name of the channel to unsubscribe from.
+            data (dict, optional): Additional data to be included in the unsubscription request. Defaults to None.
+            needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
+            subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
+                                                                      default one if provided. Defaults to None.
+
+        Returns:
+            bool: True if the unsubscription was successful, False otherwise.
+        """
+        if needs_confirmation is None:
+            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_unsubscribing
+
+        return super().unsubscribe(channel, data, needs_confirmation, subscription_processor)
+
+    def _queue_accessor(self, ibkr_ws_key: IbkrWsKey):  # pragma: no cover
+        try:
+            return self._queue_accessors[ibkr_ws_key]
+        except KeyError:
+            self._queue_accessors[ibkr_ws_key] = self.new_queue_accessor(ibkr_ws_key)
+            return self._queue_accessors[ibkr_ws_key]
+
+    def get(self, ibkr_ws_key: IbkrWsKey, block: bool = False, timeout=None):  # pragma: no cover
+        """
+        Facilitates access to data queues by exposing the `get` method of internally-stored QueueAccessor objects.
+
+        Parameters:
+            ibkr_ws_key (IbkrWsKey): The IbkrWsKey of the queue to access.
+            block (bool, optional): Whether to block if the queue is empty. Defaults to False.
+            timeout (Optional[float]): The maximum time in seconds to block waiting for an item.
+                                       A value of None indicates an indefinite wait. Only effective if 'block' is True.
+
+        Returns:
+            The item retrieved from the queue, or None if the queue is empty and 'block' is False.
+
+        Note:
+            - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+        """
+        return self._queue_accessor(ibkr_ws_key).get(block=block, timeout=timeout)
+
+    def empty(self, ibkr_ws_key: IbkrWsKey):  # pragma: no cover
+        """
+        Facilitates access to data queues by exposing the `empty` method of internally-stored QueueAccessor objects.
+
+        Parameters:
+            ibkr_ws_key (IbkrWsKey): The IbkrWsKey of the queue to access.
+
+        Returns:
+             bool: True if the queue is empty, False otherwise.
+
+        Note:
+            - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+        """
+        return self._queue_accessor(ibkr_ws_key).empty()
