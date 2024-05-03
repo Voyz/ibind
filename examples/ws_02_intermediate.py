@@ -68,4 +68,4 @@ while ws_client.running:
         print('KeyboardInterrupt')
         break
 
-ws_client.shutdown()
+stop(None, None)
