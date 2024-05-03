@@ -4,12 +4,7 @@ REST basic.
 Minimal example of using the IbkrClient class.
 """
 
-import warnings
-
 from ibind import IbkrClient
-
-# In this example we provide no CAcert, hence we need to silence this warning.
-warnings.filterwarnings("ignore", message="Unverified HTTPS request is being made to host 'localhost'")
 
 # Construct the client
 client = IbkrClient()

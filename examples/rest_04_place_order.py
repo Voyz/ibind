@@ -7,6 +7,8 @@ In this example we:
 * Prepare the place_order answers based on the QuestionType enum
 * Mock the place_order endpoint to prevent submitting an actual order
 * Call the place_order() method
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 import datetime
 import os

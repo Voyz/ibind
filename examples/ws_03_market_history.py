@@ -7,6 +7,8 @@ In this example we:
 * Use a custom unsubscribe method to iterate over all server ids for market history and attempt to unsubscribe
 * Demonstrate using the Market Data History channel
 * Use the 'signal' module to ensure we unsubscribe and shutdown upon the program termination
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 
 import os

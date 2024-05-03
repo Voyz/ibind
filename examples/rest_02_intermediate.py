@@ -6,6 +6,8 @@ In this example we:
 * Initialise the IBind logs
 * Provide a CAcert (assuming the Gateway is using the same one)
 * Showcase several REST API calls
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 
 import os

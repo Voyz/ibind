@@ -7,6 +7,8 @@ In this example we:
 * Query historical market data by symbol
 * Showcase using the marketdata_history_by_symbols to query one and multiple symbols
 * Showcase the time difference between these various calls
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 import os
 import time

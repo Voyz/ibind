@@ -7,6 +7,8 @@ In this example we:
 * Showcase using StockQuery class for advanced stock filtering
 * Get conids by using StockQuery queries
 * Showcase an error encountered when getting conids returns multiple contracts or instruments
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 
 import os

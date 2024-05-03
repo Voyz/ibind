@@ -6,6 +6,8 @@ In this example we:
 * Demonstrate subscription to multiple channels
 * Utilise queue accessors
 * Use the 'signal' module to ensure we unsubscribe and shutdown upon the program termination
+
+Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 
 import os
