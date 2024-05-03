@@ -99,13 +99,13 @@ Attributes:
 
 ## IbkrClient
 
-A client class for interfacing with the Interactive Brokers API, extending the RestClient class.
+A client class for interfacing with the IBKR API, extending the RestClient class.
 
-This subclass of RestClient is specifically designed for the Interactive Brokers API. It inherits
+This subclass of RestClient is specifically designed for the IBKR API. It inherits
 the foundational REST API interaction capabilities from RestClient and adds functionalities
-particular to the Interactive Brokers API, such as specific endpoint handling.
+particular to the IBKR API, such as specific endpoint handling.
 
-The class provides methods to perform various operations with the Interactive Brokers API, such as
+The class provides methods to perform various operations with the IBKR API, such as
 fetching stock data, submitting orders, and managing account information.
 
 See: https://interactivebrokers.github.io/cpwebapi/endpoints
@@ -131,8 +131,11 @@ def __init__(account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
 
 Arguments:
 
-- `url` _str_ - The base URL for the REST API.
 - `account_id` _str_ - An identifier for the account.
+- `url` _str_ - The base URL for the REST API.
+- `host` _str, optional_ - Host for the IBKR REST API. Defaults to 'localhost'.
+- `port` _str, optional_ - Port for the IBKR REST API. Defaults to '5000'
+- `base_route` _str, optional_ - Base route for the IBKR REST API. Defaults to '/v1/api/'.
 - `cacert` _Union[os.PathLike, bool], optional_ - Path to the CA certificate file for SSL verification,
   or False to disable SSL verification. Defaults to False.
 - `timeout` _float, optional_ - Timeout in seconds for the API requests. Defaults to 10.

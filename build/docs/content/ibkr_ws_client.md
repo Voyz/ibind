@@ -13,7 +13,9 @@
   * [server\_ids](#client.ibkr_ws_client.IbkrWsClient.server_ids)
   * [new\_queue\_accessor](#client.ibkr_ws_client.IbkrWsClient.new_queue_accessor)
   * [subscribe](#client.ibkr_ws_client.IbkrWsClient.subscribe)
-  * [unsubscribe](#base.subscription_controller.SubscriptionController.unsubscribe)
+  * [unsubscribe](#client.ibkr_ws_client.IbkrWsClient.unsubscribe)
+  * [get](#client.ibkr_ws_client.IbkrWsClient.get)
+  * [empty](#client.ibkr_ws_client.IbkrWsClient.empty)
   * [modify\_subscription](#base.subscription_controller.SubscriptionController.modify_subscription)
   * [recreate\_subscriptions](#base.subscription_controller.SubscriptionController.recreate_subscriptions)
   * [hard\_reset](#base.ws_client.WsClient.hard_reset)
@@ -93,19 +95,19 @@ Returns:
 
 https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
 
-Enumeration of key types for Interactive Brokers WebSocket channels.
+Enumeration of key types for IBKR WebSocket channels.
 
-This Enum class represents various types of data or subscription channels for Interactive Brokers WebSocket API.
+This Enum class represents various types of data or subscription channels for IBKR WebSocket API.
 
 Subscriptions Enums:
-* ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription.
-* ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription.
-* MARKET_DATA: Represents the 'MARKET_DATA' subscription.
-* MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription.
+* ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription. (S) (U)
+* ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription. (S) (U)
+* MARKET_DATA: Represents the 'MARKET_DATA' subscription. (S)
+* MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription. (S) (U)
 * PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
 * ORDERS: Represents the 'ORDERS' subscription.
-* PNL: Represents the 'PNL' subscription.
-* TRADES: Represents the 'TRADES' subscription.
+* PNL: Represents the 'PNL' subscription. (S)
+* TRADES: Represents the 'TRADES' subscription. (S)
 
 Unsolicited Enums:
 * ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
@@ -114,6 +116,8 @@ Unsolicited Enums:
 * ERROR: Represents the 'ERROR' unsolicited message.
 * SYSTEM: Represents the 'SYSTEM' unsolicited message.
 * NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
+
+(S) marker indicates that the channel confirms its subscription, while (U) marker indicates that it confirms its unsubscription.
 
 <a id="client.ibkr_ws_client.IbkrWsKey.from_channel"></a>
 
@@ -159,9 +163,9 @@ Returns:
 
 ## IbkrWsClient
 
-A WebSocket client for Interactive Brokers, extending WsClient.
+A WebSocket client for IBKR, extending WsClient.
 
-This class handles WebSocket communications specific to Interactive Brokers, managing subscriptions,
+This class handles WebSocket communications specific to IBKR, managing subscriptions,
 message processing, and maintaining the health of the WebSocket connection.
 
 See: https://interactivebrokers.github.io/cpwebapi/websockets
@@ -172,18 +176,19 @@ See: https://interactivebrokers.github.io/cpwebapi/websockets
 
 ```python
 def __init__(
-        ibkr_client: IbkrClient,
         account_id: str = var.IBIND_ACCOUNT_ID,
         url: str = var.IBIND_WS_URL,
         host: str = 'localhost',
         port: str = '5000',
         base_route: str = '/v1/api/ws',
+        ibkr_client: IbkrClient = None,
         SubscriptionProcessorClass: Type[
             SubscriptionProcessor] = IbkrSubscriptionProcessor,
         QueueControllerClass: Type[QueueController] = QueueController[
             IbkrWsKey],
         log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
         unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
+        start: bool = False,
         ping_interval: int = var.IBIND_WS_PING_INTERVAL,
         max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
         timeout: float = var.IBIND_WS_TIMEOUT,
@@ -196,18 +201,22 @@ def __init__(
 ) -> None
 ```
 
-Initializes the IbkrWsClient, an Interactive Brokers WebSocket client.
+Initializes the IbkrWsClient, an IBKR WebSocket client.
 
-Sets up the client with necessary configurations for connecting to and interacting with the Interactive Brokers WebSocket.
+Sets up the client with necessary configurations for connecting to and interacting with the IBKR WebSocket.
 
 Arguments:
 
-- `url` _str_ - URL for the Interactive Brokers WebSocket.
-- `ibkr_client` _IbkrClient_ - An instance of the IbkrClient for related operations.
-- `account_id` _str_ - Account ID for subscription management.
+- `url` _str, optional_ - URL for the IBKR WebSocket.
+- `host` _str, optional_ - Host for the IBKR WebSocket API. Defaults to 'localhost'.
+- `port` _str, optional_ - Port for the IBKR WebSocket API. Defaults to '5000'
+- `base_route` _str, optional_ - Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
+- `account_id` _str, optional_ - Account ID for subscription management.
+- `ibkr_client` _IbkrClient, optional_ - An instance of the IbkrClient for related operations.
 - `SubscriptionProcessorClass` _Type[SubscriptionProcessor]_ - The class to process subscription payloads.
 - `QueueControllerClass` _Type[QueueController[IbkrWsKey]], optional_ - The class to manage message queues. Defaults to QueueController[IbkrWsKey].
 - `unsolicited_channels_to_be_queued` _List[IbkrWsKey], optional_ - List of unsolicited channels to be queued. Defaults to None.
+- `start` _bool, optional_ - Flag to start the client immediately after initialization. Defaults to False.
   
   
   Inherited parameters from WsClient:
@@ -233,7 +242,7 @@ def check_health() -> bool
 Checks the overall health of the IbkrWsClient and its WebSocket connection.
 
 Verifies the health of the WebSocket connection by checking ping responses and heartbeat messages
-from Interactive Brokers. If the connection is found to be unhealthy, a hard reset is initiated.
+from IBKR. If the connection is found to be unhealthy, a hard reset is initiated.
 
 Returns:
 
@@ -290,11 +299,11 @@ Returns:
 ```python
 def subscribe(channel: str,
               data: dict = None,
-              needs_confirmation: bool = True,
+              needs_confirmation: bool = None,
               subscription_processor: SubscriptionProcessor = None) -> bool
 ```
 
-Subscribes to a specific channel in the Interactive Brokers WebSocket.
+Subscribes to a specific channel in the IBKR WebSocket.
 
 Initiates a subscription to a given channel, optionally including additional data in the subscription
 request. The method delegates the subscription logic to the SubscriptionController.
@@ -305,7 +314,7 @@ Arguments:
 
 - `channel` _str_ - The channel to subscribe to.
 - `data` _dict, optional_ - Additional data to be included in the subscription request. Defaults to None.
-- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation from the server. Defaults to True.
+- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
 - `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
   default one if provided. Defaults to None.
   
@@ -314,13 +323,14 @@ Returns:
 
 - `bool` - True if the subscription was successful, False otherwise.
 
+<a id="client.ibkr_ws_client.IbkrWsClient.unsubscribe"></a>
 
 ### unsubscribe
 
 ```python
 def unsubscribe(channel: str,
                 data: dict = None,
-                needs_confirmation: bool = False,
+                needs_confirmation: bool = None,
                 subscription_processor: SubscriptionProcessor = None) -> bool
 ```
 
@@ -334,21 +344,66 @@ Arguments:
 
 - `channel` _str_ - The name of the channel to unsubscribe from.
 - `data` _dict, optional_ - Additional data to be included in the unsubscription request. Defaults to None.
-- `needs_confirmation` _bool, optional_ - Specifies whether the unsubscription requires confirmation.
-  Defaults to False.
+- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
 - `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
   default one if provided. Defaults to None.
-
+  
 
 Returns:
 
 - `bool` - True if the unsubscription was successful, False otherwise.
 
+<a id="client.ibkr_ws_client.IbkrWsClient.get"></a>
+
+### get
+
+```python
+def get(ibkr_ws_key: IbkrWsKey, block: bool = False, timeout=None)
+```
+
+Facilitates access to data queues by exposing the `get` method of internally-stored QueueAccessor objects.
+
+Arguments:
+
+- `ibkr_ws_key` _IbkrWsKey_ - The IbkrWsKey of the queue to access.
+- `block` _bool, optional_ - Whether to block if the queue is empty. Defaults to False.
+- `timeout` _Optional[float]_ - The maximum time in seconds to block waiting for an item.
+  A value of None indicates an indefinite wait. Only effective if 'block' is True.
+  
+
+Returns:
+
+  The item retrieved from the queue, or None if the queue is empty and 'block' is False.
+  
 
 Notes:
 
-- If 'needs_confirmation' is False, the method sends the unsubscription request and assumes success.
-- If 'needs_confirmation' is True, the method waits for confirmation before marking the unsubscription as successful.
+  - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+
+<a id="client.ibkr_ws_client.IbkrWsClient.empty"></a>
+
+### empty
+
+```python
+def empty(ibkr_ws_key: IbkrWsKey)
+```
+
+Facilitates access to data queues by exposing the `empty` method of internally-stored QueueAccessor objects.
+
+Arguments:
+
+- `ibkr_ws_key` _IbkrWsKey_ - The IbkrWsKey of the queue to access.
+  
+
+Returns:
+
+- `bool` - True if the queue is empty, False otherwise.
+  
+
+Notes:
+
+  - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+
 
 <a id="base.subscription_controller.SubscriptionController.modify_subscription"></a>
 
