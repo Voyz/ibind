@@ -1,6 +1,6 @@
 [project]
 name = "ibind"
-version = "0.0.4"
+version = "0.1.0"
 authors = [
     { name="Voy Zan", email="voy1982@yahoo.co.uk" },
 ]
@@ -29,3 +29,4 @@ Homepage = "https://github.com/Voyz/ibind"
 requires = [
     "setuptools"
 ]
+build-backend = "setuptools.build_meta"
