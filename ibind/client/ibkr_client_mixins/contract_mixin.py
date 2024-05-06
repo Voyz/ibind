@@ -61,7 +61,7 @@ class ContractMixin():
             source (str): Specify the base currency to request data for. Valid Structure: “AUD”
             target (str): Specify the quote currency to request data for. Valid Structure: “USD”
         """
-        return self.get(f'iserver/exchangerate', {'source': source, target: target})
+        return self.get(f'iserver/exchangerate', {'source': source, 'target': target})
 
     def info_and_rules_by_conid(self: 'IbkrClient', conid: str, is_buy: bool) -> Result:  # pragma: no cover
         """
