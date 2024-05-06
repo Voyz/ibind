@@ -52,11 +52,9 @@ Features:
   * [Health monitoring][wiki-ws-health-monitoring]
   * [and more][wiki-advanced-websocket]
 
-<table><tr><td>
-  <a href="https://www.youtube.com/watch?v=34iHETvbdas">
-      <img src="https://raw.githubusercontent.com/Voyz/voyz_public/master/ibind_promo_vidA_A01.gif" alt="IBind showcase gif" title="IBind showcase gif" width="500"/>
-  </a>
-</td></tr></table>
+<a href="https://www.youtube.com/watch?v=34iHETvbdas">
+    <img src="https://raw.githubusercontent.com/Voyz/voyz_public/master/ibind_promo_vidA_A01.gif" alt="IBind showcase gif" title="IBind showcase gif" width="500"/>
+</a>
 
 ## Overview
 
