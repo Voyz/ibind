@@ -39,3 +39,7 @@ class TestIbkrClientE(TestCase):
         self.assertEqual(result.data, ibkr_responses.responses['stocks'])
 
 
+    def test_live_marketdata_snapshot(self):
+        self.client.receive_brokerage_accounts()
+        result = self.client.live_marketdata_snapshot('265598', ['55'])
+        print(result)
