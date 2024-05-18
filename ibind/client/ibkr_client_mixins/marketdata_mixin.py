@@ -38,7 +38,7 @@ class MarketdataMixin():
             'conids': ','.join(conids),
             'fields': ','.join(fields)
         }
-        return self.get(f'iserver/secdef/search', params)
+        return self.get(f'iserver/marketdata/snapshot', params)
 
     def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
