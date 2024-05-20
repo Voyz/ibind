@@ -19,7 +19,7 @@ class MarketdataMixin():
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
     """
 
-    @ensure_list_arg('conids')
+    @ensure_list_arg('conids', 'fields')
     def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Get Market Data for the given conid(s).
