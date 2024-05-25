@@ -69,9 +69,9 @@ class MarketdataMixin():
 
         Parameters:
             conid (str): Contract identifier for the ticker symbol of interest.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
             exchange (str, optional): Returns the exchange you want to receive data from.
             period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
             outside_rth (bool, optional): Determine if you want data after regular trading hours.
             start_time (datetime.datetime, optional): Starting date of the request duration.
 
@@ -143,9 +143,9 @@ class MarketdataMixin():
     def marketdata_history_by_symbol(
             self: 'IbkrClient',
             symbol: Union[str, StockQuery],
+            bar: str,
             exchange: str = None,
             period: str = None,
-            bar: str = None,
             outside_rth: bool = None,
             start_time: datetime.datetime = None,
     ) -> Result:  # pragma: no cover
@@ -154,15 +154,15 @@ class MarketdataMixin():
 
         Parameters:
             symbol (Union[str, StockQuery]): StockQuery or str symbol for the ticker of interest.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
             exchange (str, optional): Returns the exchange you want to receive data from.
             period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
             outside_rth (bool, optional): Determine if you want data after regular trading hours.
             start_time (datetime.datetime, optional): Starting date of the request duration.
 
         """
-        conid = self.stock_conid_by_symbol(symbol).data[symbol]
-        return self.marketdata_history_by_conid(conid, exchange, period, bar, outside_rth, start_time)
+        conid = str(self.stock_conid_by_symbol(symbol).data[symbol])
+        return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
