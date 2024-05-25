@@ -314,3 +314,14 @@ def params_dict(required: dict = None, optional: dict = None, preprocessors: dic
         return None
 
     return d
+
+def print_table(my_dict, column_order=None):
+    if not column_order:
+        column_order = list(my_dict[0].keys() if my_dict else [])
+    rv = [column_order] # 1st row = header
+    for item in my_dict:
+        rv.append([str(item[col] if item[col] is not None else '') for col in column_order])
+    column_size = [max(map(len,col)) for col in zip(*rv)]
+    formatter = '   '.join(["{{:>{}}}".format(i) for i in column_size])
+    for i, item in enumerate(rv):
+        print(formatter.format(*item))
