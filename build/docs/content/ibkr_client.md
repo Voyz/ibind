@@ -55,6 +55,7 @@
   * [portfolio\_account\_allocation](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.portfolio_account_allocation)
   * [portfolio\_account\_allocations](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.portfolio_account_allocations)
   * [positions](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.positions)
+  * [positions2](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.positions2)
   * [positions\_by\_conid](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.positions_by_conid)
   * [invalidate\_backend\_portfolio\_cache](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.invalidate_backend_portfolio_cache)
   * [portfolio\_summary](#client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.portfolio_summary)
@@ -569,7 +570,7 @@ https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
 ### live\_marketdata\_snapshot
 
 ```python
-@ensure_list_arg('conids')
+@ensure_list_arg('conids', 'fields')
 def live_marketdata_snapshot(conids: OneOrMany[str],
                              fields: OneOrMany[str]) -> Result
 ```
@@ -630,9 +631,9 @@ Get historical market Data for given conid, length of data is controlled by 'per
 Arguments:
 
 - `conid` _str_ - Contract identifier for the ticker symbol of interest.
+- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
 - `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
   
@@ -679,9 +680,9 @@ Notes:
 ```python
 def marketdata_history_by_symbol(
         symbol: Union[str, StockQuery],
+        bar: str,
         exchange: str = None,
         period: str = None,
-        bar: str = None,
         outside_rth: bool = None,
         start_time: datetime.datetime = None) -> Result
 ```
@@ -691,9 +692,9 @@ Get historical market Data for given symbol, length of data is controlled by 'pe
 Arguments:
 
 - `symbol` _Union[str, StockQuery]_ - StockQuery or str symbol for the ticker of interest.
+- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
 - `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 
@@ -1065,6 +1066,28 @@ Arguments:
 - `sort` _str, optional_ - Declare the table to be sorted by which column.
 - `direction` _str, optional_ - The order to sort by. 'a' means ascending 'd' means descending.
 - `period` _str, optional_ - Period for pnl column. Value Format: 1D, 7D, 1M.
+
+<a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.positions2"></a>
+
+### positions2
+
+```python
+def positions2(account_id: str = None,
+               model: str = None,
+               sort: str = None,
+               direction: str = None) -> Result
+```
+
+Returns a list of positions for the given account.
+/portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
+This endpoint provides near-real time updates and removes caching otherwise found in the /portfolio/{accountId}/positions/{pageId} endpoint.
+
+Arguments:
+
+- `account_id` _str, optional_ - The account ID for which account should place the order.
+- `model` _str, optional_ - Code for the model portfolio to compare against.
+- `sort` _str, optional_ - Declare the table to be sorted by which column.
+- `direction` _str, optional_ - The order to sort by. 'a' means ascending 'd' means descending.
 
 <a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.positions_by_conid"></a>
 
