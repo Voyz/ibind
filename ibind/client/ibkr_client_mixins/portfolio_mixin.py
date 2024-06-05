@@ -101,6 +101,37 @@ class PortfolioMixin():  # pragma: no cover
         )
         return self.get(f'portfolio/{account_id}/positions/{page}', params)
 
+    def positions2(
+            self: 'IbkrClient',
+            account_id: str = None,
+            model: str = None,
+            sort: str = None,
+            direction: str = None,
+    ) -> Result:
+        """
+        Returns a list of positions for the given account.
+        /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
+        This endpoint provides near-real time updates and removes caching otherwise found in the /portfolio/{accountId}/positions/{pageId} endpoint.
+
+        Parameters:
+            account_id (str, optional): The account ID for which account should place the order.
+            model (str, optional): Code for the model portfolio to compare against.
+            sort (str, optional): Declare the table to be sorted by which column.
+            direction (str, optional): The order to sort by. 'a' means ascending 'd' means descending.
+        """
+
+        if account_id == None:
+            account_id = self.account_id
+
+        params = params_dict(
+            optional={
+                'model': model,
+                'sort': sort,
+                'direction': direction,
+            }
+        )
+        return self.get(f'portfolio2/{account_id}/positions', params)
+
     def positions_by_conid(self: 'IbkrClient', account_id: str, conid: str) -> Result:
         """
         Returns a list containing position details only for the specified conid.
