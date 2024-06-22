@@ -245,7 +245,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
 
 def make_order_request(
-        conid: str,
+        conid: int,
         side: str,
         quantity: float,
         order_type: str,
@@ -279,7 +279,7 @@ def make_order_request(
      Create an order request object. Arguments set as None will not be included.
 
     Parameters:
-        conid (str): Identifier of the security to trade.
+        conid (int): Identifier of the security to trade.
         side (str): Order side, either 'SELL' or 'BUY'.
         quantity (int): Order quantity in number of shares.
         order_type (str): Type of the order (e.g., LMT, MKT, STP).
