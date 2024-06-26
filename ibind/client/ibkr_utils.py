@@ -142,6 +142,8 @@ def process_query(q, default_filtering: bool = True):
 class QuestionType(VerboseEnum):
     PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
+    MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
+    STOP_ORDER_RISKS = 'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
 
 
 Answers = Dict[Union[QuestionType, str], bool]
@@ -216,16 +218,18 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
         if not isinstance(data, list):
             raise ExternalBrokerError(f'While handling questions unknown data was returned: {data!r}. Request: {result.request}')
 
+        first_data = data[0]  # this assumes submitting only one order at a time
+
+        # we interpret messages as questions, absence of which we interpret as the end of questions
+        if 'message' not in first_data:
+            if len(data) == 1:
+                data = data[0]
+            return pass_result(data, original_result)
+
         if len(data) != 1:
             _LOGGER.warning(f'While handling questions multiple orders were returned: {pprint.pformat(data)}')
 
-        data = data[0]  # this assumes submitting only one order at a time
-
-        # we interpret messages as questions, absence of which we interpret as the end of questions
-        if 'message' not in data:
-            return pass_result(data, original_result)
-
-        messages = data['message']
+        messages = first_data['message']
 
         if len(messages) != 1:
             _LOGGER.warning(f'While handling questions multiple messages were returned: {pprint.pformat(messages)}')
@@ -237,7 +241,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
         if answer:
             # the result to a reply will either contain another question or a confirmation
-            result = reply_callback(data['id'], True)
+            result = reply_callback(first_data['id'], True)
         else:
             raise RuntimeError(f'A question was not given a positive reply. Question: "{question}". Answers: \n{pprint.pformat(answers)}\n. Request: {result.request}')
 
@@ -311,7 +315,7 @@ def make_order_request(
     order_request = {}
 
     if conid is not None:
-        order_request["conid"] = conid
+        order_request["conid"] = int(conid)
 
     if side is not None:
         order_request["side"] = str(side)

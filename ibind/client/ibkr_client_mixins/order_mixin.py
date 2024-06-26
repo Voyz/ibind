@@ -99,7 +99,8 @@ class OrderMixin():
         )
         return self.get(f'iserver/account/trades/', params=params)
 
-    def place_order(self: 'IbkrClient', order_request: dict, answers: Answers, account_id: str = None) -> Result:
+    @ensure_list_arg('order_request')
+    def place_order(self: 'IbkrClient', order_request: OneOrMany[dict], answers: Answers, account_id: str = None) -> Result:
         """
         When connected to an IServer Brokerage Session, this endpoint will allow you to submit orders.
 
@@ -110,7 +111,7 @@ class OrderMixin():
         Parameters:
             account_id (str): The account ID for which account should place the order.
             answers (Answers): List of question-answer pairs for order submission process.
-            order_request (dict): Used to the order content.
+            order_request (OneOrMany[dict]): Used to the order content.
 
         Keep this in mind:
         https://interactivebrokers.github.io/tws-api/automated_considerations.html#order_placement
@@ -118,12 +119,10 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
-        if isinstance(order_request, list):
-            raise RuntimeError(f'IbkrClient.submit_order() does not accept a list of orders, found: {order_request}')
 
         result = self.post(
             f'iserver/account/{account_id}/orders',
-            params={"orders": [order_request]}
+            params={"orders": order_request}
         )
 
         return handle_questions(result, answers, self.reply)
