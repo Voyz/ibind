@@ -25,8 +25,7 @@ client = IbkrClient(cacert=cacert)
 conid = '265598'
 side = 'BUY'
 size = 1
-order_type = 'MARKET'
-price = 100
+order_type = 'MKT'
 order_tag = f'my_order-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}'
 
 order_request = make_order_request(
@@ -34,7 +33,6 @@ order_request = make_order_request(
     side=side,
     quantity=size,
     order_type=order_type,
-    price=price,
     acct_id=account_id,
     coid=order_tag
 )
