@@ -28,10 +28,10 @@ order_tag = f'my_order-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}'
 order_request_partial = partial(make_order_request, conid=conid, acct_id=account_id, quantity=1)
 
 parent = order_request_partial(side='BUY', order_type='LMT', price=price, coid=order_tag)
-sell1 = order_request_partial(side='SELL', order_type='STP', price=price+1, parent_id=order_tag)
-sell2 = order_request_partial(side='SELL', order_type='LMT', price=price-1, parent_id=order_tag)
+stop_loss = order_request_partial(side='SELL', order_type='STP', price=price-1, parent_id=order_tag)
+take_profit = order_request_partial(side='SELL', order_type='LMT', price=price+1, parent_id=order_tag)
 
-requests = [parent, sell1, sell2]
+requests = [parent, stop_loss, take_profit]
 
 answers = {
     QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
