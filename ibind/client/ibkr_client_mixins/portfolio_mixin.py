@@ -221,4 +221,4 @@ class PortfolioMixin():  # pragma: no cover
                 'currency': currency,
             }, optional={'days': days}
         )
-        return self.get(f'pa/transactions', params)
+        return self.post(f'pa/transactions', params)
