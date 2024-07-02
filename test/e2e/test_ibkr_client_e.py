@@ -52,3 +52,22 @@ class TestIbkrClientE(TestCase):
     def test_positions2(self):
         result = self.client.positions2()
         print(result)
+
+    def test_live_orders(self):
+        result = self.client.live_orders()
+        print(result)
+
+    def test_cancel_all_orders(self):
+        print(self.client.portfolio_accounts())
+        result = self.client.live_orders(filters=[])
+
+        if 'orders' not in result.data or not result.data['orders']:
+            print('No orders to cancel')
+            return
+
+
+        for order in result.data['orders']:
+            try:
+                print(self.client.cancel_order(order['orderId']))
+            except Exception as e:
+                print(e)
