@@ -166,7 +166,7 @@ Thanks and have an awesome day 👋
 [ibkr-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
 [ibkr-ws-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
 
-[ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/
+[ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
 [ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
 [ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
 
