@@ -389,7 +389,7 @@ Arguments:
 ### search\_contract\_rules
 
 ```python
-def search_contract_rules(conid: int,
+def search_contract_rules(conid: str,
                           exchange: str = None,
                           is_buy: bool = None,
                           modify_order: bool = None,
@@ -400,7 +400,7 @@ Returns trading related rules for a specific contract and side.
 
 Arguments:
 
-- `conid` _Number_ - Contract identifier for the interested contract.
+- `conid` _str_ - Contract identifier for the interested contract.
 - `exchange` _str, optional_ - Designate the exchange you wish to receive information for in relation to the contract.
 - `is_buy` _bool, optional_ - Side of the market rules apply to. Set to true for Buy Orders, set to false for Sell Orders. Defaults to true or Buy side rules.
 - `modify_order` _bool, optional_ - Used to find trading rules related to an existing order.
@@ -736,14 +736,14 @@ Notes:
 
 ```python
 @ensure_list_arg('conids')
-def marketdata_unsubscribe(conids: OneOrMany[int]) -> List[Result]
+def marketdata_unsubscribe(conids: OneOrMany[str]) -> List[Result]
 ```
 
 Cancel market data for given conid(s).
 
 Arguments:
 
-- `conids` _OneOrMany[int]_ - Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
+- `conids` _OneOrMany[str]_ - Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
 
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_unsubscribe_all"></a>
 

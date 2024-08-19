@@ -223,12 +223,12 @@ class MarketdataMixin():
         return results
 
     @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[int]) -> List[Result]:
+    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> List[Result]:
         """
         Cancel market data for given conid(s).
 
         Parameters:
-            conids (OneOrMany[int]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
+            conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
         unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
