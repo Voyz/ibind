@@ -213,6 +213,7 @@ class IbkrWsClient(WsClient):
             QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
+            unwrap_market_data: bool = True,
             start: bool = False,
             # inherited
             ping_interval: int = var.IBIND_WS_PING_INTERVAL,
@@ -241,6 +242,7 @@ class IbkrWsClient(WsClient):
             SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
             QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
+            unwrap_market_data (bool, optional): Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
             start (bool, optional): Flag to start the client immediately after initialization. Defaults to False.
 
 
@@ -271,6 +273,7 @@ class IbkrWsClient(WsClient):
 
         self._log_raw_messages = log_raw_messages
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
+        self._unwrap_market_data = unwrap_market_data
 
         super().__init__(
             subscription_processor=self._subscription_processor,
@@ -315,6 +318,9 @@ class IbkrWsClient(WsClient):
         if 'conid' not in message:  # pragma: no cover
             # sometimes the ticker message is just an empty update, we ignore it
             return
+
+        if not self._unwrap_market_data:
+            return {message['conid']: message}
 
         result = {'conid': message['conid'], '_updated': message['_updated'], 'topic': message['topic']}
         for key, value in message.items():
