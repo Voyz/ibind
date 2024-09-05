@@ -1,5 +1,6 @@
 import functools
 import logging
+import sys
 import traceback
 import types
 import unittest
@@ -47,6 +48,9 @@ class SafeAssertLogs(_AssertLogsContext):
     A context manager used to implement TestCase.assertLogs().
     """
     def __init__(self, *args, logger_level:str=None, **kwargs):
+        if sys.version_info < (3, 10, 0) and 'no_logs' in kwargs:
+            del kwargs['no_logs']
+
         super().__init__(*args, **kwargs)
         self.logger_level = logger_level
 

@@ -249,7 +249,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
 
 def make_order_request(
-        conid: int | str,
+        conid: Union[int, str],
         side: str,
         quantity: float,
         order_type: str,
