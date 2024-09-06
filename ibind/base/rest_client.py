@@ -147,6 +147,7 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
+        endpoint = endpoint.lstrip("/")
         url = f"{self.base_url}{endpoint}"
 
         # we want to allow default values used by IBKR, so we remove all None parameters

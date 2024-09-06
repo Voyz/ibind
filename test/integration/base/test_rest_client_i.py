@@ -26,7 +26,7 @@ class TestIbkrClientI(TestCase):
 
         self.response = MagicMock()
         self.response.json.return_value = self.data
-        self.default_path = '/test/api/route'
+        self.default_path = 'test/api/route'
         self.default_url = f'{self.url}/{self.default_path}'
         self.result = Result(data=self.data, request={'url': self.default_url})
         self.maxDiff = 9999
