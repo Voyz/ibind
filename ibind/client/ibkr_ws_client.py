@@ -367,15 +367,17 @@ class IbkrWsClient(WsClient):
     def _handle_authentication_status(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
 
-        if 'authenticated' not in data:
-            _LOGGER.info(f'{self}: Unknown status response: {message}')
-            return
-
-        if data.get('authenticated') == False:
-            _LOGGER.error(f'{self}: Status unauthenticated: {data}')
+        if 'authenticated' in data:
+            if data.get('authenticated') == False:
+                _LOGGER.error(f'{self}: Status unauthenticated: {data}')
+                self._login()
+            else:
+                self._logged_in = True
+        elif 'competing' in data and data.get('competing') == True:
+            _LOGGER.error(f'{self}: Status competing: {data}')
             self._login()
         else:
-            self._logged_in = True
+            _LOGGER.info(f'{self}: Unknown status response: {message}')
 
     def _handle_bulletin(self, message):  # pragma: no cover
         self._handle_unsolicited_message(IbkrWsKey.BULLETINS, message)
