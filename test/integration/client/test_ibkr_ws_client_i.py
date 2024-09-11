@@ -1,6 +1,6 @@
 import json
 import logging
-import time
+from enum import Enum
 from threading import Thread
 from typing import Optional
 from unittest import TestCase
@@ -10,10 +10,26 @@ import requests
 
 from ibind import Result
 from ibind.client.ibkr_client import IbkrClient
-from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
-from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
+from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey, IbkrSubscription
 from ibind.support.logs import project_logger
+from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
 from test_utils import RaiseLogsContext, SafeAssertLogs
+
+
+class FakeIbkrWsKey(Enum):
+    FAKE = 'FAKE'
+
+    @property
+    def channel(self):
+        """
+        Gets the solicited channel string associated with the enum member.
+
+        Returns:
+            str: The channel string corresponding to the enum member.
+        """
+        return {
+            FakeIbkrWsKey.FAKE: 'fk'
+        }[self]
 
 
 class TestPreprocessRawMessage(TestCase):
@@ -38,7 +54,6 @@ class TestPreprocessRawMessage(TestCase):
             'ctABC'  # channel
         )
         self.assertEqual(self.ws_client._preprocess_raw_message(raw_message), expected_result)
-
 
     def test_preprocess_with_unsubscribed_message(self):
         raw_message = json.dumps({'message': 'Unsubscribed'})
@@ -120,7 +135,7 @@ class TestIbkrWsClient(TestCase):
 
         return self.run_in_test_context(run, expected_errors=expected_errors, expect_logs=expect_logs)
 
-    def _subscribe(self, request: dict, response: Optional[dict], expected_errors: list[str] = None, expect_logs: bool = True):
+    def _subscribe(self, subscription: IbkrSubscription, response: Optional[dict], expected_errors: list[str] = None, expect_logs: bool = True, confirms_unsubscription:bool=None):
         def run():
             def override_on_message(wsa_mock: MagicMock, message: str):
                 if response is None:
@@ -130,8 +145,8 @@ class TestIbkrWsClient(TestCase):
 
             self.ws_client.start()
             self.wsa_mock.on_message.side_effect = override_on_message
-            rv = self.ws_client.subscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation':request.get('needs_confirmation')})
-            self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation': request.get('confirms_unsubscription')})
+            rv = self.ws_client.subscribe(subscription)
+            self.ws_client.unsubscribe(subscription.copy(needs_confirmation=confirms_unsubscription))
             self.ws_client.shutdown()
             return rv
 
@@ -219,15 +234,22 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}}
+        subscription = IbkrSubscription(
+            channel=IbkrWsKey.MARKET_DATA,
+            data={
+                'conid': self.conid,
+                'args': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}
+            }
+        )
         response = {'topic': f's{full_channel}', 'conid': self.conid, '_updated': self.update_time, 55: 'AAPL', 70: '195.34', 71: '193.67', 87: '24.2M', 7295: '194.10', 84: '195.25', 86: '195.26', 88: '3,500', 85: '500', 6508: '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109'}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
-            cm, success = self._subscribe(request, response)
+            cm, success = self._subscribe(subscription, response)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel, request["data"]), [r.msg for r in cm.records])
+        self.assertEqual(self._logs_subscriptions(full_channel, subscription.data['args']), [r.msg for r in cm.records])
 
         self.assertEqual({self.conid: {'_updated': self.update_time, 'conid': self.conid, 'topic': f'smd+{self.conid}', 'ask_price': '195.26', 'ask_size': '500', 'bid_price': '195.25', 'bid_size': '3,500', 'high': '195.34', 'low': '193.67', 'open': '194.10', 'service_params': '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109', 'symbol': 'AAPL', 'volume': '24.2M'}}, queue.get())
 
@@ -235,16 +257,24 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
         server_id = 87567
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'data': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription':False}
+        request = {'channel': f'{full_channel}', 'data': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription': False}
+        subscription = IbkrSubscription(
+            channel=IbkrWsKey.MARKET_HISTORY,
+            data={
+                'conid': self.conid,
+                'args': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}
+            }
+        )
+
         response = {'topic': f's{full_channel}', 'serverId': server_id, '_updated': self.update_time, 'conid': self.conid, 'foo': 'bar'}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
-            cm, success = self._subscribe(request, response)
+            cm, success = self._subscribe(subscription, response, confirms_unsubscription=False)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel, request["data"]), [r.msg for r in cm.records])
+        self.assertEqual(self._logs_subscriptions(full_channel, subscription.data['args']), [r.msg for r in cm.records])
 
         self.assertEqual(response, queue.get())
         self.assertIn(server_id, self.ws_client.server_ids(IbkrWsKey.MARKET_HISTORY))
@@ -253,12 +283,18 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}'}
+        subscription = IbkrSubscription(
+            channel=IbkrWsKey.TRADES,
+            data={
+                'conid': self.conid
+            }
+        )
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
-            cm, success = self._subscribe(request, response)
+            cm, success = self._subscribe(subscription, response)
             self.assertTrue(success)
 
         self.assertEqual(self._logs_subscriptions(full_channel), [r.msg for r in cm.records])
@@ -269,21 +305,34 @@ class TestIbkrWsClient(TestCase):
 
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}'}
+        subscription = IbkrSubscription(
+            channel=IbkrWsKey.ORDERS,
+            data={
+                'conid': self.conid
+            }
+        )
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
-            cm, success = self._subscribe(request, response)
+            cm, success = self._subscribe(subscription, response)
             self.assertTrue(success)
 
         self.assertEqual(self._logs_subscriptions(full_channel, None, True, True), [r.msg for r in cm.records])
         self.assertEqual(response, queue.get())
 
     def test_subscription_without_confirmation(self):
-        channel = 'fake'
-        full_channel = f'{channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'needs_confirmation': False, 'confirms_unsubscription':False}
+        channel = FakeIbkrWsKey.FAKE
+        full_channel = f'{channel.channel}+{self.conid}'
+        request = {'channel': f'{full_channel}', 'needs_confirmation': False, 'confirms_unsubscription': False}
+        subscription = IbkrSubscription(
+            channel=channel,
+            data={
+                'conid': self.conid
+            },
+            needs_confirmation=False
+        )
         response = None
 
         expected_errors = [
@@ -291,7 +340,7 @@ class TestIbkrWsClient(TestCase):
         ]
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
-            cm, success = self._subscribe(request, response, expected_errors=expected_errors)
+            cm, success = self._subscribe(subscription, response, expected_errors=expected_errors, confirms_unsubscription=False)
             self.assertTrue(success)
 
         self.assertEqual([f'IbkrWsClient: Subscribed: s{full_channel} without confirmation.',
@@ -316,7 +365,14 @@ class TestIbkrWsClient(TestCase):
         # prepare a fake subscription
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'data': {'foo': 'bar'}}
+        # request = {'channel': f'{full_channel}', 'data': {'foo': 'bar'}}
+        subscription = IbkrSubscription(
+            channel=IbkrWsKey.TRADES,
+            data={
+                'conid': self.conid,
+                'args': {'foo': 'bar'}
+            },
+        )
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         def run():
@@ -331,7 +387,7 @@ class TestIbkrWsClient(TestCase):
             self.wsa_mock.on_message.side_effect = lambda wsa_mock, message: wsa_mock._on_message(wsa_mock, json.dumps(response))
 
             # create the original subscription
-            self.ws_client.subscribe(**request)
+            self.ws_client.subscribe(subscription)
 
             # we simulate that closing the WebSocket doesn't work since we have connectivity issues
             # self.wsa_mock.on_close.side_effect = lambda x, y, z: None
@@ -360,14 +416,14 @@ class TestIbkrWsClient(TestCase):
 
         cm, success = self.run_in_test_context(run, expected_errors=expected_errors)
 
-        channel_subscribed_log = f"IbkrWsClient: Subscribed: s{full_channel}+{json.dumps(request['data'])}"
+        channel_subscribed_log = f"IbkrWsClient: Subscribed: s{full_channel}+{json.dumps(subscription.data['args'])}"
 
         self.assertEqual(
             [channel_subscribed_log] +
             expected_errors +
             [
                 f'IbkrWsClient: Invalidated subscription: {full_channel}',
-                f"IbkrWsClient: Recreating 1/1 subscriptions: {{'{full_channel}': {{'status': False, 'data': {request['data']}, 'needs_confirmation': True, 'subscription_processor': None}}}}",
+                f"IbkrWsClient: Recreating 1/1 subscriptions: {{'{full_channel}': {subscription.copy(needs_confirmation=True)}}}",
                 channel_subscribed_log,
                 f'IbkrWsClient: Invalidated subscription: {full_channel}',
             ], [r.msg for r in cm.records])

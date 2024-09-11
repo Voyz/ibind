@@ -15,7 +15,8 @@ import os
 import signal
 import time
 
-from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrWsClient, ibind_logs_initialize
+from ibind.client.ibkr_ws_client import IbkrSubscription
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -26,8 +27,8 @@ ws_client = IbkrWsClient(cacert=cacert)
 
 # override the default subscription processor since we need to use the server id instead of conid
 class MhSubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
-    def make_unsubscribe_payload(self, channel: str, server_id: dict = None) -> str:
-        return f'umh+{server_id}'
+    def make_unsubscribe_payload(self, channel: str, data: dict = None) -> str:
+        return f'umh+{data["server_id"]}'
 
 
 subscription_processor = MhSubscriptionProcessor()
@@ -36,22 +37,33 @@ subscription_processor = MhSubscriptionProcessor()
 def unsubscribe():
     # loop all server ids for market history and attempt to unsubscribe
     for server_id, conid in ws_client.server_ids(IbkrWsKey.MARKET_HISTORY).items():
-        channel = 'mh'
-        needs_confirmation = False
+        subscription = IbkrSubscription(channel=IbkrWsKey.MARKET_HISTORY, data={'server_id': server_id}, needs_confirmation=False, subscription_processor=subscription_processor)
+
+        # channel = 'mh'
+        # needs_confirmation = False
 
         if conid != None:  # if we know the conid let's try to confirm the unsubscription
-            channel += f'+{conid}'
-            needs_confirmation = True
-
-        confirmed = ws_client.unsubscribe(channel, server_id, needs_confirmation, subscription_processor)
-
-        print(f'Unsubscribing channel {channel!r} from server {server_id!r}: {"unconfirmed" if confirmed == False else "confirmed"}.')
+            # channel += f'+{conid}'
+            subscription.data['conid'] = conid
+            subscription.needs_confirmation = True
 
 
-request = {
-    'channel': 'mh+265598',
-    'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
-}
+        confirmed = ws_client.unsubscribe(subscription)
+
+        print(f'Unsubscribing channel {subscription!s} from server {server_id!r}: {"unconfirmed" if confirmed == False else "confirmed"}.')
+
+
+# request = {
+#     'channel': 'mh+265598',
+#     'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
+# }
+
+subscription = IbkrSubscription(
+    channel=IbkrWsKey.MARKET_HISTORY,
+    data={
+        'conid': 265598,
+        'args': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
+    })
 
 ws_client.start()
 
@@ -66,7 +78,7 @@ def stop(_, _1):
 signal.signal(signal.SIGINT, stop)
 signal.signal(signal.SIGTERM, stop)
 
-while not ws_client.subscribe(**request):
+while not ws_client.subscribe(subscription):
     time.sleep(1)
 
 while ws_client.running:

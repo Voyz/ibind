@@ -1,6 +1,7 @@
 import json
 import time
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 from typing import Union, Type, Dict, List
 
@@ -8,7 +9,7 @@ from websocket import WebSocketApp
 
 from ibind import var
 from ibind.base.queue_controller import QueueController, QueueAccessor
-from ibind.base.subscription_controller import SubscriptionProcessor
+from ibind.base.subscription_controller import SubscriptionProcessor, Subscription
 from ibind.base.ws_client import WsClient
 from ibind.client import ibkr_definitions
 from ibind.client.ibkr_client import IbkrClient
@@ -139,12 +140,17 @@ class IbkrWsKey(Enum):
         }[self]
 
 
+@dataclass
+class IbkrSubscription(Subscription[IbkrWsKey]):
+    needs_confirmation: bool = None
+
+
 class IbkrSubscriptionProcessor(SubscriptionProcessor):
     """
     A subscription processor for IBKR WebSocket channels. This class extends the SubscriptionProcessor.
     """
 
-    def make_subscribe_payload(self, channel: str, data: dict = None) -> str:
+    def make_subscribe_payload(self, channel: IbkrWsKey, data: dict = None) -> str:
         """
         Constructs a subscription payload for a specific channel with optional data.
 
@@ -162,14 +168,21 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
             - Without data: make_subscribe_payload('md') returns "smd"
         """
-        payload = f"s{channel}"
+        payload = f"s{channel.channel}"
 
-        if data is not None or data == {}:
-            payload += f"+{json.dumps(data)}"
+        if data is None:
+            return payload
+
+        if 'conid' in data:
+            payload += f"+{data['conid']}"
+
+        # if data is not None or data == {}:
+        if 'args' in data:
+            payload += f"+{json.dumps(data['args'])}"
 
         return payload
 
-    def make_unsubscribe_payload(self, channel: str, data: dict = None) -> str:
+    def make_unsubscribe_payload(self, channel: IbkrWsKey, data: dict = None) -> str:
         """
         Constructs an unsubscription payload for a specific channel with optional data.
 
@@ -187,8 +200,19 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_unsubscribe_payload('md', {'foo': 'bar'}) returns "umd+{"foo": "bar"}"
             - Without data: make_unsubscribe_payload('md') returns "umd+{}"
         """
-        data = {} if data is None else data
-        return f'u{channel}+{json.dumps(data)}'
+        payload = f"{channel.channel}"
+
+        if data is not None and 'conid' in data:
+            payload += f"+{data['conid']}"
+
+        args = {} if data is None or 'args' not in data else data['args']
+        return f'u{payload}+{json.dumps(args)}'
+
+    def make_subscription_uuid(self, channel: IbkrWsKey, data: dict = None) -> str:
+        uuid = channel.channel
+        if data is not None and 'conid' in data:
+            uuid += f'+{data["conid"]}'
+        return uuid
 
 
 class IbkrWsClient(WsClient):
@@ -540,10 +564,7 @@ class IbkrWsClient(WsClient):
 
     def subscribe(
             self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = None,
-            subscription_processor: SubscriptionProcessor = None,
+            subscription: IbkrSubscription
     ) -> bool:  # pragma: no cover
         """
         Subscribes to a specific channel in the IBKR WebSocket.
@@ -563,23 +584,21 @@ class IbkrWsClient(WsClient):
         Returns:
             bool: True if the subscription was successful, False otherwise.
         """
-        if channel[:2] == 'or':
+        subscription = subscription.copy()
+        if subscription.channel == IbkrWsKey.ORDERS:
             if not self._ibkr_client.check_health():
                 return False
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
 
-        if needs_confirmation is None:
-            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_subscribing
+        if subscription.needs_confirmation is None:
+            subscription.needs_confirmation = subscription.channel.confirms_subscribing
 
-        return super().subscribe(channel, data, needs_confirmation, subscription_processor)
+        return super().subscribe(subscription)
 
     def unsubscribe(
             self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = None,
-            subscription_processor: SubscriptionProcessor = None,
+            subscription: IbkrSubscription
     ) -> bool:  # pragma: no cover
         """
         Unsubscribes from a specified channel.
@@ -598,10 +617,12 @@ class IbkrWsClient(WsClient):
         Returns:
             bool: True if the unsubscription was successful, False otherwise.
         """
-        if needs_confirmation is None:
-            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_unsubscribing
+        subscription = subscription.copy()
 
-        return super().unsubscribe(channel, data, needs_confirmation, subscription_processor)
+        if subscription.needs_confirmation is None:
+            subscription.needs_confirmation = subscription.channel.confirms_unsubscribing
+
+        return super().unsubscribe(subscription)
 
     def _queue_accessor(self, ibkr_ws_key: IbkrWsKey):  # pragma: no cover
         try:

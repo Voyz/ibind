@@ -15,6 +15,7 @@ import signal
 import time
 
 from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind.client.ibkr_ws_client import IbkrSubscription
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -25,27 +26,21 @@ ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 
 ws_client.start()
 
-requests = [
-    {'channel': 'md+265598', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
-    {'channel': 'or'},
-    {'channel': 'tr'},
-    {'channel': f'sd+{account_id}'},
-    {'channel': f'ld+{account_id}'},
-    {'channel': 'pl'},
+subscriptions = [
+    IbkrSubscription(channel=IbkrWsKey.MARKET_DATA, data= {'conid': 265598, 'args': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}}),
+    IbkrSubscription(channel=IbkrWsKey.ORDERS),
+    IbkrSubscription(channel=IbkrWsKey.TRADES),
+    IbkrSubscription(channel=IbkrWsKey.ACCOUNT_SUMMARY, data={'conid': account_id}),
+    IbkrSubscription(channel=IbkrWsKey.ACCOUNT_LEDGER, data={'conid': account_id}),
+    IbkrSubscription(channel=IbkrWsKey.PNL),
 ]
-queue_accessors = [
-    ws_client.new_queue_accessor(IbkrWsKey.TRADES),
-    ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA),
-    ws_client.new_queue_accessor(IbkrWsKey.ORDERS),
-    ws_client.new_queue_accessor(IbkrWsKey.ACCOUNT_SUMMARY),
-    ws_client.new_queue_accessor(IbkrWsKey.ACCOUNT_LEDGER),
-    ws_client.new_queue_accessor(IbkrWsKey.PNL),
-]
+queue_accessors = [ws_client.new_queue_accessor(subscription.channel) for subscription in subscriptions]
 
 
 def stop(_, _1):
-    for request in requests:
-        ws_client.unsubscribe(**request)
+    for subscription in subscriptions:
+        if ws_client.running:
+            ws_client.unsubscribe(subscription)
 
     ws_client.shutdown()
 
@@ -53,8 +48,8 @@ def stop(_, _1):
 signal.signal(signal.SIGINT, stop)
 signal.signal(signal.SIGTERM, stop)
 
-for request in requests:
-    while not ws_client.subscribe(**request):
+for request in subscriptions:
+    while not ws_client.subscribe(request):
         time.sleep(1)
 
 while ws_client.running:

@@ -11,6 +11,7 @@ In this example we:
 Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
 from ibind import IbkrWsKey, IbkrWsClient
+from ibind.client.ibkr_ws_client import IbkrSubscription
 
 # Construct the client. Assumes IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 ws_client = IbkrWsClient(start=True)
@@ -19,7 +20,7 @@ ws_client = IbkrWsClient(start=True)
 ibkr_ws_key = IbkrWsKey.PNL
 
 # Subscribe to the PNL channel
-ws_client.subscribe(channel=ibkr_ws_key.channel)
+ws_client.subscribe(IbkrSubscription(channel=ibkr_ws_key))
 
 # Wait for new items in the PNL queue.
 while True:
