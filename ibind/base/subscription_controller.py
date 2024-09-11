@@ -14,7 +14,7 @@ _LOGGER = project_logger(__file__)
 T = TypeVar("T", str, Enum)
 
 
-class SubscriptionProcessor(ABC):  # pragma: no cover
+class SubscriptionProcessor(ABC, Generic[T]):  # pragma: no cover
     """
     An abstract base class for creating subscription and unsubscription payloads.
 
@@ -23,23 +23,23 @@ class SubscriptionProcessor(ABC):  # pragma: no cover
     and any additional data.
 
     Methods:
-        make_subscribe_payload(channel: str, data: dict = None): Abstract method to create a subscription payload.
-        make_unsubscribe_payload(channel: str, data: dict = None): Abstract method to create an unsubscription payload.
+        make_subscribe_payload(key: str, data: dict = None): Abstract method to create a subscription payload.
+        make_unsubscribe_payload(key: str, data: dict = None): Abstract method to create an unsubscription payload.
     """
 
-    def make_subscribe_payload(self, channel: str, data: dict = None) -> str:
+    def make_subscribe_payload(self, key: T, data: dict = None) -> str:
         raise NotImplementedError()
 
-    def make_unsubscribe_payload(self, channel: str, data: dict = None) -> str:
+    def make_unsubscribe_payload(self, key: T, data: dict = None) -> str:
         raise NotImplementedError()
 
-    def make_subscription_uuid(self, channel: str, data: dict = None) -> str:
+    def make_subscription_uuid(self, key: T, data: dict = None) -> str:
         raise NotImplementedError()
 
 
 @dataclass
 class Subscription(Generic[T]):
-    channel: T
+    key: T
     data: dict = None
     status: bool = False
     needs_confirmation: bool = True
@@ -47,14 +47,14 @@ class Subscription(Generic[T]):
 
     def copy(
             self,
-            channel: Optional[T] = UNDEFINED,
+            key: Optional[T] = UNDEFINED,
             data: Optional[dict] = UNDEFINED,
             status: Optional[bool] = UNDEFINED,
             needs_confirmation: Optional[bool] = UNDEFINED,
             subscription_processor: Optional[SubscriptionProcessor] = UNDEFINED
     ):
         return Subscription(
-            channel=channel if channel is not UNDEFINED else self.channel,
+            key=key if key is not UNDEFINED else self.key,
             data=data if data is not UNDEFINED else self.data,
             status=status if status is not UNDEFINED else self.status,
             needs_confirmation=needs_confirmation if needs_confirmation is not UNDEFINED else self.needs_confirmation,
@@ -65,7 +65,7 @@ class Subscription(Generic[T]):
         if self.subscription_processor == None:
             raise RuntimeError(f'SubscriptionProcessor not set for {self}')
 
-        self._uuid = self.subscription_processor.make_subscription_uuid(self.channel, self.data)
+        self._uuid = self.subscription_processor.make_subscription_uuid(self.key, self.data)
 
     def uuid(self):
         try:
@@ -78,7 +78,7 @@ class Subscription(Generic[T]):
         return str(self)
 
     def __str__(self):
-        return f'Subscription({self.channel!s}, {self.data}, status={self.status}, needs_confirmation={self.needs_confirmation})'
+        return f'Subscription({self.key!s}, {self.data}, status={self.status}, needs_confirmation={self.needs_confirmation})'
 
 
 class SubscriptionController():
@@ -155,7 +155,7 @@ class SubscriptionController():
     def _attempt_subscribing(self, subscription: Subscription) -> bool:
 
         # format the payload
-        payload = subscription.subscription_processor.make_subscribe_payload(subscription.channel, subscription.data)
+        payload = subscription.subscription_processor.make_subscribe_payload(subscription.key, subscription.data)
 
         if not subscription.needs_confirmation:
             # if we don't need confirmation, we send the request and mark subscription as successful
@@ -227,13 +227,10 @@ class SubscriptionController():
         _LOGGER.error(f'{self}: Unsubscribing failed after {self._subscription_retries} attempts: {payload}')
         return False
 
-    def _attempt_unsubscribing(
-            self,
-            subscription: Subscription
-    ) -> bool:
+    def _attempt_unsubscribing(self, subscription: Subscription) -> bool:
 
         # format the payload
-        payload = subscription.subscription_processor.make_unsubscribe_payload(subscription.channel, subscription.data)
+        payload = subscription.subscription_processor.make_unsubscribe_payload(subscription.key, subscription.data)
 
         if not subscription.needs_confirmation:
             # if we don't need confirmation, we send the request and mark unsubscription as successful
@@ -242,10 +239,7 @@ class SubscriptionController():
             # otherwise, repeatedly attempt to unsubscribe and expect for a confirmation
             return self._attempt_unsubscribing_repeated(subscription, payload)
 
-    def unsubscribe_with_subscription(
-            self,
-            subscription: Subscription
-    ) -> bool:
+    def unsubscribe_with_subscription(self, subscription: Subscription) -> bool:
         """
         Unsubscribes from a specified channel.
 

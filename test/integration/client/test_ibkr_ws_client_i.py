@@ -138,8 +138,8 @@ class TestIbkrWsClient(TestCase):
 
             self.ws_client.start()
             self.wsa_mock.on_message.side_effect = override_on_message
-            rv = self.ws_client.subscribe(**{'channel': request.get('channel'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('needs_confirmation')})
-            self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('confirms_unsubscription')})
+            rv = self.ws_client.subscribe(**{'key': request.get('key'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('needs_confirmation')})
+            self.ws_client.unsubscribe(**{'key': request.get('key'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('confirms_unsubscription')})
             self.ws_client.shutdown()
             return rv
 
@@ -226,7 +226,7 @@ class TestIbkrWsClient(TestCase):
     def test_on_message_market_data_channel_handling(self):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': queue.key, 'conid': self.conid, 'params': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}}
+        request = {'key': queue.key, 'conid': self.conid, 'params': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}}
         response = {'topic': f's{full_channel}', 'conid': self.conid, '_updated': self.update_time, 55: 'AAPL', 70: '195.34', 71: '193.67', 87: '24.2M', 7295: '194.10', 84: '195.25', 86: '195.26', 88: '3,500', 85: '500', 6508: '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109'}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
@@ -243,7 +243,7 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
         server_id = 87567
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': queue.key, 'conid': self.conid, 'params': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription': False}
+        request = {'key': queue.key, 'conid': self.conid, 'params': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription': False}
         response = {'topic': f's{full_channel}', 'serverId': server_id, '_updated': self.update_time, 'conid': self.conid, 'foo': 'bar'}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
@@ -260,7 +260,7 @@ class TestIbkrWsClient(TestCase):
     def test_on_message_trade_channel_handling(self):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': queue.key, 'conid': self.conid}
+        request = {'key': queue.key, 'conid': self.conid}
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
@@ -276,7 +276,7 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.ORDERS)
 
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': queue.key, 'conid': self.conid}
+        request = {'key': queue.key, 'conid': self.conid}
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
@@ -291,7 +291,7 @@ class TestIbkrWsClient(TestCase):
     def test_subscription_without_confirmation(self):
         key = FakeIbkrWsKey.FAKE
         full_channel = f'{key.channel}+{self.conid}'
-        request = {'channel': key, 'conid': self.conid, 'needs_confirmation': False, 'confirms_unsubscription': False}
+        request = {'key': key, 'conid': self.conid, 'needs_confirmation': False, 'confirms_unsubscription': False}
         response = None
 
         expected_errors = [
@@ -324,7 +324,7 @@ class TestIbkrWsClient(TestCase):
         # prepare a fake subscription
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': queue.key, 'conid':self.conid, 'params': {'foo': 'bar'}}
+        request = {'key': queue.key, 'conid':self.conid, 'params': {'foo': 'bar'}}
         response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
 
         def run():

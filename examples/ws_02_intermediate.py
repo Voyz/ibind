@@ -26,14 +26,14 @@ ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 ws_client.start()
 
 subscriptions = [
-    {'channel': IbkrWsKey.MARKET_DATA, 'conid': 265598, 'params': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
-    {'channel': IbkrWsKey.ORDERS},
-    {'channel': IbkrWsKey.TRADES},
-    {'channel': IbkrWsKey.ACCOUNT_SUMMARY, 'conid': account_id},
-    {'channel': IbkrWsKey.ACCOUNT_LEDGER, 'conid': account_id},
-    {'channel': IbkrWsKey.PNL},
+    {'key': IbkrWsKey.MARKET_DATA, 'conid': 265598, 'params': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
+    {'key': IbkrWsKey.ORDERS},
+    {'key': IbkrWsKey.TRADES},
+    {'key': IbkrWsKey.ACCOUNT_SUMMARY, 'conid': account_id},
+    {'key': IbkrWsKey.ACCOUNT_LEDGER, 'conid': account_id},
+    {'key': IbkrWsKey.PNL},
 ]
-queue_accessors = [ws_client.new_queue_accessor(subscription['channel']) for subscription in subscriptions]
+queue_accessors = [ws_client.new_queue_accessor(subscription['key']) for subscription in subscriptions]
 
 
 def stop(_, _1):

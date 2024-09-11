@@ -155,9 +155,11 @@ def make_ibkr_subscription_data(conid: int = None, params: dict = None) -> Optio
     return data
 
 
-@dataclass
-class IbkrSubscription(Subscription[IbkrWsKey]):
-    needs_confirmation: bool = None
+# @dataclass
+# class IbkrSubscription(Subscription[IbkrWsKey]):
+#     needs_confirmation: bool = None
+
+IbkrSubscription = Subscription[IbkrWsKey]
 
 
 class IbkrSubscriptionProcessor(SubscriptionProcessor):
@@ -308,14 +310,13 @@ class IbkrWsClient(WsClient):
         self._ibkr_client = ibkr_client
 
         self._queue_controller = QueueControllerClass()
-        self._subscription_processor = SubscriptionProcessorClass()
 
         self._log_raw_messages = log_raw_messages
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
         self._unwrap_market_data = unwrap_market_data
 
         super().__init__(
-            subscription_processor=self._subscription_processor,
+            subscription_processor=SubscriptionProcessorClass(),
             url=url,
             timeout=timeout,
             restart_on_close=restart_on_close,
@@ -579,7 +580,7 @@ class IbkrWsClient(WsClient):
 
     def subscribe(
             self,
-            channel: IbkrWsKey,
+            key: IbkrWsKey,
             conid: str = None,
             params: dict = None,
             needs_confirmation: bool = None,
@@ -594,7 +595,8 @@ class IbkrWsClient(WsClient):
         From docs: "To receive all orders for the current day the endpoint /iserver/account/orders can be used. It is advised to query all orders for the current day first before subscribing to live orders."
 
         Parameters:
-            channel (IbkrWsKey): The channel to subscribe to.
+            key (IbkrWsKey): The IbkrWsKey representing the channel to subscribe to.
+            conid (str, optional): The conid argument to be included in the subscription request. Defaults to None.
             params (dict, optional): Additional parameters to be included in the subscription request. Defaults to None.
             needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
             subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
@@ -604,27 +606,28 @@ class IbkrWsClient(WsClient):
             bool: True if the subscription was successful, False otherwise.
         """
         subscription = IbkrSubscription(
-            channel=channel,
+            key=key,
             data=make_ibkr_subscription_data(conid, params),
             needs_confirmation=needs_confirmation,
-            subscription_processor=subscription_processor,
+            subscription_processor=self._subscription_processor if subscription_processor is None else subscription_processor,
             status=False,
         )
 
-        if subscription.channel == IbkrWsKey.ORDERS:
+
+        if subscription.key == IbkrWsKey.ORDERS:
             if not self._ibkr_client.check_health():
                 return False
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
 
         if subscription.needs_confirmation is None:
-            subscription.needs_confirmation = subscription.channel.confirms_subscribing
+            subscription.needs_confirmation = subscription.key.confirms_subscribing
 
         return self.subscribe_with_subscription(subscription)
 
     def unsubscribe(
             self,
-            channel: IbkrWsKey,
+            key: IbkrWsKey,
             conid: str = None,
             params: dict = None,
             needs_confirmation: bool = None,
@@ -638,7 +641,8 @@ class IbkrWsClient(WsClient):
         The subscription status is updated accordingly within the class.
 
         Parameters:
-            channel (IbkrWsKey): The name of the channel to unsubscribe from.
+            key (IbkrWsKey): The IbkrWsKey representing the channel to unsubscribe from.
+            conid (str, optional): The conid argument to be included in the subscription request. Defaults to None.
             params (dict, optional): Additional data to be included in the unsubscription request. Defaults to None.
             needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
             subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
@@ -649,15 +653,15 @@ class IbkrWsClient(WsClient):
         """
 
         subscription = IbkrSubscription(
-            channel=channel,
+            key=key,
             data=make_ibkr_subscription_data(conid, params),
             needs_confirmation=needs_confirmation,
-            subscription_processor=subscription_processor,
+            subscription_processor=self._subscription_processor if subscription_processor is None else subscription_processor,
             status=False,
         )
 
         if subscription.needs_confirmation is None:
-            subscription.needs_confirmation = subscription.channel.confirms_unsubscribing
+            subscription.needs_confirmation = subscription.key.confirms_unsubscribing
 
         return self.unsubscribe_with_subscription(subscription)
 

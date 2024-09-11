@@ -16,7 +16,6 @@ import signal
 import time
 
 from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrWsClient, ibind_logs_initialize
-from ibind.client.ibkr_ws_client import IbkrSubscription
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -27,7 +26,7 @@ ws_client = IbkrWsClient(cacert=cacert)
 
 # override the default subscription processor since we need to use the server id instead of conid
 class MhSubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
-    def make_unsubscribe_payload(self, channel: str, data: dict = None) -> str:
+    def make_unsubscribe_payload(self, key: str, data: dict = None) -> str:
         return f'umh+{data['params']["server_id"]}'
 
 
@@ -46,14 +45,14 @@ def unsubscribe():
 
 
 request = {
-    'channel': IbkrWsKey.MARKET_HISTORY,
+    'key': IbkrWsKey.MARKET_HISTORY,
     'conid': 265598,
     'params': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
 }
 
 ws_client.start()
 
-qa = ws_client.new_queue_accessor(request['channel'])
+qa = ws_client.new_queue_accessor(request['key'])
 
 
 def stop(_, _1):
