@@ -3,7 +3,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union, Type, Dict, List
+from typing import Union, Type, Dict, List, Optional
 
 from websocket import WebSocketApp
 
@@ -140,6 +140,21 @@ class IbkrWsKey(Enum):
         }[self]
 
 
+def make_ibkr_subscription_data(conid: int = None, params: dict = None) -> Optional[dict]:
+    if conid is None and params is None:
+        return None
+
+    data = {}
+
+    if conid is not None:
+        data['conid'] = conid
+
+    if params is not None:
+        data['params'] = params
+
+    return data
+
+
 @dataclass
 class IbkrSubscription(Subscription[IbkrWsKey]):
     needs_confirmation: bool = None
@@ -177,8 +192,8 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             payload += f"+{data['conid']}"
 
         # if data is not None or data == {}:
-        if 'args' in data:
-            payload += f"+{json.dumps(data['args'])}"
+        if 'params' in data:
+            payload += f"+{json.dumps(data['params'])}"
 
         return payload
 
@@ -205,7 +220,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
         if data is not None and 'conid' in data:
             payload += f"+{data['conid']}"
 
-        args = {} if data is None or 'args' not in data else data['args']
+        args = {} if data is None or 'params' not in data else data['params']
         return f'u{payload}+{json.dumps(args)}'
 
     def make_subscription_uuid(self, channel: IbkrWsKey, data: dict = None) -> str:
@@ -564,7 +579,11 @@ class IbkrWsClient(WsClient):
 
     def subscribe(
             self,
-            subscription: IbkrSubscription
+            channel: IbkrWsKey,
+            conid: str = None,
+            params: dict = None,
+            needs_confirmation: bool = None,
+            subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
         Subscribes to a specific channel in the IBKR WebSocket.
@@ -575,8 +594,8 @@ class IbkrWsClient(WsClient):
         From docs: "To receive all orders for the current day the endpoint /iserver/account/orders can be used. It is advised to query all orders for the current day first before subscribing to live orders."
 
         Parameters:
-            channel (str): The channel to subscribe to.
-            data (dict, optional): Additional data to be included in the subscription request. Defaults to None.
+            channel (IbkrWsKey): The channel to subscribe to.
+            params (dict, optional): Additional parameters to be included in the subscription request. Defaults to None.
             needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
             subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
                                                                       default one if provided. Defaults to None.
@@ -584,7 +603,14 @@ class IbkrWsClient(WsClient):
         Returns:
             bool: True if the subscription was successful, False otherwise.
         """
-        subscription = subscription.copy()
+        subscription = IbkrSubscription(
+            channel=channel,
+            data=make_ibkr_subscription_data(conid, params),
+            needs_confirmation=needs_confirmation,
+            subscription_processor=subscription_processor,
+            status=False,
+        )
+
         if subscription.channel == IbkrWsKey.ORDERS:
             if not self._ibkr_client.check_health():
                 return False
@@ -594,11 +620,15 @@ class IbkrWsClient(WsClient):
         if subscription.needs_confirmation is None:
             subscription.needs_confirmation = subscription.channel.confirms_subscribing
 
-        return super().subscribe(subscription)
+        return self.subscribe_with_subscription(subscription)
 
     def unsubscribe(
             self,
-            subscription: IbkrSubscription
+            channel: IbkrWsKey,
+            conid: str = None,
+            params: dict = None,
+            needs_confirmation: bool = None,
+            subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
         Unsubscribes from a specified channel.
@@ -608,8 +638,8 @@ class IbkrWsClient(WsClient):
         The subscription status is updated accordingly within the class.
 
         Parameters:
-            channel (str): The name of the channel to unsubscribe from.
-            data (dict, optional): Additional data to be included in the unsubscription request. Defaults to None.
+            channel (IbkrWsKey): The name of the channel to unsubscribe from.
+            params (dict, optional): Additional data to be included in the unsubscription request. Defaults to None.
             needs_confirmation (bool, optional): Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
             subscription_processor (SubscriptionProcessor, optional): The subscription processor to use instead of the
                                                                       default one if provided. Defaults to None.
@@ -617,12 +647,19 @@ class IbkrWsClient(WsClient):
         Returns:
             bool: True if the unsubscription was successful, False otherwise.
         """
-        subscription = subscription.copy()
+
+        subscription = IbkrSubscription(
+            channel=channel,
+            data=make_ibkr_subscription_data(conid, params),
+            needs_confirmation=needs_confirmation,
+            subscription_processor=subscription_processor,
+            status=False,
+        )
 
         if subscription.needs_confirmation is None:
             subscription.needs_confirmation = subscription.channel.confirms_unsubscribing
 
-        return super().unsubscribe(subscription)
+        return self.unsubscribe_with_subscription(subscription)
 
     def _queue_accessor(self, ibkr_ws_key: IbkrWsKey):  # pragma: no cover
         try:

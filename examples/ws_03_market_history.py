@@ -28,7 +28,7 @@ ws_client = IbkrWsClient(cacert=cacert)
 # override the default subscription processor since we need to use the server id instead of conid
 class MhSubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
     def make_unsubscribe_payload(self, channel: str, data: dict = None) -> str:
-        return f'umh+{data["server_id"]}'
+        return f'umh+{data['params']["server_id"]}'
 
 
 subscription_processor = MhSubscriptionProcessor()
@@ -36,38 +36,24 @@ subscription_processor = MhSubscriptionProcessor()
 
 def unsubscribe():
     # loop all server ids for market history and attempt to unsubscribe
-    for server_id, conid in ws_client.server_ids(IbkrWsKey.MARKET_HISTORY).items():
-        subscription = IbkrSubscription(channel=IbkrWsKey.MARKET_HISTORY, data={'server_id': server_id}, needs_confirmation=False, subscription_processor=subscription_processor)
+    channel = IbkrWsKey.MARKET_HISTORY
+    for server_id, conid in ws_client.server_ids(channel).items():
+        needs_confirmation = conid != None # if we know the conid let's try to confirm the unsubscription
 
-        # channel = 'mh'
-        # needs_confirmation = False
+        confirmed = ws_client.unsubscribe(channel, conid, {'server_id': server_id}, needs_confirmation, subscription_processor)
 
-        if conid != None:  # if we know the conid let's try to confirm the unsubscription
-            # channel += f'+{conid}'
-            subscription.data['conid'] = conid
-            subscription.needs_confirmation = True
+        print(f'Unsubscribing channel {channel!r} from server {server_id!r}: {"unconfirmed" if confirmed == False else "confirmed"}.')
 
 
-        confirmed = ws_client.unsubscribe(subscription)
-
-        print(f'Unsubscribing channel {subscription!s} from server {server_id!r}: {"unconfirmed" if confirmed == False else "confirmed"}.')
-
-
-# request = {
-#     'channel': 'mh+265598',
-#     'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
-# }
-
-subscription = IbkrSubscription(
-    channel=IbkrWsKey.MARKET_HISTORY,
-    data={
-        'conid': 265598,
-        'args': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
-    })
+request = {
+    'channel': IbkrWsKey.MARKET_HISTORY,
+    'conid': 265598,
+    'params': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
+}
 
 ws_client.start()
 
-qa = ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
+qa = ws_client.new_queue_accessor(request['channel'])
 
 
 def stop(_, _1):
@@ -78,7 +64,7 @@ def stop(_, _1):
 signal.signal(signal.SIGINT, stop)
 signal.signal(signal.SIGTERM, stop)
 
-while not ws_client.subscribe(subscription):
+while not ws_client.subscribe(**request):
     time.sleep(1)
 
 while ws_client.running:

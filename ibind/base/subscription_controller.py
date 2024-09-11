@@ -164,7 +164,7 @@ class SubscriptionController():
             # otherwise, repeatedly attempt to subscribe and expect for a confirmation
             return self._attempt_subscribing_repeated(subscription, payload)
 
-    def subscribe(self, subscription: Subscription) -> bool:
+    def subscribe_with_subscription(self, subscription: Subscription) -> bool:
         """
         Subscribes to a specified channel.
 
@@ -232,7 +232,6 @@ class SubscriptionController():
             subscription: Subscription
     ) -> bool:
 
-
         # format the payload
         payload = subscription.subscription_processor.make_unsubscribe_payload(subscription.channel, subscription.data)
 
@@ -243,7 +242,7 @@ class SubscriptionController():
             # otherwise, repeatedly attempt to unsubscribe and expect for a confirmation
             return self._attempt_unsubscribing_repeated(subscription, payload)
 
-    def unsubscribe(
+    def unsubscribe_with_subscription(
             self,
             subscription: Subscription
     ) -> bool:
@@ -352,7 +351,7 @@ class SubscriptionController():
 
             for uuid, subscription in inactive_subscriptions.items():
 
-                success = self.subscribe(subscription)
+                success = self.subscribe_with_subscription(subscription)
                 if not success:
                     not_resubscribed[uuid] = subscription.copy(status=False)
 
