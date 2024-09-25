@@ -227,14 +227,21 @@ class ContractMixin():
         return self.get(f'iserver/secdef/strikes', params)
 
     @ensure_list_arg('symbols')
-    def security_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:  # pragma: no cover
+    def security_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str], exchange: str = None) -> Result:  # pragma: no cover
         """
         Returns a list of non-expired future contracts for given symbol(s).
 
         Parameters:
             symbols (str): Indicate the symbol(s) of the underlier you are trying to retrieve futures on. Accepts list of string of symbols.
+            exchange (str, optional): Exchange from which futures should be retrieved from. Default value is set to None, means "All exchanges". 
         """
-        return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
+        params = params_dict(
+            {
+                'symbols': ','.join(symbols)
+            },
+            optional={'exchange': exchange}
+        )
+        return self.get(f'trsrv/futures', params)
 
     @ensure_list_arg('queries')
     def security_stocks_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True) -> Result:
