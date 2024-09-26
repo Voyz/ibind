@@ -167,7 +167,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
     A subscription processor for IBKR WebSocket channels. This class extends the SubscriptionProcessor.
     """
 
-    def make_subscribe_payload(self, channel: IbkrWsKey, data: dict = None) -> str:
+    def make_subscribe_payload(self, key: IbkrWsKey, data: dict = None) -> str:
         """
         Constructs a subscription payload for a specific channel with optional data.
 
@@ -175,7 +175,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
         data if provided.
 
         Parameters:
-            channel (str): The channel identifier to subscribe to.
+            key (IbkrWsKey): The IbkrWsKey representing the channel to subscribe to.
             data (dict, optional): Additional data to be included in the subscription payload. Defaults to None.
 
         Returns:
@@ -185,7 +185,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
             - Without data: make_subscribe_payload('md') returns "smd"
         """
-        payload = f"s{channel.channel}"
+        payload = f"s{key.channel}"
 
         if data is None:
             return payload
@@ -199,7 +199,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
 
         return payload
 
-    def make_unsubscribe_payload(self, channel: IbkrWsKey, data: dict = None) -> str:
+    def make_unsubscribe_payload(self, key: IbkrWsKey, data: dict = None) -> str:
         """
         Constructs an unsubscription payload for a specific channel with optional data.
 
@@ -207,7 +207,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
         data. If data is not provided, an empty dictionary is used.
 
         Parameters:
-            channel (str): The channel identifier to unsubscribe from.
+            key (IbkrWsKey): The IbkrWsKey representing the channel to subscribe to.
             data (dict, optional): Additional data to be included in the unsubscription payload. Defaults to None.
 
         Returns:
@@ -217,7 +217,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_unsubscribe_payload('md', {'foo': 'bar'}) returns "umd+{"foo": "bar"}"
             - Without data: make_unsubscribe_payload('md') returns "umd+{}"
         """
-        payload = f"{channel.channel}"
+        payload = f"{key.channel}"
 
         if data is not None and 'conid' in data:
             payload += f"+{data['conid']}"
@@ -225,8 +225,8 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
         args = {} if data is None or 'params' not in data else data['params']
         return f'u{payload}+{json.dumps(args)}'
 
-    def make_subscription_uuid(self, channel: IbkrWsKey, data: dict = None) -> str:
-        uuid = channel.channel
+    def make_subscription_uuid(self, key: IbkrWsKey, data: dict = None) -> str:
+        uuid = key.channel
         if data is not None and 'conid' in data:
             uuid += f'+{data["conid"]}'
         return uuid
