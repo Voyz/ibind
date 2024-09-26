@@ -27,7 +27,7 @@ ws_client = IbkrWsClient(cacert=cacert)
 # override the default subscription processor since we need to use the server id instead of conid
 class MhSubscriptionProcessor(IbkrSubscriptionProcessor):  # pragma: no cover
     def make_unsubscribe_payload(self, key: str, data: dict = None) -> str:
-        return f'umh+{data['params']["server_id"]}'
+        return f'umh+{data["params"]["server_id"]}'
 
 
 subscription_processor = MhSubscriptionProcessor()
