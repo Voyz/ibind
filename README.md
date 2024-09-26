@@ -17,7 +17,9 @@ wrong? [Create an issue and let us know!][issues]*
     </a>
 </p>
 
-IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][ibkr-docs]
+IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0.
+
+_Note: IBind currently supports only the Web API 1.0 since the [newer OAuth-based Web API][web-api] seems to be still in beta and is not fully documented. Once a complete version of the new Web API is released IBind will be extended to support it._
 
 ## Installation
 
@@ -169,6 +171,7 @@ Thanks and have an awesome day 👋
 [ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
 [ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
 [ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+[web-api]: https://www.interactivebrokers.com/campus/ibkr-api-page/webapi-doc
 
 
 [wiki]: https://github.com/Voyz/ibind/wiki
