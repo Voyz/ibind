@@ -253,10 +253,10 @@ def make_order_request(
         side: str,
         quantity: float,
         order_type: str,
-        price: float,
         acct_id: str,
 
         # optional
+        price: float = None,
         conidex: str = None,
         sec_type: str = None,
         coid: str=None,
