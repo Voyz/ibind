@@ -20,6 +20,7 @@ snapshot_by_key = {
     'last_price': '31',  # Last Price - The last price at which the contract traded. May contain one of the following prefixes: C - Previous day's closing price. H - Trading has halted.
     'bid_price': '84',  # Bid Price - The highest-priced bid on the contract.
     'ask_price': '86',  # Ask Price - The lowest-priced offer on the contract.
+    'last_size': '7059',  # Last Size - The number of unites traded at the last price. 
     'bid_size': '88',  # Bid Size - The number of contracts or shares bid for at the bid price. For US stocks, the number displayed is divided by 100.
     'ask_size': '85',  # Ask Size - The number of contracts or shares offered at the ask price. For US stocks, the number displayed is divided by 100.
     'prior_close': '7741',  # Prior Close - Yesterday's closing price
@@ -98,6 +99,11 @@ snapshot_by_key = {
     'put_call_interest': '7085',  # Put/Call Interest - Put option open interest/call option open interest for the trading day.
     'put_call_volume': '7086',  # Put/Call Volume - Put option volume/call option volume for the trading day.
     'option_implied_vol_percent': '7283',  # Option Implied Vol. % - A prediction of how volatile an underlying will be in the future. At the market volatility estimated for a maturity thirty calendar days forward of the current trading day, and based on option prices from two consecutive expiration months. To query the Implied Vol. % of a specific strike refer to field 7633.
+    'delta': '7308',  # Delta - The ratio of the change in the price of the option to the corresponding change in the price of the underlying.
+    'gamma': '7309',  # Gamma - The rate of change for the delta with respect to the underlying asset’s price.
+    'theta': '7310',  # Theta - A measure of the rate of decline the value of an option due to the passage of time.
+    'vega': '7311',  # Vega - The amount that the price of an option changes compared to a 1% change in the volatility.
+    'implied_vol_percent': '7633',  # Implied Vol. % - The implied volatility for the specific strike of the option in percentage. To query the Option Implied Vol. % from the underlying refer to field 7283.
 
     # Wall Street Horizon
     'upcoming_event': '7683',  # Upcoming Event - Shows the next major company event. Requires Wall Street Horizon subscription.
