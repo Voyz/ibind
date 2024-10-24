@@ -55,5 +55,5 @@ pprint(conids)
     Uncomment the following lines to see the exception raised when multiple conids are returned.
 """
 # print('\n#### get_conid with too many conids ####')
-# conids = c.get_conids('AAPL', default_filtering=False).data
+# conids = client.stock_conid_by_symbol('AAPL', default_filtering=False).data
 # pprint(conids)
