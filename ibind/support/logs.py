@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import datetime
 
 import logging
 import sys
@@ -128,7 +128,7 @@ class DailyRotatingFileHandler(logging.FileHandler):
         super().__init__(*args, **kwargs)
 
     def get_timestamp(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
         return now.strftime(self.date_format)
 
     def get_filename(self, timestamp):
