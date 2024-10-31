@@ -12,6 +12,14 @@ snapshot_by_key = {
     'market_data_availability': '6509',  # Market Data Availability. The field may contain three chars. First char defines: R = RealTime, D = Delayed, Z = Frozen, Y = Frozen Delayed, N = Not Subscribed. Second char defines: P = Snapshot, p = Consolidated. Third char defines: B = Book
     'conid_exchange': '7094',  # Conid + Exchange
 
+    ##Regulator snapshot
+    'ask_codes':'7057', # Returns the series of character codes for the Ask exchange.
+
+    'bid_codes': '7068', #Returns the series of character codes for the Bid exchange.
+
+    'last_exch_codes': '7058', #Returns the series of character codes for the Last exchange.
+
+
     # Price and Volume
     'open': '7295',  # Open - Today's opening price.
     'high': '70',  # High - Current day high price
