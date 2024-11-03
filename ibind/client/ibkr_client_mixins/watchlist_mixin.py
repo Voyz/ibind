@@ -39,7 +39,7 @@ class WatchlistMixin():  # pragma: no cover
         Parameters:
             SC (str): Optional. Specify the scope of the request. Valid Values: USER_WATCHLIST.
         """
-        return self.get('iserver/watchlists', params={'SC': sc})
+        return self.get('iserver/watchlist', params={'SC': sc})
 
     def get_watchlist_information(self: 'IbkrClient', id: str) -> Result:
         """

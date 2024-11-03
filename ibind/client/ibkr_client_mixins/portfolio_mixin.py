@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 from ibind.base.rest_client import Result
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import params_dict, ensure_list_arg, OneOrMany
+from oauth_requests_mixin import OAuth_Requests_Mixin
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
@@ -16,25 +18,57 @@ class PortfolioMixin():  # pragma: no cover
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
     """
 
-    def portfolio_accounts(self: 'IbkrClient') -> Result:
+    def portfolio_accounts(
+            self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str) -> Result:
         """
         In non-tiered account structures, returns a list of accounts for which the user can view position and account information. This endpoint must be called prior to calling other /portfolio endpoints for those accounts.
         """
-        return self.get('portfolio/accounts')
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/accounts",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def portfolio_subaccounts(self: 'IbkrClient') -> Result:
+        return response
+        # return self.get('portfolio/accounts')
+
+    def portfolio_subaccounts(
+            self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str) -> Result:
         """
         Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of up to 100 sub-accounts for which the user can view position and account-related information. This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts.
         """
         return self.get('portfolio/subaccounts')
 
-    def large_portfolio_subaccounts(self: 'IbkrClient', page: int = 0) -> Result:
+    def large_portfolio_subaccounts(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            page: int = 0) -> Result:
         """
         Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information. This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts.
         """
-        return self.get('portfolio/subaccounts2', {'page': page})
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/subaccounts2', {'page': page}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def portfolio_account_information(self: 'IbkrClient', account_id: str = None) -> Result:
+        return response
+        # return self.get('portfolio/subaccounts2', {'page': page})
+
+    def portfolio_account_information(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            account_id: str = None) -> Result:
         """
         Account information related to account Id. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
 
@@ -43,9 +77,24 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id == None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/meta')
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/meta",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def portfolio_account_allocation(self: 'IbkrClient', account_id: str = None) -> Result:
+        return response
+        
+        # return self.get(f'portfolio/{account_id}/meta')
+
+    def portfolio_account_allocation(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str, 
+            account_id: str = None) -> Result:
         """
         Information about the account's portfolio allocation by Asset Class, Industry and Category. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
 
@@ -54,10 +103,24 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id == None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/allocation')
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/allocation",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'portfolio/{account_id}/allocation')
 
     @ensure_list_arg('account_ids')
-    def portfolio_account_allocations(self: 'IbkrClient', account_ids: OneOrMany[str]) -> Result:
+    def portfolio_account_allocations(self: 'IbkrClient', 
+                                access_token:str,
+                                live_session_token:str,  
+                                account_ids: OneOrMany[str]) -> Result:
         """
         Similar to /portfolio/{accountId}/allocation but returns a consolidated view of all the accounts returned by /portfolio/accounts.
 
@@ -65,10 +128,23 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Contains all account IDs as strings the user should receive data for.
         """
         params = params_dict({'acctIds': account_ids})
-        return self.get(f'portfolio/allocation', params=params)
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/allocation",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'portfolio/allocation', params=params)
 
     def positions(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             account_id: str = None,
             page: int = 0,
             model: str = None,
@@ -99,10 +175,23 @@ class PortfolioMixin():  # pragma: no cover
                 'period': period,
             }
         )
-        return self.get(f'portfolio/{account_id}/positions/{page}', params)
+
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url=f"https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/positions/{page}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'portfolio/{account_id}/positions/{page}', params)
 
     def positions2(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             account_id: str = None,
             model: str = None,
             sort: str = None,
@@ -130,9 +219,24 @@ class PortfolioMixin():  # pragma: no cover
                 'direction': direction,
             }
         )
-        return self.get(f'portfolio2/{account_id}/positions', params)
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio2/{account_id}/positions",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def positions_by_conid(self: 'IbkrClient', account_id: str, conid: str) -> Result:
+        return response
+        
+        # return self.get(f'portfolio2/{account_id}/positions', params)
+
+    def positions_by_conid(self: 'IbkrClient', 
+                        access_token:str,
+                        live_session_token:str,   
+                        account_id: str, 
+                        conid: str) -> Result:
         """
         Returns a list containing position details only for the specified conid.
 
@@ -142,9 +246,24 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id == None:
             account_id = self.account_id
-        return self.get(f'/portfolio/{account_id}/position/{conid}')
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url=f"https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/position/{conid}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def invalidate_backend_portfolio_cache(self: 'IbkrClient', account_id: str = None) -> Result:
+        return response
+            
+        # return self.get(f'/portfolio/{account_id}/position/{conid}')
+
+    def invalidate_backend_portfolio_cache(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            account_id: str = None) -> Result:
         """
         Invalidates the cached value for your portfolio’s positions and calls the /portfolio/{accountId}/positions/0 endpoint automatically.
 
@@ -153,9 +272,24 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.post(f'portfolio/{account_id}/positions/invalidate')
 
-    def portfolio_summary(self: 'IbkrClient', account_id: str = None) -> Result:
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="POST",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/positions/invalidate",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+            
+        # return self.post(f'portfolio/{account_id}/positions/invalidate')
+
+    def portfolio_summary(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            account_id: str = None) -> Result:
         """
         Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
@@ -164,9 +298,24 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/summary')
 
-    def get_ledger(self: 'IbkrClient', account_id: str = None) -> Result:
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/summary",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+            
+        # return self.get(f'portfolio/{account_id}/summary')
+
+    def get_ledger(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            account_id: str = None) -> Result:
         """
         Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
@@ -175,19 +324,48 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/ledger')
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/portfolio/{account_id}/ledger",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
 
-    def position_and_contract_info(self: 'IbkrClient', conid: str) -> Result:
+        return response
+            
+        # return self.get(f'portfolio/{account_id}/ledger')
+
+    def position_and_contract_info(
+            self: 'IbkrClient', 
+            access_token:str,
+            live_session_token:str,
+            conid: str) -> Result:
         """
         Returns an object containing information about a given position along with its contract details.
 
         Parameters:
             conid (str): The contract ID to receive position information on.
         """
-        return self.get(f'portfolio/positions/{conid}')
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url=f"https://api.ibkr.com/v1/api/iserver/portfolio/positions/{conid}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'portfolio/positions/{conid}')
 
     @ensure_list_arg('account_ids')
-    def account_performance(self: 'IbkrClient', account_ids: OneOrMany[str], period: str) -> Result:
+    def account_performance(
+        self: 'IbkrClient', 
+        access_token:str,
+        live_session_token:str,
+        account_ids: OneOrMany[str], period: str) -> Result:
         """
         Returns the performance (MTM) for the given accounts, if more than one account is passed, the result is consolidated.
 
@@ -195,11 +373,24 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Include each account ID to receive data for.
             period (str): Specify the period for which the account should be analyzed. Available Values: “1D”, “7D”, “MTD”, “1M”, “YTD”, “1Y”.
         """
-        return self.get(f'pa/performance', {'acctIds': account_ids, 'period': period})
+        
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/pa/performance', {'acctIds': account_ids, 'period': period}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'pa/performance', {'acctIds': account_ids, 'period': period})
 
     @ensure_list_arg('account_ids', 'conids')
     def transaction_history(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             account_ids: OneOrMany[str],
             conids: OneOrMany[str],
             currency: str,
@@ -221,4 +412,14 @@ class PortfolioMixin():  # pragma: no cover
                 'currency': currency,
             }, optional={'days': days}
         )
-        return self.post(f'pa/transactions', params)
+
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/pa/transactions",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        # request_params=params,
+        )
+
+        return response        
+        # return self.post(f'pa/transactions', params)

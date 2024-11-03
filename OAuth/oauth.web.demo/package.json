@@ -1,0 +1,48 @@
+{
+  "name": "oauth.demo",
+  "version": "1.0.0",
+  "description": "IBKR WebAPI OAuth Demo",
+  "main": "client.js",
+  "dependencies": {
+    "big-integer": "^1.6.48",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.6.0",
+    "node-rsa": "^1.0.7",
+    "oauth-1.0a": "^2.2.6",
+    "package.json": "^2.0.1",
+    "vue": "^2.6.11"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.2",
+    "css-loader": "^3.5.3",
+    "esmify": "^2.1.1",
+    "html-webpack-plugin": "^4.3.0",
+    "less": "^3.11.1",
+    "less-loader": "^6.1.0",
+    "npm-pack-zip": "^1.2.7",
+    "pug": "^2.0.4",
+    "pug-loader": "^2.4.0",
+    "pug-plain-loader": "^1.0.0",
+    "static-server": "^2.2.1",
+    "style-loader": "^1.2.1",
+    "vue-loader": "^15.9.2",
+    "vue-router": "^3.1.6",
+    "vue-style-loader": "^4.1.2",
+    "vue-template-compiler": "^2.6.11",
+    "vuex": "^3.4.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "files": [
+    "dist/index.html",
+    "dist/index.js",
+    "dist/package.json"
+  ],
+  "scripts": {
+    "demo": "cross-env BUILD_ENV=demo webpack-dev-server --hot-only --config webpack.config.js --watch --inline --host=0.0.0.0 --port=20000",
+    "dist": "cross-env BUILD_ENV=prod webpack --config webpack.config.js --display-error-details --hide-modules && npm-pack-zip"
+  },
+  "author": "Albert Yang",
+  "license": "ISC"
+}

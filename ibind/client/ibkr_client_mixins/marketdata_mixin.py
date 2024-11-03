@@ -7,6 +7,8 @@ from ibind.client.ibkr_utils import StockQuery, StockQueries
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import ensure_list_arg, OneOrMany, execute_in_parallel, params_dict
+from oauth_requests_mixin import OAuth_Requests_Mixin
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
@@ -20,7 +22,12 @@ class MarketdataMixin():
     """
 
     @ensure_list_arg('conids', 'fields')
-    def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:  # pragma: no cover
+    def live_marketdata_snapshot(self: 'IbkrClient', 
+                                 access_token:str,
+                                 live_session_token:str,
+                                 conids: OneOrMany[str], 
+                                 fields: OneOrMany[str],
+                                 params) -> Result:  # pragma: no cover
         """
         Get Market Data for the given conid(s).
 
@@ -38,9 +45,24 @@ class MarketdataMixin():
             'conids': ','.join(conids),
             'fields': ','.join(fields)
         }
-        return self.get(f'iserver/marketdata/snapshot', params)
 
-    def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/marketdata/snapshot",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+    
+        # return self.get(f'iserver/marketdata/snapshot', params)
+
+    def regulatory_snapshot(self: 'IbkrClient', 
+                            access_token:str,
+                            live_session_token:str,
+                            conid: str,                            
+                            params) -> Result:  # pragma: no cover
         """
         Send a request for a regulatory snapshot. This will cost $0.01 USD per request unless you are subscribed to the direct exchange market data already.
 
@@ -53,16 +75,29 @@ class MarketdataMixin():
             - If you are already paying for, or are subscribed to, a specific US Network subscription, your account will not be charged.
             - For stocks, there are individual exchange-specific market data subscriptions necessary to receive streaming quotes.
         """
-        return self.get(f'md/regsnapshot', {'conid': conid})
+    
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url=f"https://api.ibkr.com/v1/api/md/regsnapshot, {'conid': conid}",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+    
+        # return self.get(f'md/regsnapshot', {'conid': conid})
 
     def marketdata_history_by_conid(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             conid: str,
             bar: str,
             exchange: str = None,
             period: str = None,
             outside_rth: bool = None,
-            start_time: datetime.datetime = None
+            start_time: datetime.datetime = None,
     ) -> Result:  # pragma: no cover
         """
         Get historical market Data for given conid, length of data is controlled by 'period' and 'bar'.
@@ -94,10 +129,22 @@ class MarketdataMixin():
             }
         )
 
-        return self.get('iserver/marketdata/history', params)
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/marketdata/history",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+    
+        # return self.get('iserver/marketdata/history', params)
 
     def historical_marketdata_beta(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             conid: str,
             period: str,
             bar: str,
@@ -138,10 +185,22 @@ class MarketdataMixin():
             }
         )
 
-        return self.get('hmds/history', params)
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/hdms/history",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+    
+        # return self.get('hmds/history', params)
 
     def marketdata_history_by_symbol(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             symbol: Union[str, StockQuery],
             bar: str,
             exchange: str = None,
@@ -162,11 +221,24 @@ class MarketdataMixin():
 
         """
         conid = str(self.stock_conid_by_symbol(symbol).data[symbol])
-        return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
+
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/hdms/history",
+        oauth_token=access_token,
+        live_session_token=live_session_token,
+        request_params=params,
+        )
+
+        return response
+        
+        # return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
             self: 'IbkrClient',
+            access_token:str,
+            live_session_token:str,
             queries: StockQueries,
             period: str = "1min",
             bar: str = "1min",
@@ -223,12 +295,15 @@ class MarketdataMixin():
         return results
 
     @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> List[Result]:
+    def marketdata_unsubscribe(self: 'IbkrClient', 
+                                access_token:str,
+                                live_session_token:str,
+                                conids: OneOrMany[int]) -> List[Result]:
         """
         Cancel market data for given conid(s).
 
         Parameters:
-            conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
+            conids (OneOrMany[int]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
         unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
@@ -243,8 +318,20 @@ class MarketdataMixin():
 
         return results
 
-    def marketdata_unsubscribe_all(self: 'IbkrClient') -> Result:  # pragma: no cover
+    def marketdata_unsubscribe_all(self: 'IbkrClient',
+                                   access_token:str,
+                                    live_session_token:str) -> Result:  # pragma: no cover
         """
         Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
         """
-        return self.get(f'iserver/marketdata/unsubscribeall')
+        response= OAuth_Requests_Mixin.send_oauth_request(
+        request_method="GET",
+        request_url="https://api.ibkr.com/v1/api/iserver/marketdata/unsubscribeall",
+        oauth_token=access_token,
+        live_session_token=live_session_token
+        # request_params=params,
+        )
+
+        return response
+        
+        # return self.get(f'iserver/marketdata/unsubscribeall')
