@@ -173,17 +173,28 @@ class WsClient(SubscriptionController):
         if self._restart_on_close and self._running:
             self._reconnect()
 
+    def get_cookie(self):
+        return None
+
     def _new_websocket_app(self) -> bool:
         if self._wsa is not None:
             raise RuntimeError(f"{self}: WebSocketApp should be closed before attempting to create a new one")
 
         _LOGGER.debug(f'{self}: Creating new WebSocketApp')
+
+        try:
+            cookie = self.get_cookie()
+        except Exception as e:
+            _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
+            cookie = None
+
         wsa = WebSocketApp(
             url=self._url,
             on_open=self._wrap_callback(self._handle_on_open),
             on_message=self._wrap_callback(self._handle_on_message),
             on_close=self._wrap_callback(self._handle_on_close),
             on_error=self._wrap_callback(self._handle_on_error),
+            cookie=cookie,
         )
 
         self._wsa = wsa

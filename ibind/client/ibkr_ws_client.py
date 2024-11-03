@@ -293,7 +293,6 @@ class IbkrWsClient(WsClient):
 
         self._queue_controller.register_queues(list(IbkrWsKey))
 
-        self._logged_in = False
         self._last_heartbeat = 0
         self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
         self._queue_accessors: Dict[IbkrWsKey, QueueAccessor] = {}
@@ -301,14 +300,13 @@ class IbkrWsClient(WsClient):
         if start:
             self.start()
 
-    def _login(self):
+    def get_cookie(self):
         status = self._ibkr_client.tickle()
         session_id = status.data['session']
         payload = {'session': session_id}
-        self.send_json(payload)
+        return f'api={json.dumps(payload)}'
 
     def on_reconnect(self):
-        self._logged_in = False
         super().on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
@@ -370,12 +368,12 @@ class IbkrWsClient(WsClient):
         if 'authenticated' in data:
             if data.get('authenticated') == False:
                 _LOGGER.error(f'{self}: Status unauthenticated: {data}')
-                self._login()
-            else:
-                self._logged_in = True
-        elif 'competing' in data and data.get('competing') == True:
+        elif 'competing' in data:
+            if data.get('competing') == False:
+                pass
             _LOGGER.error(f'{self}: Status competing: {data}')
-            self._login()
+        elif message == '':
+            pass
         else:
             _LOGGER.info(f'{self}: Unknown status response: {message}')
 
