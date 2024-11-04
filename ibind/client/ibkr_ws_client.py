@@ -7,6 +7,7 @@ from typing import Union, Type, Dict, List
 from websocket import WebSocketApp
 
 from ibind import var
+from ibind.support.errors import ExternalBrokerError
 from ibind.base.queue_controller import QueueController, QueueAccessor
 from ibind.base.subscription_controller import SubscriptionProcessor
 from ibind.base.ws_client import WsClient
@@ -301,7 +302,11 @@ class IbkrWsClient(WsClient):
             self.start()
 
     def get_cookie(self):
-        status = self._ibkr_client.tickle()
+        try:
+            status = self._ibkr_client.tickle()
+        except ExternalBrokerError:
+            _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
+            return None
         session_id = status.data['session']
         payload = {'session': session_id}
         return f'api={json.dumps(payload)}'
@@ -368,11 +373,12 @@ class IbkrWsClient(WsClient):
         if 'authenticated' in data:
             if data.get('authenticated') == False:
                 _LOGGER.error(f'{self}: Status unauthenticated: {data}')
+            self.set_authenticated(data.get('authenticated'))
         elif 'competing' in data:
             if data.get('competing') == False:
                 pass
             _LOGGER.error(f'{self}: Status competing: {data}')
-        elif message == '':
+        elif data == {'message': ''}:
             pass
         else:
             _LOGGER.info(f'{self}: Unknown status response: {message}')
