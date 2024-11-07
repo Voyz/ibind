@@ -1,9 +1,11 @@
+
+#%%
 import os
 from typing import Union, Optional
 
 from ibind import var
 from ibind.base.rest_client import RestClient
-from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
+from ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
@@ -15,7 +17,7 @@ from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 
 _LOGGER = project_logger(__file__)
 
-
+#%%
 
 
 class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
