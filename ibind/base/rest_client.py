@@ -107,6 +107,15 @@ class RestClient:
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
 
+
+    def get_headers(        
+        self,    
+        request_method: str,
+        request_url: str,
+        request_params: dict[str, str] | None = None,
+        ):    
+        return None    
+
     @property
     def logger(self):
         try:
@@ -150,6 +159,10 @@ class RestClient:
         endpoint = endpoint.lstrip("/")
         url = f"{self.base_url}{endpoint}"
 
+        # get headers from ibkr_client.py
+        header=self.get_headers(request_method=method,request_url=endpoint,request_params=TBD)
+
+
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
@@ -159,7 +172,8 @@ class RestClient:
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             try:
-                response = requests.request(method, url, verify=self.cacert, timeout=self._timeout, **kwargs)
+                # add IBKR OAuth headers to request function
+                response = requests.request(method, url, verify=self.cacert,headers=header, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
@@ -190,3 +204,5 @@ class RestClient:
 
     def __str__(self):
         return f'{self.__class__.__qualname__}'
+    
+
