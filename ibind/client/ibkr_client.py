@@ -58,7 +58,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
     def __init__(
             self,
-            oauth:bool,
+            use_oauth:bool,
             account_id: Optional[str] = var.IBIND_ACCOUNT_ID,            
             url: str = var.IBIND_REST_URL,
             host: str = 'localhost',
@@ -85,8 +85,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             url = f'https://{host}:{port}{base_route}'
 
         self.account_id = account_id
-        self._oauth=oauth
-        self.live_session_token,self.access_token=(self.req_live_session_token if self._oauth else None,None)
+        self._use_oauth=use_oauth
+        self.live_session_token,self.access_token=(self.req_live_session_token if self._use_oauth else None,None)
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         self.logger.info('#################')
