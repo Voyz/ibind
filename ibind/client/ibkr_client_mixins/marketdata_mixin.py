@@ -7,7 +7,6 @@ from ibind.client.ibkr_utils import StockQuery, StockQueries
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import ensure_list_arg, OneOrMany, execute_in_parallel, params_dict
-from oauth_requests_mixin import OAuth_Requests_Mixin
 
 
 if TYPE_CHECKING:  # pragma: no cover

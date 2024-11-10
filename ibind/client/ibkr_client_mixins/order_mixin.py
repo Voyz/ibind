@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, List
 from ibind.base.rest_client import Result
 from ibind.client.ibkr_utils import Answers, handle_questions
 from ibind.support.py_utils import OneOrMany, params_dict, ensure_list_arg
-from oauth_requests_mixin import OAuth_Requests_Mixin
 
 
 if TYPE_CHECKING:  # pragma: no cover
