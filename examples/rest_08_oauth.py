@@ -8,6 +8,7 @@ Minimal example to create a client and test OAuth
 
 from ibind.client.ibkr_client.py import IbkrClient
 
+
 # Construct the client, set use_oauth=False, if working, try creating a live session by setting use_oath=True
 client = IbkrClient(use_oauth=False)
 
