@@ -4,7 +4,7 @@ REST basic.
 Minimal example of using the IbkrClient class.
 """
 
-from ibind.client.ibkr_client.py import IbkrClient
+from ibind import IbkrClient
 
 # Construct the client
 client = IbkrClient()

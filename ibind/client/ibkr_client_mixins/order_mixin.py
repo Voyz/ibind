@@ -4,7 +4,6 @@ from ibind.base.rest_client import Result
 from ibind.client.ibkr_utils import Answers, handle_questions
 from ibind.support.py_utils import OneOrMany, params_dict, ensure_list_arg
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
@@ -18,8 +17,6 @@ class OrderMixin():
     @ensure_list_arg('filters')
     def live_orders(
             self: 'IbkrClient',
-            access_token:str,
-            live_session_token:str,
             filters: OneOrMany[str] = None,
             force: bool = None,
             account_id: str = None
@@ -68,45 +65,19 @@ class OrderMixin():
             }
         )
 
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url="https://api.ibkr.com/v1/api/iserver/account/orders",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params=params,
-        )
+        return self.get('iserver/account/orders', params=params)
 
-        return response
-
-        # return self.get('iserver/account/orders', params=params)
-
-    def order_status(self: 'IbkrClient', 
-                    access_token:str,
-                    live_session_token:str,
-                    order_id: str) -> Result:  # pragma: no cover
+    def order_status(self: 'IbkrClient', order_id: str) -> Result:  # pragma: no cover
         """
         Retrieve the given status of an individual order using the orderId returned by the order placement response or the orderId available in the live order response.
 
         Parameters:
             order_id (str): Order identifier for the placed order. Returned by the order placement response or the order_id available in the live order response.
         """
-        
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/account/order/status/{order_id}",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        # request_params=params,
-        )
-
-        return response
-
-        # return self.get(f'iserver/account/order/status/{order_id}')
+        return self.get(f'iserver/account/order/status/{order_id}')
 
     def trades(
             self: 'IbkrClient',
-            access_token:str,
-            live_session_token:str,
             days: str = None,
             account_id: str = None
     ) -> Result:  # pragma: no cover
@@ -126,26 +97,10 @@ class OrderMixin():
                 'accountId': account_id,
             }
         )
-
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/trades",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        # request_params=params,
-        )
-
-        return response
-
-        # return self.get(f'iserver/account/trades/', params=params)
+        return self.get(f'iserver/account/trades/', params=params)
 
     @ensure_list_arg('order_request')
-    def place_order(self: 'IbkrClient', 
-                    access_token:str,
-                    live_session_token:str,
-                    order_request: OneOrMany[dict], 
-                    answers: Answers, 
-                    account_id: str = None) -> Result:
+    def place_order(self: 'IbkrClient', order_request: OneOrMany[dict], answers: Answers, account_id: str = None) -> Result:
         """
         When connected to an IServer Brokerage Session, this endpoint will allow you to submit orders.
 
@@ -164,30 +119,15 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
-        params={"orders": order_request}
 
-        result= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/account/{account_id}/orders",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params=params
+        result = self.post(
+            f'iserver/account/{account_id}/orders',
+            params={"orders": order_request}
         )
 
         return handle_questions(result, answers, self.reply)
 
-        # result = self.post(
-        #     f'iserver/account/{account_id}/orders',
-        #     params={"orders": order_request}
-        # )
-
-        return handle_questions(result, answers, self.reply)
-
-    def reply(self: 'IbkrClient', 
-            access_token:str,
-            live_session_token:str,
-            reply_id, 
-            confirmed: bool) -> Result:  # pragma: no cover
+    def reply(self: 'IbkrClient', reply_id, confirmed: bool) -> Result:  # pragma: no cover
         """
         Confirm order precautions and warnings presented from placing orders.
 
@@ -197,22 +137,9 @@ class OrderMixin():
             reply_id (str): Include the id value from the prior order request relating to the particular order's warning confirmation.
             confirmed (bool): Pass your confirmation to the reply to allow or cancel the order to go through. true will agree to the message transmit the order. false will decline the message and discard the order.
         """
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/reply/{reply_id}",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params={"confirmed": confirmed}
-        )
+        return self.post(f'iserver/reply/{reply_id}', params={"confirmed": confirmed})
 
-        return response
-        # return self.post(f'iserver/reply/{reply_id}', params={"confirmed": confirmed})
-
-    def whatif_order(self: 'IbkrClient', 
-            access_token:str,
-            live_session_token:str,
-            order_request: dict, 
-            account_id: str) -> Result:  # pragma: no cover
+    def whatif_order(self: 'IbkrClient', order_request: dict, account_id: str) -> Result:  # pragma: no cover
         """
         This endpoint allows you to preview order without actually submitting the order and you can get commission information in the response. Also supports bracket orders.
 
@@ -227,22 +154,9 @@ class OrderMixin():
         if account_id == None:
             account_id = self.account_id
 
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/account/{account_id}/orders/whatif",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params={"orders": [order_request]}
-        )
+        return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [order_request]})
 
-        return response
-        # return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [order_request]})
-
-    def cancel_order(self: 'IbkrClient', 
-                    access_token:str,
-                    live_session_token:str,
-                    order_id: str, 
-                    account_id: str = None) -> Result:  # pragma: no cover
+    def cancel_order(self: 'IbkrClient', order_id: str, account_id: str = None) -> Result:  # pragma: no cover
         """
         Cancels an open order.
 
@@ -256,25 +170,9 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/account/{account_id}/order/{order_id}",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        # request_params=
-        )
+        return self.delete(f'iserver/account/{account_id}/order/{order_id}')
 
-        return response
-
-        # return self.delete(f'iserver/account/{account_id}/order/{order_id}')
-
-    def modify_order(self: 'IbkrClient', 
-                    access_token:str,
-                    live_session_token:str,
-                    order_id: str, 
-                    order_request: dict, 
-                    answers: Answers, 
-                    account_id: str = None) -> Result:
+    def modify_order(self: 'IbkrClient', order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
         """
         Modifies an open order.
 
@@ -290,59 +188,21 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
-        result= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="GET",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/account/{account_id}/order/{order_id}",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params=order_request
-        )
-
-        # result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
+        result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
 
         return handle_questions(result, answers, self.reply)
 
-    def suppress_messages(self: 'IbkrClient', 
-                        access_token:str,
-                        live_session_token:str,
-                        message_ids: List[str]) -> Result:  # pragma: no cover
+    def suppress_messages(self: 'IbkrClient', message_ids: List[str]) -> Result:  # pragma: no cover
         """
         Disables a messageId, or series of messageIds, that will no longer prompt the user.
 
         Parameters:
-            message_ids (List[str]): The identifier for each warning message to suppress. 
-            The array supports up to 51 messages sent in a single request. 
-            Any additional values will result in a system error. The majority of the message IDs 
-            are based on the TWS API Error Codes with a “o” prepended to the id.
+            message_ids (List[str]): The identifier for each warning message to suppress. The array supports up to 51 messages sent in a single request. Any additional values will result in a system error. The majority of the message IDs are based on the TWS API Error Codes with a “o” prepended to the id.
         """
+        return self.post(f'iserver/questions/suppress', params={"messageIds": message_ids})
 
-        response= OAuth_Requests_Mixin.send_oauth_request(
-            request_method="POST",
-            request_url=f"https://api.ibkr.com/v1/api/iserver/questions/suppress",
-            oauth_token=access_token,
-            live_session_token=live_session_token,
-            request_params={"messageIds": message_ids}
-            )
-
-        return response
-
-        # return self.post(f'iserver/questions/suppress', params={"messageIds": message_ids})
-
-    def reset_suppressed_messages(self: 'IbkrClient',
-                                access_token:str,
-                                live_session_token:str) -> Result:  # pragma: no cover
+    def reset_suppressed_messages(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Resets all messages disabled by the Suppress Messages endpoint.
         """
-
-        response= OAuth_Requests_Mixin.send_oauth_request(
-        request_method="POST",
-        request_url=f"https://api.ibkr.com/v1/api/iserver/questions/suppress/reset",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_paramss={"messageIds": message_ids}
-        )
-
-        return response
-
-        # return self.post(f'/iserver/questions/suppress/reset')
+        return self.post(f'/iserver/questions/suppress/reset')

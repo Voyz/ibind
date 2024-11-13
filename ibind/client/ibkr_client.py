@@ -60,7 +60,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
     def __init__(
             self,
-            use_oauth:bool,
+            use_oauth:bool=False,
             account_id: Optional[str] = var.IBIND_ACCOUNT_ID,            
             url: str = var.IBIND_REST_URL,
             host: str = 'localhost',
@@ -88,7 +88,10 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         self.account_id = account_id
         self._use_oauth=use_oauth
-        self.live_session_token,self.access_token=(self.req_live_session_token if self._use_oauth else None,None)
+        # if self._use_oauth:
+        #     self.live_session_token,self.access_token=self.req_live_session_token()
+        # else:
+        #     self.live_session_token,self.access_token=None,None
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         self.logger.info('#################')
@@ -100,22 +103,31 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
         
     def req_live_session_token(self) -> tuple[str, int]:
+        """Get live session token and access token from IBKR Web API used to make API endpoint calls
+
+        Raises:
+            Exception: _description_
+            Exception: _description_
+
+        Returns:
+            tuple[token,token]: live access token, access token
+        """
 
         REQUEST_URL = "https://api.ibkr.com/v1/api/oauth/live_session_token"
-        # REQUEST_METHOD = "POST"
-        # ENCRYPTION_METHOD = "RSA-SHA256"
+        REQUEST_METHOD = "POST"
+        ENCRYPTION_METHOD = "RSA-SHA256"
 
-        if config==None:
-            load_dotenv()
-            config = configparser.ConfigParser()
-            config.read('../oauth.env')
+        
+        load_dotenv()
+        config = configparser.ConfigParser()
+        config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
         consumer_key = config['consumer_key']['CONSUMER_KEY']
         access_token_secret=config['access_token_secret']['ACCESS_TOKEN_SECRET']
         encription_key_fp=config['keys']['ENCRYPTION_KEY_FP']
         dh_prime_fp=config['Diffie_Hellman']['DH_PRIME_FP']
         dh_generator=config['Diffie_Hellman']['DH_GENERATOR']
-        # realm=config['realm']['REALM']
+        realm=config['realm']['REALM']
 
         dh_random = self.generate_dh_random_bytes()
         dh_prime=self.pem_to_dh_prime(pem_file_path=dh_prime_fp)
@@ -131,7 +143,13 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         # TO DO: call post and request from rest_client.py with additional parameters, instead of IBKR send_oauth_request function
         extra_headers={"diffie_hellman_challenge": dh_challenge}
-        response=self.post(self, path=REQUEST_URL, params = extra_headers,prepend=prepend, log = True)
+
+        params={
+            'extra_headers':{"diffie_hellman_challenge": dh_challenge},
+            'prepend':prepend,
+            'signature_method':ENCRYPTION_METHOD,
+        }
+        response=self.post(path=REQUEST_URL, params = params, log = True)
         # response = send_oauth_request(
         #     request_method=REQUEST_METHOD,
         #     request_url=REQUEST_URL,
@@ -162,7 +180,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             consumer_key=consumer_key,
         ):
             raise Exception("Live session token validation failed.")
-
+        
         return live_session_token, lst_expires
     
 
@@ -171,14 +189,13 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self,
         request_method: str,
         request_url: str,
-        request_params: dict[str, str] | None = None,
+        request_params: dict[str, str] | None = None
         ):    
         
         # TODO: read or generate all necessary variables here
-        if config==None:
-            load_dotenv()
-            config = configparser.ConfigParser()
-            config.read('../oauth.env')
+        load_dotenv()
+        config = configparser.ConfigParser()
+        config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
         consumer_key = config['consumer_key']['CONSUMER_KEY']
         access_token=config['access_token']['ACCESS_TOKEN']
@@ -189,8 +206,12 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         dh_generator=config['Diffie_Hellman']['DH_GENERATOR']
         realm=config['realm']['REALM']
 
+        # signature method is "RSA-SHA256" for live session token and "HMAC-SHA256" for endpoint calls
+        if request_params['signature_method'] is None:
+            signature_method="HMAC-SHA256"
+        else:
+            signature_method=request_params['signature_method']
 
-        signature_method="HMAC-SHA256",
         oauth_token=access_token
 
         headers = {
@@ -202,14 +223,14 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if oauth_token:
             headers.update({"oauth_token": oauth_token})
-        if extra_headers:
-            headers.update(extra_headers)
+        if request_params['extra_headers']:
+            headers.update(request_params['extra_headers'])
         base_string = self.generate_base_string(
             request_method=request_method,
             request_url=request_url,
             request_headers=headers,
             request_params=request_params,
-            prepend=prepend,
+            prepend=request_params['prepend'],
         )
         if signature_method == "HMAC-SHA256":
             headers.update(

@@ -132,7 +132,7 @@ class ContractMixin():
 
     def search_contract_rules(
             self: 'IbkrClient',
-            conid: int,
+            conid: str,
             exchange: str = None,
             is_buy: bool = None,
             modify_order: bool = None,
@@ -142,7 +142,7 @@ class ContractMixin():
         Returns trading related rules for a specific contract and side.
 
         Parameters:
-            conid (Number): Contract identifier for the interested contract.
+            conid (str): Contract identifier for the interested contract.
             exchange (str, optional): Designate the exchange you wish to receive information for in relation to the contract.
             is_buy (bool, optional): Side of the market rules apply to. Set to true for Buy Orders, set to false for Sell Orders. Defaults to true or Buy side rules.
             modify_order (bool, optional): Used to find trading rules related to an existing order.

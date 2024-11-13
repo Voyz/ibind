@@ -158,12 +158,18 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
-        endpoint = endpoint.lstrip("/")
-        url = f"{self.base_url}{endpoint}"
+        
 
         # get headers from ibkr_client.py
-        header=self.get_headers(request_method=method,request_url=endpoint,request_params=TBD)
-
+        if self._use_oauth:
+            header_oauth=self.get_headers(request_method=method,
+                                          request_url=endpoint,
+                                          request_params=kwargs.get('json'))
+            url=endpoint
+        else:
+            header_oauth=None
+            endpoint = endpoint.lstrip("/")
+            url = f"{self.base_url}{endpoint}"
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
@@ -175,7 +181,7 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method, url, verify=self.cacert,headers=header, timeout=self._timeout, **kwargs)
+                response = requests.request(method, url, verify=self.cacert,headers=header_oauth, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
