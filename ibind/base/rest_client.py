@@ -110,13 +110,13 @@ class RestClient:
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
 
 
-    def get_headers(        
-        self,    
-        request_method: str,
-        request_url: str,
-        request_params: dict[str, str] | None = None,
-        ):    
-        return None    
+    # def get_headers(        
+    #     self,    
+    #     request_method: str,
+    #     request_url: str,
+    #     request_params: dict[str, str] | None = None,
+    #     ):    
+    #     return None    
 
     @property
     def logger(self):
@@ -129,13 +129,13 @@ class RestClient:
     def get(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
         return self.request('GET', path, log=log, params=params)
 
-    def post(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('POST', path, log=log, json=params)
+    def post(self, path: str, params: Optional[Dict[str, Any]] = None, headers=None,log: bool = True) -> Result:
+        return self.request(method='POST', endpoint=path, attempt=0,headers=headers,params=params,log=log, json=params)
 
     def delete(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
         return self.request('DELETE', path, log=log, json=params)
 
-    def request(self, method: str, endpoint: str, attempt: int = 0, log: bool = True, **kwargs) -> Result:
+    def request(self, method: str, endpoint: str, attempt: int = 0, headers=None,params=None,log: bool = True, **kwargs) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -160,14 +160,10 @@ class RestClient:
         """
         
 
-        # get headers from ibkr_client.py
+        # different url for OAuth vs username/pw methods
         if self._use_oauth:
-            header_oauth=self.get_headers(request_method=method,
-                                          request_url=endpoint,
-                                          request_params=kwargs.get('json'))
             url=endpoint
         else:
-            header_oauth=None
             endpoint = endpoint.lstrip("/")
             url = f"{self.base_url}{endpoint}"
 
@@ -181,7 +177,8 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method, url, verify=self.cacert,headers=header_oauth, timeout=self._timeout, **kwargs)
+                response = requests.request(method,url,headers=headers,params=params,timeout=10)
+                # response = requests.request(method, url, verify=self.cacert,headers=headers,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 

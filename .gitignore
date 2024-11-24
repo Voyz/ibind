@@ -6,4 +6,5 @@ build/docs/.generated-files.txt
 build/docs/mkdocs.yml
 
 .venv
+.env
 *.env
