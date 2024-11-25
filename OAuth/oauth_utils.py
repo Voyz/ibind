@@ -1,30 +1,13 @@
-
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Hash import SHA256, HMAC, SHA1
-from Crypto.IO import PEM
-from Crypto.PublicKey import DSA
-
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.serialization import load_pem_parameters
-
 from urllib import parse
 import string
 import random
 import base64
 import time
 
-
-def pem_to_dh_prime(pem_file_path):
-    with open(pem_file_path, 'rb') as pem_file:
-        pem_data = pem_file.read()
-    
-    parameters = load_pem_parameters(pem_data)
-    prime = parameters.parameter_numbers().p
-    prime = hex(prime)[2:]
-    return prime
 
 
 def generate_request_timestamp() -> str:
@@ -91,8 +74,7 @@ def generate_base_string(
 
 def generate_dh_random_bytes() -> str:
     """
-    Generates a random 256 bit number and returns it as a hex value. 
-    This is used when generating the DH challenge.
+    Generates a random 256 bit number and returns it as a hex value. This is used when generating the DH challenge.
     """
     NUM_RANDOM_BITS = 256
     random_bytes = random.getrandbits(NUM_RANDOM_BITS)
@@ -102,11 +84,10 @@ def generate_dh_random_bytes() -> str:
 
 def generate_dh_challenge(dh_prime: str, dh_random: str, dh_generator: int = 2) -> str:
     """
-    Generate the DH challenge using the prime, random and generator values. 
-    The result needs to be recorded as a hex value and sent to LST endpoint.
+    Generate the DH challenge using the prime, random and generator values. The result needs to be recorded as a hex value and sent to LST endpoint.
     """
     INT_BASE = 16
-    dh_challenge = pow(int(dh_generator), int(dh_random, INT_BASE), int(dh_prime, INT_BASE))
+    dh_challenge = pow(dh_generator, int(dh_random, INT_BASE), int(dh_prime, INT_BASE))
     hex_challenge = hex(dh_challenge)[2:]
     return hex_challenge
 
@@ -115,8 +96,7 @@ def calculate_live_session_token_prepend(
     access_token_secret: str, private_encryption_key: RSA.RsaKey
 ) -> str:
     """
-    Decrypts the access token secret using the private encryption key. 
-    The result is then converted to a hex value, and returned as the prepend
+    Decrypts the access token secret using the private encryption key. The result is then converted to a hex value, and returned as the prepend
     used when requesting the live session token.
     """
     access_token_secret_bytes = base64.b64decode(access_token_secret)
@@ -130,10 +110,8 @@ def generate_rsa_sha_256_signature(
     base_string: str, private_signature_key: RSA.RsaKey
 ) -> str:
     """
-    Generates the signature for the base string using the private signature key. 
-    The signature is generated using the
-    RSA-SHA256 algorithm and is encoded using base64. 
-    The signature is then decoded to utf-8 and the newline character
+    Generates the signature for the base string using the private signature key. The signature is generated using the
+    RSA-SHA256 algorithm and is encoded using base64. The signature is then decoded to utf-8 and the newline character
     is removed. Finally, the signature is URL encoded.
 
     This method is used when getting the request, access and live session tokens.

@@ -37,8 +37,9 @@ class OAuthMixin():  # pragma: no cover
             tuple[token,token]: live access token, access token
         """
 
-        REQUEST_URL = "https://api.ibkr.com/v1/api/oauth/live_session_token"
-        REQUEST_METHOD = "POST"
+        REQUEST_URL = "oauth/live_session_token"
+        # REQUEST_URL = "https://api.ibkr.com/v1/api/oauth/live_session_token"
+        # REQUEST_METHOD = "POST"
         ENCRYPTION_METHOD = "RSA-SHA256"
         
         load_dotenv()
@@ -58,18 +59,20 @@ class OAuthMixin():  # pragma: no cover
             private_encryption_key=self.read_private_key(private_key_fp=config['ibkr']['ENCRYPTION_KEY_FP']),
         )
 
+        extra_headers={"diffie_hellman_challenge": dh_challenge}
+
         # get OAuth headers - move this to the rest_client.py request function?? but then many variables to pass or make global or class attributes
-        header_oauth=self.get_headers(
-            request_method=REQUEST_METHOD,
-            request_url=REQUEST_URL,
-            oauth_token=config['ibkr']['ACCESS_TOKEN'],
-            signature_method=ENCRYPTION_METHOD,
-            extra_headers={"diffie_hellman_challenge": dh_challenge},
-            prepend=prepend,
-            )
+        # header_oauth=self.get_headers(
+        #     request_method=REQUEST_METHOD,
+        #     request_url=REQUEST_URL,
+        #     oauth_token=config['ibkr']['ACCESS_TOKEN'],
+        #     signature_method=ENCRYPTION_METHOD,
+        #     extra_headers={"diffie_hellman_challenge": dh_challenge},
+        #     prepend=prepend,
+        #     )
 
         # call ibind request
-        result=self.post(path=REQUEST_URL, headers = header_oauth, log = True)
+        result=self.post(path=REQUEST_URL, log = True,signature_method=ENCRYPTION_METHOD,extra_headers=extra_headers,prepend=prepend)
 
         # TODO: catch error with result
         # if result is ok:
@@ -100,17 +103,20 @@ class OAuthMixin():  # pragma: no cover
         self,    
         request_method: str,
         request_url: str,
-        oauth_token: str | None = None,
-        live_session_token: str | None = None,
-        extra_headers: dict[str, str] | None = None,
-        request_params: dict[str, str] | None = None,
-        signature_method: str = "HMAC-SHA256",
-        prepend: str | None = None,
+        **kwargs
         ) :
+
+        signature_method=kwargs['signature_method'] if 'signature_method' in kwargs else "HMAC-SHA256"
+        extra_headers=kwargs['extra_headers'] if 'extra_headers' in kwargs else None
+        request_params=kwargs['request_params'] if 'request_params' in kwargs else None
+        prepend=kwargs['prepend'] if 'prepend' in kwargs else None
+        live_session_token = self.live_session_token if hasattr(self, 'live_session_token') and self.live_session_token is not None else None
+
 
         load_dotenv()
         config = configparser.ConfigParser()
         config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
+        oauth_token=config['ibkr']["ACCESS_TOKEN"]
 
         headers = {
             "oauth_consumer_key": config['ibkr']["CONSUMER_KEY"],
@@ -122,6 +128,7 @@ class OAuthMixin():  # pragma: no cover
             headers.update({"oauth_token": oauth_token})
         if extra_headers:
             headers.update(extra_headers)
+
         base_string = self.generate_base_string(
             request_method=request_method,
             request_url=request_url,
@@ -129,6 +136,7 @@ class OAuthMixin():  # pragma: no cover
             request_params=request_params,
             prepend=prepend,
         )
+
         if signature_method == "HMAC-SHA256":
             headers.update(
                 {
@@ -386,22 +394,30 @@ class OAuthMixin():  # pragma: no cover
         return authorization_header_string
     
         
-    def init_brokerage_session(self):
-        params = {
-            "compete": "true",
-            "publish": "true",
-        }
+    # def init_brokerage_session(self,access_token,live_session_token):
+    #     """Init brokerage session
+    #     Args:
+    #         access_token (str): The access token set up offline in IBKR website
+    #     Returns:
+    #         dict: status of the brokerage session
+    #     """
 
-        request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
+    #     params = {
+    #         "compete": "true",
+    #         "publish": "true",
+    #     }
 
-        header_oauth= self.get_headers(
-            request_method="POST",
-            request_url=request_url,
-            oauth_token=self.access_token,
-            live_session_token=self.live_session_token,
-            request_params=params
-        )
+    #     request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
+
+    #     header_oauth= self.get_headers(
+    #         request_method="POST",
+    #         request_url=request_url,
+    #         oauth_token=access_token,
+    #         live_session_token=live_session_token,
+    #         request_params=params
+    #     )
         
-        result=self.post(path=request_url,params=params,headers = header_oauth, log = True)
+    #     result=self.post(path=request_url,params=params,headers = header_oauth, log = True)
 
-        return result
+    #     return result
+

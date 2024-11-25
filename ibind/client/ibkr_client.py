@@ -79,10 +79,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.account_id = account_id
         self._use_oauth=use_oauth
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
+        
         if self._use_oauth:
-            self.live_session_token,self.access_token=self.req_live_session_token()
+            self.live_session_token,self.live_session_token_expires_ms=self.req_live_session_token()
         else:
-            self.live_session_token,self.access_token=None,None
+            self.live_session_token,self.live_session_token_expires_ms=None,None
         
 
         self.logger.info('#################')

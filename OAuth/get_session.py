@@ -1,66 +1,38 @@
+
+# ./.venv/Scripts/Activate.ps1
+
 #%%
-import oauth_requests
-import oauth_utils
+import OAuth.oauth_requests as oauth_requests
 import logging
-from enum import Enum, EnumMeta
-import datetime
-# import dotenv
 import configparser
 from dotenv import load_dotenv
-import os
 
 
-class QuestionType(Enum):
-    PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
-    ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
-    MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
-    STOP_ORDER_RISKS = 'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
-    CLOSE_POSITION="The closing order quantity is greater than your current position.Are you sure you want to submit this order?"
-    EXCEEDS_SIZE_LIMIT="The following order size exceeds the Size Limit"
-    SANITY_CHECK="Are you sure you want to submit this order?"
-
-answers={
-            QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
-            QuestionType.ORDER_VALUE_LIMIT: True,
-            QuestionType.MISSING_MARKET_DATA:True,
-            QuestionType.STOP_ORDER_RISKS:True,
-            QuestionType.CLOSE_POSITION:True,
-            QuestionType.EXCEEDS_SIZE_LIMIT:True,
-            QuestionType.SANITY_CHECK:True
-        }
-
-# Read the environment variables and configure the environment
 load_dotenv()
 config = configparser.ConfigParser()
-config.read('../oauth.env')
+# config.read('../.env/datamodels_paper.env')
+config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
-account_id=config['ibkr']['ACCOUNT_ID']
-consumer_key = config['consumer_key']['CONSUMER_KEY']
-access_token=config['access_token']['ACCESS_TOKEN']
-access_token_secret=config['access_token_secret']['ACCESS_TOKEN_SECRET']
-signature_key_fp=config['keys']['SIGNATURE_KEY_FP']
-encription_key_fp=config['keys']['ENCRYPTION_KEY_FP']
-dh_prime_fp=config['Diffie_Hellman']['DH_PRIME_FP']
-dh_generator=config['Diffie_Hellman']['DH_GENERATOR']
-realm=config['realm']['REALM']
 
+access_token=config['ibkr']['access_token']
+access_token_secret=config['ibkr']['access_token_secret']
 
 #%%
 
-# logger.info('starting oauth')
+#  1. Request the live sesssion token and its expiration time
+live_session_token,live_session_token_expires_ms = oauth_requests.req_live_session_token(access_token=config['ibkr']['access_token'],access_token_secret=config['ibkr']['access_token_secret'])
 
 #%%
 
+# print live session token
+print(f'live_session_token: {live_session_token}')
 
-live_session_token,live_session_token_expires_ms = oauth_requests.live_session_token(
-    access_token=access_token,
-    access_token_secret=access_token_secret)
+# print access token
+print(f'access_token: {access_token}')
 
 #%%
-# this is the pre-flight data request call
 
-
-brokerage_session_response = oauth_requests.init_brokerage_session(
+brokerage_session_response = oauth_requests.init_brokerage_session_dev(
     access_token=access_token,
     live_session_token=live_session_token)
 
@@ -69,17 +41,6 @@ brokerage_session_response_data
 
 #%%
 
-account_ledger=oauth_requests.account_ledger(access_token=access_token, 
-                                             live_session_token=live_session_token, 
-                                             account_id=account_id) 
-account_ledger.json()
-
-#%%
-
-account=oauth_requests.brokerage_accounts(access_token=access_token, live_session_token=live_session_token)
-account.json()
-
-#%%
 
 port_accounts=oauth_requests.portfolio_accounts(access_token=access_token, live_session_token=live_session_token)
 port_accounts.json()
@@ -88,7 +49,7 @@ port_accounts.json()
 
 port_summary=oauth_requests.portfolio_account_summary(access_token=access_token,
     live_session_token=live_session_token,
-    account_id=account_id)
+    account_id=config['ibkr']['account_id'])
 
 port_summary.json()
 
@@ -125,10 +86,17 @@ market_data_history_response.json()
 
 #%%
 
+
+
+account_live='U16060442'
+account_paper='DUD057603'
+
+brokerage_session_response = oauth_requests.init_brokerage_session(access_token=access_token,live_session_token=live_session_token)
+
 positions_response=oauth_requests.positions(
     access_token=access_token,
     live_session_token=live_session_token,
-    account_id=account_id,
+    account_id=account_paper,
     page= 0)
 
 positions_response
@@ -168,7 +136,7 @@ response.json()
 trades=oauth_requests.trades(
     access_token=access_token,
     live_session_token=live_session_token,
-    account_id=account_id,
+    account_id=config['ibkr']['account_id'],
     days='3')
 
 trades.json()
@@ -201,4 +169,8 @@ order_response=oauth_requests.place_order(
     answers=answers)
 
 
-#%%
+#%% logout
+
+
+oauth_requests.logout(access_token=access_token, live_session_token=live_session_token)
+
