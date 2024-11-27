@@ -200,7 +200,7 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method, url, headers=headers, params=params, timeout=10)
+                response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs)
                 # response = requests.request(method, url, verify=self.cacert,headers=header_oauth,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
