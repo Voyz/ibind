@@ -1,12 +1,7 @@
-#%%
-
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
-
-import configparser
-from dotenv import load_dotenv
 
 import requests
 from requests import ReadTimeout, Timeout
@@ -84,7 +79,7 @@ class RestClient:
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
-            ) -> None:
+    ) -> None:
         """
         Parameters:
             url (str): The base URL for the REST API.
@@ -98,7 +93,7 @@ class RestClient:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
         if not url.endswith('/'):
-            self.base_url += '/'    
+            self.base_url += '/'
 
         self.cacert = cacert
         if not (self.cacert is False or Path(self.cacert).exists()):
@@ -120,16 +115,50 @@ class RestClient:
             self.make_logger()
             return self._logger
 
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None, headers=None,log: bool = True) -> Result:
-        return self.request(method='GET', endpoint=path, log=log, headers=headers,params=params)
+    def get_headers(self, request_method: str, request_url: str):
+        return {}
 
-    def post(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True,**kwargs) -> Result:
-        return self.request(method='POST', endpoint=path, attempt=0,params=params,log=log, json=params,**kwargs)
+    def get(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True,
+    ) -> Result:
+        return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
-    def delete(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('DELETE', path, log=log, json=params)
+    def post(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log, json=params)
 
-    def request(self, method: str, endpoint: str, attempt: int = 0, params=None,log: bool = True, **kwargs) -> Result:
+    def delete(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
+
+    def request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            attempt: int = 0,
+            params=None,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -152,23 +181,14 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
-        
 
-        # different url for OAuth vs username/pw methods
-        if self._use_oauth:
+        headers = self.get_headers(request_method=method, request_url=endpoint)
+        headers = {**headers, **(extra_headers or {})}
 
-            endpoint = endpoint.lstrip("/")
-            oauth_base_url='https://api.ibkr.com/v1/api/'
-            url = f"{oauth_base_url}{endpoint}"
+        base_url = base_url if base_url is not None else self.base_url
 
-            header_oauth= self.get_headers(
-                request_method=method,
-                request_url=url,
-                **kwargs
-            )
-        else:
-            endpoint = endpoint.lstrip("/")
-            url = f"{self.base_url}{endpoint}"
+        endpoint = endpoint.lstrip("/")
+        url = f"{base_url}{endpoint}"
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
@@ -180,7 +200,7 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method,url,headers=header_oauth,params=params,timeout=10)
+                response = requests.request(method, url, headers=headers, params=params, timeout=10)
                 # response = requests.request(method, url, verify=self.cacert,headers=header_oauth,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
@@ -212,5 +232,3 @@ class RestClient:
 
     def __str__(self):
         return f'{self.__class__.__qualname__}'
-    
-

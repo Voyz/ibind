@@ -24,6 +24,7 @@ import random
 import base64
 import time
 
+# DEPRECATED
 class OAuthMixin():  # pragma: no cover
 
     def req_live_session_token(self) -> tuple[str, int]:
@@ -87,8 +88,6 @@ class OAuthMixin():  # pragma: no cover
             dh_response=dh_response,
             prepend=prepend
         )
-
-        a=''
 
         if not self.validate_live_session_token(
             live_session_token=live_session_token,
