@@ -1,4 +1,3 @@
-# %%
 import os
 from typing import Union, Optional
 
@@ -14,12 +13,9 @@ from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
 from ibind.client.ibkr_client_mixins.session_mixin import SessionMixin
 from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
-from ibind.support.oauth import req_live_session_token
+from ibind.support.oauth import req_live_session_token, generate_oauth_headers, prepare_oauth
 
 _LOGGER = project_logger(__file__)
-
-
-# %%
 
 
 class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin, OAuthMixin):
@@ -71,12 +67,33 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self._use_oauth = use_oauth
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
-        self.live_session_token, self.live_session_token_expires_ms = None, None
         if self._use_oauth:
-            self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self, self.live_session_token)
+            self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)
 
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
 
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
+
+    def get_headers(
+            self,
+            request_method: str,
+            request_url: str
+            ):
+
+        # TODO: this second check shouldn't be hardcoded. Temporary fix for now
+        if (not self._use_oauth) or request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
+            return {}
+
+        prepend, extra_headers, _, _, _ = prepare_oauth()
+
+        headers = generate_oauth_headers(
+            request_method=request_method,
+            request_url=request_url,
+            extra_headers=extra_headers,
+            prepend=prepend,
+            live_session_token=self.live_session_token,
+        )
+
+        return headers

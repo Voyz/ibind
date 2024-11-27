@@ -182,13 +182,15 @@ class RestClient:
 
         """
 
-        headers = self.get_headers(request_method=method, request_url=endpoint)
-        headers = {**headers, **(extra_headers or {})}
+
 
         base_url = base_url if base_url is not None else self.base_url
 
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
+
+        headers = self.get_headers(request_method=method, request_url=url)
+        headers = {**headers, **(extra_headers or {})}
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)

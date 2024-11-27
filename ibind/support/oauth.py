@@ -3,6 +3,7 @@ import configparser
 import random
 import string
 import time
+from typing import Optional
 from urllib import parse
 
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
@@ -10,45 +11,29 @@ from Crypto.Hash import SHA256, HMAC, SHA1
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
-from dotenv import load_dotenv
 
 from ibind import IbkrClient
 
 
-def req_live_session_token(client: IbkrClient, live_session_token=None) -> tuple[str, int]:
-    """Get live session token and access token from IBKR Web API used to make API endpoint calls"""
+def req_live_session_token(client: IbkrClient) -> tuple[str, int]:
+    """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
+    ENCRYPTION_METHOD = "RSA-SHA256"
     REQUEST_URL = "oauth/live_session_token"
     REQUEST_BASE_URL = "https://api.ibkr.com/v1/api/"
     REQUEST_METHOD = "POST"
-    ENCRYPTION_METHOD = "RSA-SHA256"
 
-    load_dotenv()
     config = configparser.ConfigParser()
     config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
-    dh_prime = pem_to_dh_prime(pem_file_path=config['ibkr']['DH_PRIME_FP'])
-
-    dh_random = generate_dh_random_bytes()
-    dh_challenge = generate_dh_challenge(
-        dh_prime=dh_prime,
-        dh_generator=int(config['ibkr']['DH_GENERATOR']),
-        dh_random=dh_random,
-    )
-    prepend = calculate_live_session_token_prepend(
-        access_token_secret=config['ibkr']['ACCESS_TOKEN_SECRET'],
-        private_encryption_key=read_private_key(private_key_fp=config['ibkr']['ENCRYPTION_KEY_FP']),
-    )
-
-    extra_headers = {"diffie_hellman_challenge": dh_challenge}
+    prepend, extra_headers, dh_prime, dh_random = prepare_oauth()
 
     headers = generate_oauth_headers(
         request_method=REQUEST_METHOD,
         request_url=f'{REQUEST_BASE_URL}{REQUEST_URL}',
-        signature_method=ENCRYPTION_METHOD,
         extra_headers=extra_headers,
         prepend=prepend,
-        live_session_token=live_session_token,
+        signature_method=ENCRYPTION_METHOD,
     )
 
     # call ibind request
@@ -78,16 +63,37 @@ def req_live_session_token(client: IbkrClient, live_session_token=None) -> tuple
     return live_session_token, lst_expires
 
 
+def prepare_oauth():
+    config = configparser.ConfigParser()
+    config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
+
+    dh_prime = pem_to_dh_prime(pem_file_path=config['ibkr']['DH_PRIME_FP'])
+
+    dh_random = generate_dh_random_bytes()
+    dh_challenge = generate_dh_challenge(
+        dh_prime=dh_prime,
+        dh_generator=int(config['ibkr']['DH_GENERATOR']),
+        dh_random=dh_random,
+    )
+    prepend = calculate_live_session_token_prepend(
+        access_token_secret=config['ibkr']['ACCESS_TOKEN_SECRET'],
+        private_encryption_key=read_private_key(private_key_fp=config['ibkr']['ENCRYPTION_KEY_FP']),
+    )
+
+    extra_headers = {"diffie_hellman_challenge": dh_challenge}
+
+    return prepend, extra_headers, dh_prime, dh_random
+
+
 def generate_oauth_headers(
         request_method,
         request_url,
-        signature_method,
-        extra_headers,
-        prepend,
-        request_params=None,
-        live_session_token=None
+        live_session_token: Optional[str] = None,
+        extra_headers: Optional[dict[str, str]] = None,
+        request_params: dict = None,
+        signature_method: str = "HMAC-SHA256",
+        prepend: Optional[str] = None,
 ):
-    load_dotenv()
     config = configparser.ConfigParser()
     config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
     oauth_token = config['ibkr']["ACCESS_TOKEN"]
