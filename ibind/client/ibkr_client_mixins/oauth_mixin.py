@@ -24,6 +24,7 @@ import random
 import base64
 import time
 
+# DEPRECATED
 class OAuthMixin():  # pragma: no cover
 
     def req_live_session_token(self) -> tuple[str, int]:
@@ -41,7 +42,7 @@ class OAuthMixin():  # pragma: no cover
         # REQUEST_URL = "https://api.ibkr.com/v1/api/oauth/live_session_token"
         # REQUEST_METHOD = "POST"
         ENCRYPTION_METHOD = "RSA-SHA256"
-        
+
         load_dotenv()
         config = configparser.ConfigParser()
         config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
