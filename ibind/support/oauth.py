@@ -52,7 +52,7 @@ def req_live_session_token(client: IbkrClient, live_session_token=None) -> tuple
     )
 
     # call ibind request
-    result = client.post(path=REQUEST_URL, base_url='https://api.ibkr.com/v1/api/', extra_headers=headers, log=True)
+    result = client.post(path=REQUEST_URL, base_url=REQUEST_BASE_URL, extra_headers=headers, log=True)
 
     # TODO: catch error with result
     # if result is ok:
