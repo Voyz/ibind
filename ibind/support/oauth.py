@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_parameters
 from ibind import IbkrClient
 
 
-def req_live_session_token(client: IbkrClient) -> tuple[str, int]:
+def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
     ENCRYPTION_METHOD = "RSA-SHA256"
