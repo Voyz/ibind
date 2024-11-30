@@ -6,7 +6,7 @@ from ibind.base.rest_client import RestClient
 from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
-from ibind.client.ibkr_client_mixins.oauth_mixin import OAuthMixin
+# from ibind.client.ibkr_client_mixins.oauth_mixin import OAuthMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
 from ibind.client.ibkr_client_mixins.portfolio_mixin import PortfolioMixin
 from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
@@ -18,7 +18,7 @@ from ibind.support.oauth import req_live_session_token, generate_oauth_headers, 
 _LOGGER = project_logger(__file__)
 
 
-class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin, OAuthMixin):
+class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
     """
     A client class for interfacing with the IBKR API, extending the RestClient class.
 
@@ -97,3 +97,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         )
 
         return headers
+
+
+    def test_get_live_session_token(self):
+        live_session_token,live_session_token_expires_ms=req_live_session_token(self)
+        return live_session_token,live_session_token_expires_ms
+    

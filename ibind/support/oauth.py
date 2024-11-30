@@ -12,7 +12,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
 
-from ibind import IbkrClient
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:  # pragma: no cover
+    from ibind import IbkrClient
 
 
 def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
