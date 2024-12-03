@@ -182,9 +182,12 @@ class RestClient:
 
         """
 
+        # TODO: raise error if use_oauth=False, but live_session_token=None
 
-
-        base_url = base_url if base_url is not None else self.base_url
+        if self._use_oauth:
+            base_url=self.oauth_base_url
+        else:
+            base_url = base_url if base_url is not None else self.base_url
 
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
@@ -202,7 +205,7 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs)
+                response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs,verify=False)
                 # response = requests.request(method, url, verify=self.cacert,headers=header_oauth,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)

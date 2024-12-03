@@ -42,7 +42,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
     result = client.post(path=REQUEST_URL, base_url=REQUEST_BASE_URL, extra_headers=headers, log=True)
 
     # TODO: catch error with result
-    # if result is ok:
+    # if result is not ok:
     #     raise Exception(f"Live session token request failed: {response.text}")
 
     lst_expires = result.data["live_session_token_expiration"]
@@ -106,6 +106,7 @@ def generate_oauth_headers(
         "oauth_signature_method": signature_method,
         "oauth_timestamp": generate_request_timestamp(),
     }
+
     if oauth_token:
         headers.update({"oauth_token": oauth_token})
     if extra_headers:
@@ -123,9 +124,12 @@ def generate_oauth_headers(
         signature = generate_hmac_sha_256_signature(base_string=base_string, live_session_token=live_session_token)
     else:
         private_signature_key = read_private_key(config['ibkr']["SIGNATURE_KEY_FP"])
+
         signature = generate_rsa_sha_256_signature(base_string=base_string, private_signature_key=private_signature_key)
+        
     headers.update({"oauth_signature": signature})
     headers_string = generate_authorization_header_string(request_data=headers, realm=config['ibkr']["REALM"])
+
     return {"Authorization": headers_string}
 
 

@@ -14,13 +14,21 @@ from ibind.support.oauth import req_live_session_token, generate_oauth_headers, 
 
 load_dotenv()
 config = configparser.ConfigParser()
+
 config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
 # Construct the client, set use_oauth=False, if working, try creating a live session by setting use_oath=True
-client = IbkrClient(use_oauth=False)
+client = IbkrClient(use_oauth=True,cacert=False)
 # add self signed certificate - not working right now
 # client = IbkrClient(use_oauth=True,cacert='D:\\git_repos\\certificates\\ca_cert.pem')
 
+#%%
+
+# print live session token
+print(f'live_session_token: {client.live_session_token}')
+
+# print access token
+print(f'live_session_token_expires_ms: {client.live_session_token_expires_ms}')
 
 #%%
 
@@ -40,6 +48,9 @@ print(f'live_session_token_expires_ms: {live_session_token_expires_ms}')
 client.tickle()
 
 #%%
+
+# check if extra_headers are needed for non live_session_token fun, the add dh_challenge which may cause request to fail
+
 # get brokerage session
 brokerage_session_response=client.initialize_brokerage_session(publish='true',compete='true')
 brokerage_session_response.data
@@ -60,3 +71,7 @@ orders_live=client.live_orders(account_id=config['ibkr']['account_id'])
 
 snapshot=client.live_marketdata_snapshot(conids='499871328', fields=['83']) 
 pd.DataFrame(snapshot.data)
+
+#%%
+
+client.logout()

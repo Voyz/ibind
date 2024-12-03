@@ -65,6 +65,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         self.account_id = account_id
         self._use_oauth = use_oauth
+        self.oauth_base_url="https://api.ibkr.com/v1/api/"
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         if self._use_oauth:
@@ -86,14 +87,21 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         if (not self._use_oauth) or request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
             return {}
 
-        prepend, extra_headers, _, _, _ = prepare_oauth()
+        prepend, extra_headers, _, _ = prepare_oauth()
+
+        # extra headers only needed for req live session token
+        if request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
+            extra_headers=extra_headers
+        else:
+            extra_headers=None
+
 
         headers = generate_oauth_headers(
             request_method=request_method,
             request_url=request_url,
             extra_headers=extra_headers,
             prepend=prepend,
-            live_session_token=self.live_session_token,
+            live_session_token=self.live_session_token
         )
 
         return headers
