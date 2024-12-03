@@ -40,7 +40,7 @@ config['ibkr']['DH_PRIME']=pem_to_dh_prime(pem_file_path=config['ibkr']['DH_PRIM
 #%%
 
 
-def send_oauth_request(
+def get_oauth_header(
     request_method: str,
     request_url: str,
     oauth_token: str | None = None,
@@ -55,18 +55,20 @@ def send_oauth_request(
         "oauth_consumer_key": config['ibkr']["CONSUMER_KEY"],
         "oauth_nonce": oauth_utils.generate_oauth_nonce(),
         "oauth_signature_method": signature_method,
-        "oauth_timestamp": oauth_utils.generate_request_timestamp(),
+        "oauth_timestamp": oauth_utils.generate_request_timestamp()
     }
+
     if oauth_token:
         headers.update({"oauth_token": oauth_token})
     if extra_headers:
         headers.update(extra_headers)
+
     base_string = oauth_utils.generate_base_string(
         request_method=request_method,
         request_url=request_url,
         request_headers=headers,
         request_params=request_params,
-        prepend=prepend,
+        prepend=prepend
     )
     logging.info(
         msg={
@@ -120,48 +122,15 @@ def send_oauth_request(
             )
         }
 
-    # response = requests.request(
-    #     method=request_method,
-    #     url=request_url,
-    #     headers=header_oauth,
-    #     # headers={
-    #     #     "Authorization": oauth_utils.generate_authorization_header_string(
-    #     #         request_data=headers,
-    #     #         realm=config['ibkr']["REALM"],
-    #     #     )
-    #     # },
-    #     # params=request_params,
-    #     params=None,
-    #     timeout=10,
-    # )
-    
-    # logging.info(
-    #     msg={
-    #         "message": "sent oauth request",
-    #         "timestamp": time.time(),
-    #         "details": {
-    #             "request_method": request_method,
-    #             "request_url": response.request.url,
-    #             "request_headers": response.request.headers,
-    #             "request_body": response.request.body,
-    #             "response_status_code": response.status_code,
-    #             "response_error_message": response.text if not response.ok else None,
-    #         },
-    #     }
-    # )
-
     return header_oauth
-    # return response
-
-
 
 # Authentication flow
-
 
 def req_live_session_token(
     access_token: str,
     access_token_secret: str,
 ) -> tuple[str, int]:
+
     REQUEST_URL = "https://api.ibkr.com/v1/api/oauth/live_session_token"
     REQUEST_METHOD = "POST"
     ENCRYPTION_METHOD = "RSA-SHA256"
@@ -169,53 +138,31 @@ def req_live_session_token(
     dh_challenge = oauth_utils.generate_dh_challenge(
         dh_prime=config['ibkr']['DH_PRIME'],
         dh_generator=int(config['ibkr']['DH_GENERATOR']),
-        dh_random=dh_random,
+        dh_random=dh_random
     )
     prepend = oauth_utils.calculate_live_session_token_prepend(
         access_token_secret,
-        oauth_utils.read_private_key(
-            config['ibkr']["ENCRYPTION_KEY_FP"],
-        ),
+        oauth_utils.read_private_key(config['ibkr']["ENCRYPTION_KEY_FP"])
     )
 
-    header_oauth = send_oauth_request(
+    extra_headers={"diffie_hellman_challenge": dh_challenge}
+
+    header_oauth = get_oauth_header(
         request_method=REQUEST_METHOD,
         request_url=REQUEST_URL,
         oauth_token=access_token,
         signature_method=ENCRYPTION_METHOD,
-        extra_headers={
-            "diffie_hellman_challenge": dh_challenge,
-        },
-        prepend=prepend,
+        extra_headers=extra_headers,
+        prepend=prepend
     )
 
     response = requests.request(
         method=REQUEST_METHOD,
         url=REQUEST_URL,
         headers=header_oauth,
-        # headers={
-        #     "Authorization": oauth_utils.generate_authorization_header_string(
-        #         request_data=headers,
-        #         realm=config['ibkr']["REALM"],
-        #     )
-        # },
-        # params=request_params,
         params=None,
         timeout=10,
     )
-
-    # response = send_oauth_request(
-    #     request_method=REQUEST_METHOD,
-    #     request_url=REQUEST_URL,
-    #     oauth_token=access_token,
-    #     signature_method=ENCRYPTION_METHOD,
-    #     extra_headers={
-    #         "diffie_hellman_challenge": dh_challenge,
-    #     },
-    #     prepend=prepend,
-    # )
-
-
 
     if not response.ok:
         raise Exception(f"Live session token request failed: {response.text}")
@@ -235,16 +182,15 @@ def req_live_session_token(
         consumer_key=config['ibkr']["CONSUMER_KEY"],
     ):
         raise Exception("Live session token validation failed.")
+
     return live_session_token, lst_expires
 
 
 # Session management
 
-
-
-
-def init_brokerage_session_dev(
-    access_token: str, live_session_token: str
+def init_brokerage_session(
+    access_token: str, 
+    live_session_token: str
 ) -> requests.Response:
     params = {
         "compete": "true",
@@ -253,7 +199,7 @@ def init_brokerage_session_dev(
 
     request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
 
-    header_oauth= send_oauth_request(
+    header_oauth= get_oauth_header(
         request_method="POST",
         request_url=request_url,   
         oauth_token=access_token,
@@ -272,24 +218,24 @@ def init_brokerage_session_dev(
     return response
 
 
-def init_brokerage_session(
-    access_token: str, live_session_token: str
-) -> requests.Response:
-    params = {
-        "compete": "true",
-        "publish": "true",
-    }
-    return send_oauth_request(
-        request_method="POST",
-        request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
-        oauth_token=access_token,
-        live_session_token=live_session_token,
-        request_params=params,
-    )
+# def init_brokerage_session(
+#     access_token: str, live_session_token: str
+# ) -> requests.Response:
+#     params = {
+#         "compete": "true",
+#         "publish": "true",
+#     }
+#     return send_oauth_request(
+#         request_method="POST",
+#         request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
+#         oauth_token=access_token,
+#         live_session_token=live_session_token,
+#         request_params=params,
+#     )
 
 
 def tickle(access_token: str, live_session_token: str) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="POST",
         request_url="https://api.ibkr.com/v1/api/tickle",
         oauth_token=access_token,
@@ -298,7 +244,7 @@ def tickle(access_token: str, live_session_token: str) -> requests.Response:
 
 
 def auth_status(access_token: str, live_session_token: str) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="GET",
         request_url="https://api.ibkr.com/v1/api/iserver/auth/status",
         oauth_token=access_token,
@@ -307,7 +253,7 @@ def auth_status(access_token: str, live_session_token: str) -> requests.Response
 
 
 def logout(access_token: str, live_session_token: str) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="POST",
         request_url="https://api.ibkr.com/v1/api/logout",
         oauth_token=access_token,
@@ -319,7 +265,7 @@ def logout(access_token: str, live_session_token: str) -> requests.Response:
 
 
 def brokerage_accounts(access_token: str, live_session_token: str) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="GET",
         request_url="https://api.ibkr.com/v1/api/iserver/accounts",
         oauth_token=access_token,
@@ -333,7 +279,7 @@ def brokerage_accounts(access_token: str, live_session_token: str) -> requests.R
 def account_ledger(
     access_token: str, live_session_token: str, account_id: str
 ) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="GET",
         request_url=f"https://api.ibkr.com/v1/api/account/{account_id}/ledger",
         oauth_token=access_token,
@@ -360,7 +306,7 @@ def positions(
             period (str, optional): Period for pnl column. Value Format: 1D, 7D, 1M.
         """
 
-        return send_oauth_request(
+        return get_oauth_header(
             request_method="GET",
             request_url=f"https://api.ibkr.com/v1/api/iserver/portfolio2/{account_id}/positions",
             oauth_token=access_token,
@@ -369,7 +315,7 @@ def positions(
 
 
 def portfolio_accounts(access_token: str, live_session_token: str) -> requests.Response:
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="GET",
         request_url=f"https://api.ibkr.com/v1/api/portfolio/accounts",
         oauth_token=access_token,
@@ -392,7 +338,7 @@ def market_data_snapshot(
         "conids": ",".join([str(conid) for conid in conids]),
         "fields": ",".join([str(field) for field in fields]),
     }
-    return send_oauth_request(
+    return get_oauth_header(
         request_method="GET",
         request_url="https://api.ibkr.com/v1/api/iserver/marketdata/snapshot",
         oauth_token=access_token,
@@ -421,7 +367,7 @@ def trades(
                 'accountId': account_id,
             }
 
-        return send_oauth_request(
+        return get_oauth_header(
             request_method="GET",
             request_url="https://api.ibkr.com/v1/api/iserver/account/trades",
             oauth_token=access_token,

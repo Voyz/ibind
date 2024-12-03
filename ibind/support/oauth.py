@@ -33,13 +33,17 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
     headers = generate_oauth_headers(
         request_method=REQUEST_METHOD,
         request_url=f'{REQUEST_BASE_URL}{REQUEST_URL}',
-        extra_headers=extra_headers,
-        prepend=prepend,
         signature_method=ENCRYPTION_METHOD,
+        extra_headers=extra_headers,
+        prepend=prepend        
     )
 
     # call ibind request
-    result = client.post(path=REQUEST_URL, base_url=REQUEST_BASE_URL, extra_headers=headers, log=True)
+    result = client.post(
+        path=REQUEST_URL,
+        base_url=REQUEST_BASE_URL, 
+        extra_headers=headers, 
+        log=True)
 
     # TODO: catch error with result
     # if result is not ok:
@@ -88,23 +92,26 @@ def prepare_oauth():
 
 
 def generate_oauth_headers(
-        request_method,
-        request_url,
+        request_method:str,
+        request_url:str,
         live_session_token: Optional[str] = None,
         extra_headers: Optional[dict[str, str]] = None,
         request_params: dict = None,
         signature_method: str = "HMAC-SHA256",
         prepend: Optional[str] = None,
 ):
+
     config = configparser.ConfigParser()
     config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
     oauth_token = config['ibkr']["ACCESS_TOKEN"]
 
+    # oauth token always added to header??
     headers = {
         "oauth_consumer_key": config['ibkr']["CONSUMER_KEY"],
         "oauth_nonce": generate_oauth_nonce(),
         "oauth_signature_method": signature_method,
         "oauth_timestamp": generate_request_timestamp(),
+        # "oauth_token": config['ibkr']["ACCESS_TOKEN"]
     }
 
     if oauth_token:
@@ -117,20 +124,27 @@ def generate_oauth_headers(
         request_url=request_url,
         request_headers=headers,
         request_params=request_params,
-        prepend=prepend,
+        prepend=prepend
     )
 
     if signature_method == "HMAC-SHA256":
-        signature = generate_hmac_sha_256_signature(base_string=base_string, live_session_token=live_session_token)
+        signature = generate_hmac_sha_256_signature(
+            base_string=base_string, 
+            live_session_token=live_session_token)
     else:
         private_signature_key = read_private_key(config['ibkr']["SIGNATURE_KEY_FP"])
-
-        signature = generate_rsa_sha_256_signature(base_string=base_string, private_signature_key=private_signature_key)
+        signature = generate_rsa_sha_256_signature(
+            base_string=base_string, 
+            private_signature_key=private_signature_key)
         
     headers.update({"oauth_signature": signature})
-    headers_string = generate_authorization_header_string(request_data=headers, realm=config['ibkr']["REALM"])
+    headers_string = generate_authorization_header_string(
+        request_data=headers, 
+        realm=config['ibkr']["REALM"])
 
-    return {"Authorization": headers_string}
+    header_oauth=  {"Authorization": headers_string}  
+
+    return header_oauth
 
 
 def pem_to_dh_prime(pem_file_path):

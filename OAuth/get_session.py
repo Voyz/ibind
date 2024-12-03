@@ -20,7 +20,10 @@ access_token_secret=config['ibkr']['access_token_secret']
 #%%
 
 #  1. Request the live sesssion token and its expiration time
-live_session_token,live_session_token_expires_ms = oauth_requests.req_live_session_token(access_token=config['ibkr']['access_token'],access_token_secret=config['ibkr']['access_token_secret'])
+live_session_token,live_session_token_expires_ms = oauth_requests.req_live_session_token(
+    access_token=config['ibkr']['access_token'],
+access_token_secret=config['ibkr']['access_token_secret']
+)
 
 #%%
 
@@ -32,7 +35,7 @@ print(f'access_token: {access_token}')
 
 #%%
 
-brokerage_session_response = oauth_requests.init_brokerage_session_dev(
+brokerage_session_response = oauth_requests.init_brokerage_session(
     access_token=access_token,
     live_session_token=live_session_token)
 

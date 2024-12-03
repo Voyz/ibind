@@ -84,23 +84,19 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             ):
 
         # TODO: this second check shouldn't be hardcoded. Temporary fix for now
+        # if request is for a live session token then return None
         if (not self._use_oauth) or request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
             return {}
 
-        prepend, extra_headers, _, _ = prepare_oauth()
+        # not needed once live session token obtained
+        # prepend, extra_headers, _, _ = prepare_oauth()
 
-        # extra headers only needed for req live session token
-        if request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
-            extra_headers=extra_headers
-        else:
-            extra_headers=None
-
-
+        # get headers for endpoints other than live session token request
         headers = generate_oauth_headers(
             request_method=request_method,
             request_url=request_url,
-            extra_headers=extra_headers,
-            prepend=prepend,
+            # extra_headers=extra_headers,
+            # prepend=prepend,
             live_session_token=self.live_session_token
         )
 
