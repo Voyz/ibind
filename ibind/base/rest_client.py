@@ -142,9 +142,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True
     ) -> Result:
-        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log
-                            # , json=params
-                            )
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
     def delete(
             self,
@@ -204,47 +202,6 @@ class RestClient:
 
         headers = self.get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
-
-        if url=="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init":
-
-            headers = self.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
-            params = {"compete": "true","publish": "true"}   
-
-            response = requests.request(
-                method='POST',
-                url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
-                headers=headers,
-                params=params,
-                timeout=10
-            )
-                        
-            response = requests.request(
-                method='POST',
-                url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
-                headers=headers,
-                params=params,
-                timeout=10,
-                **kwargs,verify=False
-            )
-
-            print("")
-
-
-            # load_dotenv()
-            # config = configparser.ConfigParser()
-            # config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
-            # request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
-            # access_token=config['ibkr']["ACCESS_TOKEN"]
-            # live_session_token=self.live_session_token     
-            # params = {"compete": "true","publish": "true"}   
-
-            # headers= oauth_requests.get_oauth_header(
-            #     request_method="POST",
-            #     request_url=request_url,   
-            #     oauth_token=access_token,
-            #     live_session_token=live_session_token,
-            #     request_params=params
-            # )
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)

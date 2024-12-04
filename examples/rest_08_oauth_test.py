@@ -5,12 +5,15 @@ Minimal example to create a client and test OAuth
 
 #%%
 
+
+import threading
+import time
+from datetime import datetime
 from ibind import IbkrClient
 import configparser
 from dotenv import load_dotenv
 import pandas as pd
 from ibind.support.oauth import req_live_session_token, generate_oauth_headers, prepare_oauth
-
 
 load_dotenv()
 config = configparser.ConfigParser()
@@ -30,6 +33,85 @@ print(f'live_session_token: {client.live_session_token}')
 # print access token
 print(f'live_session_token_expires_ms: {client.live_session_token_expires_ms}')
 
+
+#%%
+
+#  run tickle every 60s in its own thread to keep connection open
+
+# Flag to control the thread 
+stop_thread = False
+
+# Function that contains the while loop
+def background_task():
+    global stop_thread
+    while not stop_thread:
+        client.tickle()
+        now = datetime.now().strftime('%d-%b-%y %H:%M:%S')
+        print(f"Tickle...{now}")
+        time.sleep(60)  # Sleep for 2 seconds
+
+# Create a thread for the background task
+background_thread = threading.Thread(target=background_task)
+
+# Set the thread as a daemon so it will not prevent the program from exiting
+background_thread.daemon = True
+
+# Start the thread
+background_thread.start()
+
+# Stop the background thread 
+def stop_tickle():
+    global stop_thread
+    stop_thread = True 
+    background_thread.join()
+
+#%%
+
+accounts=client.portfolio_accounts()
+pd.DataFrame(accounts.data).T
+
+#%%
+
+account_summary=client.account_performance(account_ids=config['ibkr']['account_id'],period="7D")
+account_summary
+
+#%%
+# get brokerage session
+brokerage_session_response=client.initialize_brokerage_session(publish='true',compete='true')
+brokerage_session_response.data
+
+#%%
+
+# get account positions
+portfolio_summary=client.portfolio_summary(account_id=config['ibkr']['account_id'])
+portfolio=pd.DataFrame(portfolio_summary.data).T
+
+#%%
+# get live orders
+orders_live=client.live_orders(account_id=config['ibkr']['account_id'])
+pd.DataFrame(orders_live.data)
+
+#%%
+# trades
+trades=client.trades(days='3',account_id=config['ibkr']['account_id'])
+pd.DataFrame(trades.data)
+
+#%%
+
+# snapshot
+snapshot=client.live_marketdata_snapshot(conids='391638829', fields=['83','84','85']) 
+pd.DataFrame(snapshot.data)
+
+#%%
+# historical market data
+
+market_data=client.marketdata_history_by_conid(conid='391638829',bar='1d',period='1m',exchange='SEHK')
+market_data.data
+
+#%%
+
+client.logout()
+
 #%%
 
 # test get live session code, not in client init
@@ -42,92 +124,3 @@ print(f'live_session_token_expires_ms: {client.live_session_token_expires_ms}')
 
 # # print access token
 # print(f'live_session_token_expires_ms: {live_session_token_expires_ms}')
-
-#%%
-
-client.tickle()
-
-#%%
-
-# check if extra_headers are needed for non live_session_token fun, the add dh_challenge which may cause request to fail
-
-# get brokerage session
-brokerage_session_response=client.initialize_brokerage_session(publish='true',compete='true')
-brokerage_session_response.data
-
-#%%
-
-headers = client.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
-
-#%%
-import requests
-import OAuth.oauth_requests as oauth_requests
-
-
-params = {
-        "compete": "true",
-        "publish": "true",
-    }
-
-request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
-access_token=config['ibkr']["ACCESS_TOKEN"]
-live_session_token=client.live_session_token
-
-
-# header_oauth= oauth_requests.get_oauth_header(
-#     request_method="POST",
-#     request_url=request_url,   
-#     oauth_token=access_token,
-#     live_session_token=live_session_token,
-#     request_params=params
-# )
-
-headers = client.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
-
-response = requests.request(
-    method='POST',
-    url=request_url,
-    headers=headers,
-    params=params,
-    timeout=10,
-    verify=False
-)
-
-response.json()
-
-
-
-#%%
-
-import OAuth.oauth_requests as oauth_requests
-
-
-brokerage_session_response = oauth_requests.init_brokerage_session(
-    access_token=config['ibkr']["ACCESS_TOKEN"],
-    live_session_token=client.live_session_token)
-
-brokerage_session_response_data = brokerage_session_response.json()
-brokerage_session_response_data
-
-
-#%%
-
-# get account positions
-account_positions=client.positions(account_id=config['ibkr']['account_id'])
-pd.DataFrame(account_positions.data)
-
-#%%
-# get live orders
-
-orders_live=client.live_orders(account_id=config['ibkr']['account_id'])
-
-#%%
-
-# market data
-
-snapshot=client.live_marketdata_snapshot(conids='499871328', fields=['83']) 
-pd.DataFrame(snapshot.data)
-
-#%%
-
-client.logout()
