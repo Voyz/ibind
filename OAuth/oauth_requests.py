@@ -8,7 +8,7 @@ import dotenv
 import time
 import os
 
-import oauth_utils as oauth_utils
+import OAuth.oauth_utils as oauth_utils
 import configparser
 from dotenv import load_dotenv
 

@@ -30,6 +30,8 @@ access_token_secret=config['ibkr']['access_token_secret']
 # print live session token
 print(f'live_session_token: {live_session_token}')
 
+print(f'live_session_token_expires_ms: {live_session_token_expires_ms}')
+
 # print access token
 print(f'access_token: {access_token}')
 

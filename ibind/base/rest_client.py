@@ -6,6 +6,12 @@ from typing import Union, Optional, Dict, Any
 import requests
 from requests import ReadTimeout, Timeout
 
+
+import OAuth.oauth_requests as oauth_requests
+import configparser
+from dotenv import load_dotenv
+
+
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
@@ -136,7 +142,9 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True
     ) -> Result:
-        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log, json=params)
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log
+                            # , json=params
+                            )
 
     def delete(
             self,
@@ -184,18 +192,59 @@ class RestClient:
 
         # TODO: raise error if use_oauth=False, but live_session_token=None
 
-        # if self.use_oauth:
-        #     base_url=self.base_oauth_url
-        # else:
-        #     base_url = base_url if base_url is not None else self.base_url
+        if self._use_oauth:
+            base_url="https://api.ibkr.com/v1/api/"
+        else:
+            base_url = base_url if base_url is not None else self.base_url
 
-        base_url = base_url if base_url is not None else self.base_url    
+        # base_url = base_url if base_url is not None else self.base_url    
 
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
 
         headers = self.get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
+
+        if url=="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init":
+
+            headers = self.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
+            params = {"compete": "true","publish": "true"}   
+
+            response = requests.request(
+                method='POST',
+                url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
+                headers=headers,
+                params=params,
+                timeout=10
+            )
+                        
+            response = requests.request(
+                method='POST',
+                url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init",
+                headers=headers,
+                params=params,
+                timeout=10,
+                **kwargs,verify=False
+            )
+
+            print("")
+
+
+            # load_dotenv()
+            # config = configparser.ConfigParser()
+            # config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
+            # request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
+            # access_token=config['ibkr']["ACCESS_TOKEN"]
+            # live_session_token=self.live_session_token     
+            # params = {"compete": "true","publish": "true"}   
+
+            # headers= oauth_requests.get_oauth_header(
+            #     request_method="POST",
+            #     request_url=request_url,   
+            #     oauth_token=access_token,
+            #     live_session_token=live_session_token,
+            #     request_params=params
+            # )
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)

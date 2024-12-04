@@ -35,13 +35,13 @@ print(f'live_session_token_expires_ms: {client.live_session_token_expires_ms}')
 # test get live session code, not in client init
 
 # test function to get live session and access tokens
-live_session_token,live_session_token_expires_ms=client.test_get_live_session_token()
+# live_session_token,live_session_token_expires_ms=client.test_get_live_session_token()
 
-# print live session token
-print(f'live_session_token: {live_session_token}')
+# # print live session token
+# print(f'live_session_token: {live_session_token}')
 
-# print access token
-print(f'live_session_token_expires_ms: {live_session_token_expires_ms}')
+# # print access token
+# print(f'live_session_token_expires_ms: {live_session_token_expires_ms}')
 
 #%%
 
@@ -56,6 +56,62 @@ brokerage_session_response=client.initialize_brokerage_session(publish='true',co
 brokerage_session_response.data
 
 #%%
+
+headers = client.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
+
+#%%
+import requests
+import OAuth.oauth_requests as oauth_requests
+
+
+params = {
+        "compete": "true",
+        "publish": "true",
+    }
+
+request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init"
+access_token=config['ibkr']["ACCESS_TOKEN"]
+live_session_token=client.live_session_token
+
+
+# header_oauth= oauth_requests.get_oauth_header(
+#     request_method="POST",
+#     request_url=request_url,   
+#     oauth_token=access_token,
+#     live_session_token=live_session_token,
+#     request_params=params
+# )
+
+headers = client.get_headers(request_method="POST", request_url="https://api.ibkr.com/v1/api/iserver/auth/ssodh/init")
+
+response = requests.request(
+    method='POST',
+    url=request_url,
+    headers=headers,
+    params=params,
+    timeout=10,
+    verify=False
+)
+
+response.json()
+
+
+
+#%%
+
+import OAuth.oauth_requests as oauth_requests
+
+
+brokerage_session_response = oauth_requests.init_brokerage_session(
+    access_token=config['ibkr']["ACCESS_TOKEN"],
+    live_session_token=client.live_session_token)
+
+brokerage_session_response_data = brokerage_session_response.json()
+brokerage_session_response_data
+
+
+#%%
+
 # get account positions
 account_positions=client.positions(account_id=config['ibkr']['account_id'])
 pd.DataFrame(account_positions.data)
