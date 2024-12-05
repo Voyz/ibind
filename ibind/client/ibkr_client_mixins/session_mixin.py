@@ -32,7 +32,7 @@ class SessionMixin():
             publish (Boolean): Determines if the request should be sent immediately. Users should always pass true. Otherwise, a ‘500’ response will be returned.
             compete (Boolean): Determines if other brokerage sessions should be disconnected to prioritize this connection.
         """
-        return self.post(path='iserver/auth/ssodh/init', params={'publish': publish, 'compete': compete})
+        return self.post('iserver/auth/ssodh/init', {'publish': publish, 'compete': compete})
 
     def logout(self: 'IbkrClient') -> Result:  # pragma: no cover
         """

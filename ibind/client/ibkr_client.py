@@ -6,7 +6,6 @@ from ibind.base.rest_client import RestClient
 from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
-# from ibind.client.ibkr_client_mixins.oauth_mixin import OAuthMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
 from ibind.client.ibkr_client_mixins.portfolio_mixin import PortfolioMixin
 from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
