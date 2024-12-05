@@ -71,7 +71,7 @@ accounts=client.portfolio_accounts()
 pd.DataFrame(accounts.data).T
 
 #%%
-
+# not working
 account_summary=client.account_performance(account_ids=config['ibkr']['account_id'],period="7D")
 account_summary
 
@@ -84,7 +84,7 @@ brokerage_session_response.data
 
 # get account positions
 portfolio_summary=client.portfolio_summary(account_id=config['ibkr']['account_id'])
-portfolio=pd.DataFrame(portfolio_summary.data).T
+pd.DataFrame(portfolio_summary.data).T
 
 #%%
 # get live orders

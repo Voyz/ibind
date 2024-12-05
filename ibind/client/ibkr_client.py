@@ -66,7 +66,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.account_id = account_id
         self._use_oauth = use_oauth
         self.oauth_base_url="https://api.ibkr.com/v1/api/"
-        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
+        super().__init__(url=url, use_oauth=use_oauth,cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         if self._use_oauth:
             self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)

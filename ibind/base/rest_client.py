@@ -80,8 +80,9 @@ class RestClient:
     """
 
     def __init__(
-            self,
+            self,            
             url: str,
+            use_oauth:bool=False,
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
@@ -94,7 +95,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
-
+        self._use_oauth=use_oauth
         if url is None:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
