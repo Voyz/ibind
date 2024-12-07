@@ -47,6 +47,9 @@ LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 
 ##### IBKR #####
 
+IBIND_OAUTH_REST_URL= os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
+""" IBKR Client Portal Gateway's URL for OAuth REST API."""
+
 IBIND_REST_URL = os.getenv('IBIND_REST_URL', None)
 """ IBKR Client Portal Gateway's URL for REST API."""
 
