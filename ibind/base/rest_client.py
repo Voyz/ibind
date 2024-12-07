@@ -93,7 +93,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
-        self._use_oauth=use_oauth
+        # self._use_oauth=use_oauth
         if url is None:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
@@ -189,12 +189,12 @@ class RestClient:
 
         # TODO: raise error if use_oauth=False, but live_session_token=None
 
-        if self._use_oauth:
-            base_url="https://api.ibkr.com/v1/api/"
-        else:
-            base_url = base_url if base_url is not None else self.base_url
+        # if self._use_oauth:
+        #     base_url="https://api.ibkr.com/v1/api/"
+        # else:
+        #     base_url = base_url if base_url is not None else self.base_url
 
-        # base_url = base_url if base_url is not None else self.base_url    
+        base_url = base_url if base_url is not None else self.base_url    
 
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"

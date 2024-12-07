@@ -76,6 +76,13 @@ account_summary=client.account_performance(account_ids=config['ibkr']['account_i
 account_summary
 
 #%%
+# positions
+
+positions=client.positions(account_id=config['ibkr']['account_id'])
+pd.DataFrame(positions.data)
+
+
+#%%
 # get brokerage session
 brokerage_session_response=client.initialize_brokerage_session(publish='true',compete='true')
 brokerage_session_response.data
