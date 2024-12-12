@@ -3,6 +3,8 @@ REST OAuth.
 Minimal example to create a client and test OAuth
 """
 
+
+
 #%%
 
 
@@ -10,15 +12,21 @@ import threading
 import time
 from datetime import datetime
 from ibind import IbkrClient
-import configparser
-from dotenv import load_dotenv
+from ibind import var
+
 import pandas as pd
 from ibind.support.oauth import req_live_session_token, generate_oauth_headers, prepare_oauth
 
-load_dotenv()
-config = configparser.ConfigParser()
+#%%
 
-config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
+print(var.IBIND_ACCOUNT_ID)
+print(var.IBIND_ACCESS_TOKEN)
+print(var.IBIND_CONSUMER_KEY)
+print(var.IBIND_ENCRYPTION_KEY_FP)
+
+
+#%%
+
 
 # Construct the client, set use_oauth=False, if working, try creating a live session by setting use_oath=True
 client = IbkrClient(use_oauth=True,cacert=False)
@@ -72,13 +80,13 @@ pd.DataFrame(accounts.data).T
 
 #%%
 # not working
-account_summary=client.account_performance(account_ids=config['ibkr']['account_id'],period="7D")
+account_summary=client.account_performance(account_ids=var.IBIND_ACCOUNT_ID,period="7D")
 account_summary
 
 #%%
 # positions
 
-positions=client.positions(account_id=config['ibkr']['account_id'])
+positions=client.positions(account_id=var.IBIND_ACCOUNT_ID)
 pd.DataFrame(positions.data)
 
 
@@ -90,17 +98,17 @@ brokerage_session_response.data
 #%%
 
 # get account positions
-portfolio_summary=client.portfolio_summary(account_id=config['ibkr']['account_id'])
+portfolio_summary=client.portfolio_summary(account_id=var.IBIND_ACCOUNT_ID)
 pd.DataFrame(portfolio_summary.data).T
 
 #%%
 # get live orders
-orders_live=client.live_orders(account_id=config['ibkr']['account_id'])
+orders_live=client.live_orders(account_id=var.IBIND_ACCOUNT_ID)
 pd.DataFrame(orders_live.data)
 
 #%%
 # trades
-trades=client.trades(days='3',account_id=config['ibkr']['account_id'])
+trades=client.trades(days='3',account_id=var.IBIND_ACCOUNT_ID)
 pd.DataFrame(trades.data)
 
 #%%

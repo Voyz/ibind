@@ -6,10 +6,6 @@ from typing import Union, Optional, Dict, Any
 import requests
 from requests import ReadTimeout, Timeout
 
-import configparser
-from dotenv import load_dotenv
-
-
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
@@ -80,7 +76,6 @@ class RestClient:
     def __init__(
             self,            
             url: str,
-            use_oauth:bool=False,
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
