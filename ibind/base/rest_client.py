@@ -182,13 +182,6 @@ class RestClient:
 
         """
 
-        # TODO: raise error if use_oauth=False, but live_session_token=None
-
-        # if self._use_oauth:
-        #     base_url="https://api.ibkr.com/v1/api/"
-        # else:
-        #     base_url = base_url if base_url is not None else self.base_url
-
         base_url = base_url if base_url is not None else self.base_url    
 
         endpoint = endpoint.lstrip("/")
