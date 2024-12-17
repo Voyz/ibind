@@ -195,7 +195,7 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Include each account ID to receive data for.
             period (str): Specify the period for which the account should be analyzed. Available Values: “1D”, “7D”, “MTD”, “1M”, “YTD”, “1Y”.
         """
-        return self.get(f'pa/performance', {'acctIds': account_ids, 'period': period})
+        return self.post(f'pa/performance', {'acctIds': account_ids, 'period': period})
 
     @ensure_list_arg('account_ids', 'conids')
     def transaction_history(
