@@ -136,7 +136,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True
     ) -> Result:
-        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
     def delete(
             self,

@@ -96,8 +96,3 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         return headers
 
-
-    def test_get_live_session_token(self):
-        live_session_token,live_session_token_expires_ms=req_live_session_token(self)
-        return live_session_token,live_session_token_expires_ms
-    

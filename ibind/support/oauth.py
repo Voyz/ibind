@@ -42,10 +42,6 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
         extra_headers=headers, 
         log=True)
 
-    # TODO: catch error with result
-    # if result is not ok:
-    #     raise Exception(f"Live session token request failed: {response.text}")
-
     lst_expires = result.data["live_session_token_expiration"]
     dh_response = result.data["diffie_hellman_response"]
     lst_signature = result.data["live_session_token_signature"]
@@ -97,7 +93,7 @@ def generate_oauth_headers(
 ):
 
     
-    oauth_token = var.IBIND_ACCESS_TOKEN
+    # oauth_token = var.IBIND_ACCESS_TOKEN
 
     # oauth token always added to header??
     headers = {
@@ -108,8 +104,8 @@ def generate_oauth_headers(
         "oauth_token": var.IBIND_ACCESS_TOKEN
     }
 
-    if oauth_token:
-        headers.update({"oauth_token": oauth_token})
+    if var.IBIND_ACCESS_TOKEN:
+        headers.update({"oauth_token": var.IBIND_ACCESS_TOKEN})
     if extra_headers:
         headers.update(extra_headers)
 

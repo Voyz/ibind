@@ -61,8 +61,6 @@ background_thread.start()
 transactions = client.transaction_history(account_ids=var.IBIND_ACCOUNT_ID,conids='391638829',currency='HKD',days='30')
 # ExternalBrokerError: IbkrClient: response error Result(data=None, request={'url': 'https://api.ibkr.com/v1/api/pa/transactions'}) :: 400 :: Bad Request :: {"error":"Bad Request: account id missing","statusCode":400}
 
-
-#%%
 account_summary=client.account_performance(account_ids=var.IBIND_ACCOUNT_ID,period="7D")
 account_summary
 
