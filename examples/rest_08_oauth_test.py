@@ -3,7 +3,7 @@ REST OAuth.
 Minimal example to create a client and test OAuth
 """
 
-#%%
+
 
 from ibind import IbkrClient
 
