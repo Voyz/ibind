@@ -74,12 +74,12 @@ class RestClient:
     """
 
     def __init__(
-            self,
+            self,            
             url: str,
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
-            ) -> None:
+    ) -> None:
         """
         Parameters:
             url (str): The base URL for the REST API.
@@ -88,7 +88,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
-
+        # self._use_oauth=use_oauth
         if url is None:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
@@ -115,16 +115,50 @@ class RestClient:
             self.make_logger()
             return self._logger
 
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('GET', path, log=log, params=params)
+    def get_headers(self, request_method: str, request_url: str):
+        return {}
 
-    def post(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('POST', path, log=log, json=params)
+    def get(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True,
+    ) -> Result:
+        return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
-    def delete(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('DELETE', path, log=log, json=params)
+    def post(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
-    def request(self, method: str, endpoint: str, attempt: int = 0, log: bool = True, **kwargs) -> Result:
+    def delete(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
+
+    def request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            attempt: int = 0,
+            params=None,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -147,8 +181,14 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
+
+        base_url = base_url if base_url is not None else self.base_url    
+
         endpoint = endpoint.lstrip("/")
-        url = f"{self.base_url}{endpoint}"
+        url = f"{base_url}{endpoint}"
+
+        headers = self.get_headers(request_method=method, request_url=url)
+        headers = {**headers, **(extra_headers or {})}
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
@@ -159,7 +199,9 @@ class RestClient:
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             try:
-                response = requests.request(method, url, verify=self.cacert, timeout=self._timeout, **kwargs)
+                # add IBKR OAuth headers to request function
+                # response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs,verify=False)
+                response = requests.request(method, url, verify=self.cacert,headers=headers,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
