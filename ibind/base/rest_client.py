@@ -74,7 +74,7 @@ class RestClient:
     """
 
     def __init__(
-            self,
+            self,            
             url: str,
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
@@ -88,7 +88,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
-
+        # self._use_oauth=use_oauth
         if url is None:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
@@ -136,7 +136,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True
     ) -> Result:
-        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log, json=params)
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
     def delete(
             self,
@@ -182,9 +182,7 @@ class RestClient:
 
         """
 
-
-
-        base_url = base_url if base_url is not None else self.base_url
+        base_url = base_url if base_url is not None else self.base_url    
 
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
@@ -202,8 +200,8 @@ class RestClient:
         for attempt in range(self._max_retries + 1):
             try:
                 # add IBKR OAuth headers to request function
-                response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs)
-                # response = requests.request(method, url, verify=self.cacert,headers=header_oauth,params=params, timeout=self._timeout, **kwargs)
+                # response = requests.request(method, url, headers=headers, params=params, timeout=10, **kwargs,verify=False)
+                response = requests.request(method, url, verify=self.cacert,headers=headers,params=params, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 

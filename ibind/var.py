@@ -27,7 +27,6 @@ def strtobool(value):
 def to_bool(value):
     return bool(strtobool(str(value)))
 
-
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))
@@ -47,8 +46,35 @@ LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 
 ##### IBKR #####
 
+IBIND_OAUTH_REST_URL= os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
+""" IBKR Client Portal Gateway's URL for OAuth REST API."""
+
 IBIND_REST_URL = os.getenv('IBIND_REST_URL', None)
 """ IBKR Client Portal Gateway's URL for REST API."""
+
+IBIND_ACCESS_TOKEN=os.getenv('IBIND_ACCESS_TOKEN',None)
+"""IBKR OAuth access token"""
+
+IBIND_ACCESS_TOKEN_SECRET=os.getenv('IBIND_ACCESS_TOKEN_SECRET',None)
+"""IBKR OAuth access token secret"""
+
+IBIND_CONSUMER_KEY=os.getenv('IBIND_CONSUMER_KEY',None)
+"""IBKR OAuth consumer key obtained from IBKR"""
+
+IBIND_DH_PRIME_FP=os.getenv('IBIND_DH_PRIME_FP',None)
+"""Diffie Hellman prime file path"""
+
+IBIND_DH_GENERATOR=os.getenv('IBIND_DH_GENERATOR',None)
+"""Diffie Hellnam generator"""
+
+IBIND_ENCRYPTION_KEY_FP=os.getenv('IBIND_ENCRYPTION_KEY_FP',None)
+"""IBKR OAuth encription key file path"""
+
+IBIND_SIGNATURE_KEY_FP=os.getenv('IBIND_SIGNATURE_KEY_FP',None)
+"""IBKR OAuth signature key file path"""
+
+IBIND_REALM=os.getenv('IBIND_REALM',None)
+"""IBKR OAuth connection type"""
 
 IBIND_WS_URL = os.getenv('IBIND_WS_URL', None)
 """ IBKR Client Portal Gateway's URL for WebSocket API."""

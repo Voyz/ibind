@@ -1,47 +1,46 @@
 import base64
-import configparser
 import random
 import string
 import time
 from typing import Optional
 from urllib import parse
 
+from ibind import var
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Hash import SHA256, HMAC, SHA1
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
 
-from ibind import IbkrClient
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:  # pragma: no cover
+    from ibind import IbkrClient
 
 
-def req_live_session_token(client: IbkrClient) -> tuple[str, int]:
+def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
     ENCRYPTION_METHOD = "RSA-SHA256"
     REQUEST_URL = "oauth/live_session_token"
-    REQUEST_BASE_URL = "https://api.ibkr.com/v1/api/"
+    REQUEST_BASE_URL = var.IBIND_OAUTH_REST_URL
     REQUEST_METHOD = "POST"
-
-    config = configparser.ConfigParser()
-    config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
     prepend, extra_headers, dh_prime, dh_random = prepare_oauth()
 
     headers = generate_oauth_headers(
         request_method=REQUEST_METHOD,
         request_url=f'{REQUEST_BASE_URL}{REQUEST_URL}',
-        extra_headers=extra_headers,
-        prepend=prepend,
         signature_method=ENCRYPTION_METHOD,
+        extra_headers=extra_headers,
+        prepend=prepend        
     )
 
     # call ibind request
-    result = client.post(path=REQUEST_URL, base_url=REQUEST_BASE_URL, extra_headers=headers, log=True)
-
-    # TODO: catch error with result
-    # if result is ok:
-    #     raise Exception(f"Live session token request failed: {response.text}")
+    result = client.post(
+        path=REQUEST_URL,
+        base_url=REQUEST_BASE_URL, 
+        extra_headers=headers, 
+        log=True)
 
     lst_expires = result.data["live_session_token_expiration"]
     dh_response = result.data["diffie_hellman_response"]
@@ -56,7 +55,7 @@ def req_live_session_token(client: IbkrClient) -> tuple[str, int]:
     if not validate_live_session_token(
             live_session_token=live_session_token,
             live_session_token_signature=lst_signature,
-            consumer_key=config['ibkr']['CONSUMER_KEY']
+            consumer_key=var.IBIND_CONSUMER_KEY
     ):
         raise Exception("Live session token validation failed.")
 
@@ -64,20 +63,18 @@ def req_live_session_token(client: IbkrClient) -> tuple[str, int]:
 
 
 def prepare_oauth():
-    config = configparser.ConfigParser()
-    config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
 
-    dh_prime = pem_to_dh_prime(pem_file_path=config['ibkr']['DH_PRIME_FP'])
+    dh_prime = pem_to_dh_prime(pem_file_path=var.IBIND_DH_PRIME_FP)
 
     dh_random = generate_dh_random_bytes()
     dh_challenge = generate_dh_challenge(
         dh_prime=dh_prime,
-        dh_generator=int(config['ibkr']['DH_GENERATOR']),
+        dh_generator=int(var.IBIND_DH_GENERATOR),
         dh_random=dh_random,
     )
     prepend = calculate_live_session_token_prepend(
-        access_token_secret=config['ibkr']['ACCESS_TOKEN_SECRET'],
-        private_encryption_key=read_private_key(private_key_fp=config['ibkr']['ENCRYPTION_KEY_FP']),
+        access_token_secret=var.IBIND_ACCESS_TOKEN_SECRET,
+        private_encryption_key=read_private_key(private_key_fp=var.IBIND_ENCRYPTION_KEY_FP)
     )
 
     extra_headers = {"diffie_hellman_challenge": dh_challenge}
@@ -86,26 +83,29 @@ def prepare_oauth():
 
 
 def generate_oauth_headers(
-        request_method,
-        request_url,
+        request_method:str,
+        request_url:str,
         live_session_token: Optional[str] = None,
         extra_headers: Optional[dict[str, str]] = None,
         request_params: dict = None,
         signature_method: str = "HMAC-SHA256",
         prepend: Optional[str] = None,
 ):
-    config = configparser.ConfigParser()
-    config.read('D:\\git_repos\\oauth_env\\oauth_test.env')
-    oauth_token = config['ibkr']["ACCESS_TOKEN"]
 
+    
+    # oauth_token = var.IBIND_ACCESS_TOKEN
+
+    # oauth token always added to header??
     headers = {
-        "oauth_consumer_key": config['ibkr']["CONSUMER_KEY"],
+        "oauth_consumer_key": var.IBIND_CONSUMER_KEY,
         "oauth_nonce": generate_oauth_nonce(),
         "oauth_signature_method": signature_method,
         "oauth_timestamp": generate_request_timestamp(),
+        "oauth_token": var.IBIND_ACCESS_TOKEN
     }
-    if oauth_token:
-        headers.update({"oauth_token": oauth_token})
+
+    if var.IBIND_ACCESS_TOKEN:
+        headers.update({"oauth_token": var.IBIND_ACCESS_TOKEN})
     if extra_headers:
         headers.update(extra_headers)
 
@@ -114,17 +114,28 @@ def generate_oauth_headers(
         request_url=request_url,
         request_headers=headers,
         request_params=request_params,
-        prepend=prepend,
+        prepend=prepend
     )
 
     if signature_method == "HMAC-SHA256":
-        signature = generate_hmac_sha_256_signature(base_string=base_string, live_session_token=live_session_token)
+        signature = generate_hmac_sha_256_signature(
+            base_string=base_string, 
+            live_session_token=live_session_token)
     else:
-        private_signature_key = read_private_key(config['ibkr']["SIGNATURE_KEY_FP"])
-        signature = generate_rsa_sha_256_signature(base_string=base_string, private_signature_key=private_signature_key)
+        private_signature_key = read_private_key(var.IBIND_SIGNATURE_KEY_FP)
+        signature = generate_rsa_sha_256_signature(
+            base_string=base_string, 
+            private_signature_key=private_signature_key)
+        
     headers.update({"oauth_signature": signature})
-    headers_string = generate_authorization_header_string(request_data=headers, realm=config['ibkr']["REALM"])
-    return {"Authorization": headers_string}
+    headers_string = generate_authorization_header_string(
+        request_data=headers, 
+        realm=var.IBIND_REALM
+        )
+
+    header_oauth=  {"Authorization": headers_string}  
+
+    return header_oauth
 
 
 def pem_to_dh_prime(pem_file_path):

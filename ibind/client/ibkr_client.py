@@ -6,7 +6,6 @@ from ibind.base.rest_client import RestClient
 from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
-from ibind.client.ibkr_client_mixins.oauth_mixin import OAuthMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
 from ibind.client.ibkr_client_mixins.portfolio_mixin import PortfolioMixin
 from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
@@ -18,7 +17,7 @@ from ibind.support.oauth import req_live_session_token, generate_oauth_headers, 
 _LOGGER = project_logger(__file__)
 
 
-class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin, OAuthMixin):
+class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
     """
     A client class for interfacing with the IBKR API, extending the RestClient class.
 
@@ -63,8 +62,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         if url is None:
             url = f'https://{host}:{port}{base_route}'
 
-        self.account_id = account_id
         self._use_oauth = use_oauth
+        url = var.IBIND_OAUTH_REST_URL if self._use_oauth else var.IBIND_REST_URL
+        if url is None:
+            url = f'https://{host}:{port}{base_route}'
+        self.account_id = account_id
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         if self._use_oauth:
@@ -82,18 +84,15 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             request_url: str
             ):
 
-        # TODO: this second check shouldn't be hardcoded. Temporary fix for now
-        if (not self._use_oauth) or request_url == 'https://api.ibkr.com/v1/api/oauth/live_session_token':
+        if (not self._use_oauth) or request_url == self.base_url+'oauth/live_session_token':
             return {}
 
-        prepend, extra_headers, _, _, _ = prepare_oauth()
-
+        # get headers for endpoints other than live session token request
         headers = generate_oauth_headers(
             request_method=request_method,
             request_url=request_url,
-            extra_headers=extra_headers,
-            prepend=prepend,
-            live_session_token=self.live_session_token,
+            live_session_token=self.live_session_token
         )
 
         return headers
+
