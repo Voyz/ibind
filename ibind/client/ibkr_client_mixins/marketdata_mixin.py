@@ -2,7 +2,7 @@ import datetime
 from typing import Union, TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_definitions import decode_data_availability
+from ibind.client.ibkr_definitions import decode_data_availability, snapshot_by_id
 from ibind.client.ibkr_utils import StockQuery, StockQueries
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
@@ -39,6 +39,52 @@ class MarketdataMixin():
             'fields': ','.join(fields)
         }
         return self.get(f'iserver/marketdata/snapshot', params)
+
+    def live_marketdata_snapshot_by_symbol(self: 'IbkrClient', queries: StockQueries, fields: OneOrMany[str]) -> dict:
+        """
+        Get Market Data for the given symbols(s).
+
+        A pre-flight request must be made prior to ever receiving data.
+
+        Parameters:
+            queries (List[StockQuery]): A list of StockQuery objects to specify filtering criteria for stocks.
+            fields (OneOrMany[str]): Specify a series of tick values to be returned.
+
+        Note:
+            - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
+            - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
+        """
+        conids_by_symbol = self.stock_conid_by_symbol(queries).data
+
+        conids = []
+        symbols_by_conids = {}
+        for symbol, conid in conids_by_symbol.items():
+            conids.append(str(conid))
+            symbols_by_conids[conid] = symbol
+
+        # There needs to be a pre-flight request for some reason, so we default to calling this twice
+        self.receive_brokerage_accounts()
+        self.live_marketdata_snapshot(conids, fields=fields)
+        entries = self.live_marketdata_snapshot(conids, fields=fields).data
+
+        results = {}
+        for entry in entries:
+            try:
+                result = {}
+
+                for key, value in entry.items():
+                    if key not in snapshot_by_id:
+                        continue
+
+                    result[snapshot_by_id[key]] = value
+                results[entry['conid']] = result
+            except Exception as e:  # pragma: no cover
+                _LOGGER.exception(f'Error post-processing live market data for {entry}: {str(e)}')
+
+        # reformat the results by symbol instead of conid
+        results_by_symbol = {symbols_by_conids[conid]: result for conid, result in results.items()}
+
+        return results_by_symbol
 
     def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
