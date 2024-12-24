@@ -48,8 +48,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     ) -> None:
         """
         Parameters:
-            account_id (str): An identifier for the account.
-            url (str): The base URL for the REST API.
+            account_id (str): An identifier for the account. Defaults to None.
+            url (str): The base URL for the REST API. Defaults to None.
             host (str, optional): Host for the IBKR REST API. Defaults to 'localhost'.
             port (str, optional): Port for the IBKR REST API. Defaults to '5000'
             base_route (str, optional): Base route for the IBKR REST API. Defaults to '/v1/api/'.
@@ -79,18 +79,20 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
-    def oauth_init(self):
+    def generate_live_session_token(self):
         from ibind.support.oauth import req_live_session_token
-        import signal
-
-        # get live session token for OAuth authentication
         self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)
+
+    def oauth_init(self):
+        # get live session token for OAuth authentication
+        self.generate_live_session_token()
 
         # start Tickler to maintain the connection alive
         self._tickler = Tickler(self)
         self._tickler.start()
 
         # add signal handlers to gracefully shut down the Tickler and the client
+        import signal
         existing_handler_int = signal.getsignal(signal.SIGINT)
         existing_handler_term = signal.getsignal(signal.SIGTERM)
 
@@ -107,6 +109,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         signal.signal(signal.SIGTERM, _stop)
 
     def oauth_shutdown(self):
+        _LOGGER.info(f'IbkrClient: Shutting down OAuth')
+
         if hasattr(self, '_tickler') and self._tickler is not None:
             self._tickler.stop()
 
@@ -117,8 +121,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
 
-        from ibind.support.oauth import generate_oauth_headers
         # get headers for endpoints other than live session token request
+        from ibind.support.oauth import generate_oauth_headers
         headers = generate_oauth_headers(
             request_method=request_method,
             request_url=request_url,

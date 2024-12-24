@@ -60,8 +60,8 @@ def prepare_oauth():
     dh_random = generate_dh_random_bytes()
     dh_challenge = generate_dh_challenge(
         dh_prime=dh_prime,
-        dh_generator=int(var.IBIND_DH_GENERATOR),
         dh_random=dh_random,
+        dh_generator=int(var.IBIND_DH_GENERATOR),
     )
     prepend = calculate_live_session_token_prepend(
         access_token_secret=var.IBIND_ACCESS_TOKEN_SECRET,

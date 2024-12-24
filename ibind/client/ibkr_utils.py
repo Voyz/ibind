@@ -442,6 +442,7 @@ class Tickler():
         self._thread = None
 
     def _worker(self):
+        _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
         while self._running:
             try:
                 self._client.tickle()
@@ -452,6 +453,8 @@ class Tickler():
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
 
             time.sleep(self._interval)
+
+        _LOGGER.info(f'Tickler gracefully stopped.')
 
     def start(self):
         if self._thread is not None:

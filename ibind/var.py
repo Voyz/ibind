@@ -80,36 +80,35 @@ IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', 
 
 ##### OAuth #####
 
-
 IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))
 """ Whether OAuth should be used. """
 
 IBIND_OAUTH_REST_URL = os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
-""" IBKR Client Portal OAuth base URL"""
+""" IBKR Client Portal OAuth base URL. """
 
 IBIND_LIVE_SESSION_TOKEN_ENDPOINT = os.getenv('IBIND_LIVE_SESSION_TOKEN_ENDPOINT', 'oauth/live_session_token')
-""" Endpoint for OAuth Live Session Token """
+""" Endpoint for OAuth Live Session Token. """
 
 IBIND_ACCESS_TOKEN = os.getenv('IBIND_ACCESS_TOKEN', None)
-""" OAuth access token """
+""" OAuth access token generated in the self-service portal. """
 
 IBIND_ACCESS_TOKEN_SECRET = os.getenv('IBIND_ACCESS_TOKEN_SECRET', None)
-""" OAuth access token secret """
+""" OAuth access token secret generated in the self-service portal. """
 
 IBIND_CONSUMER_KEY = os.getenv('IBIND_CONSUMER_KEY', None)
-""" OAuth consumer key obtained from IBKR """
+""" The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
 
 IBIND_DH_PRIME_FP = os.getenv('IBIND_DH_PRIME_FP', None)
-"""Diffie Hellman prime file path"""
-
-IBIND_DH_GENERATOR = os.getenv('IBIND_DH_GENERATOR', None)
-"""Diffie Hellnam generator"""
+""" File path to the hex representation of the Diffie-Hellman prime. """
 
 IBIND_ENCRYPTION_KEY_FP = os.getenv('IBIND_ENCRYPTION_KEY_FP', None)
-""" OAuth encription key file path """
+""" The path to the private OAuth encryption key. """
 
 IBIND_SIGNATURE_KEY_FP = os.getenv('IBIND_SIGNATURE_KEY_FP', None)
-""" OAuth signature key file path """
+""" The path to the private OAuth signature key. """
 
-IBIND_REALM = os.getenv('IBIND_REALM', None)
-""" OAuth connection type"""
+IBIND_DH_GENERATOR = int(os.getenv('IBIND_DH_GENERATOR', 2))
+""" The Diffie-Hellman generator value. """
+
+IBIND_REALM = os.getenv('IBIND_REALM', 'limited_poa')
+""" OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
