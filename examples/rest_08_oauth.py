@@ -13,7 +13,7 @@ Importantly, in order to use OAuth you're required to set up the following envir
 - IBIND_ACCESS_TOKEN: OAuth access token generated in the self-service portal.
 - IBIND_ACCESS_TOKEN_SECRET: OAuth access token secret generated in the self-service portal.
 - IBIND_CONSUMER_KEY: The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem.
-- IBIND_DH_PRIME_FP: File path to the hex representation of the Diffie-Hellman prime.
+- IBIND_DH_PRIME: The hex representation of the Diffie-Hellman prime.
 - IBIND_ENCRYPTION_KEY_FP: The path to the private OAuth encryption key.
 - IBIND_SIGNATURE_KEY_FP: The path to the private OAuth signature key.
 

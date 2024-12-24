@@ -9,7 +9,6 @@ from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Hash import SHA256, HMAC, SHA1
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
-from cryptography.hazmat.primitives.serialization import load_pem_parameters
 
 from ibind import var
 
@@ -22,7 +21,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
 
     endpoint = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
 
-    prepend, extra_headers, dh_prime, dh_random = prepare_oauth()
+    prepend, extra_headers, dh_random = prepare_oauth()
 
     headers = generate_oauth_headers(
         request_method="POST",
@@ -38,7 +37,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
     dh_response = result.data["diffie_hellman_response"]
     lst_signature = result.data["live_session_token_signature"]
     live_session_token = calculate_live_session_token(
-        dh_prime=dh_prime,
+        dh_prime=var.IBIND_DH_PRIME,
         dh_random_value=dh_random,
         dh_response=dh_response,
         prepend=prepend
@@ -48,11 +47,9 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
 
 
 def prepare_oauth():
-    dh_prime = pem_to_dh_prime(pem_file_path=var.IBIND_DH_PRIME_FP)
-
     dh_random = generate_dh_random_bytes()
     dh_challenge = generate_dh_challenge(
-        dh_prime=dh_prime,
+        dh_prime=var.IBIND_DH_PRIME,
         dh_random=dh_random,
         dh_generator=int(var.IBIND_DH_GENERATOR),
     )
@@ -63,7 +60,7 @@ def prepare_oauth():
 
     extra_headers = {"diffie_hellman_challenge": dh_challenge}
 
-    return prepend, extra_headers, dh_prime, dh_random
+    return prepend, extra_headers, dh_random
 
 
 def generate_oauth_headers(
@@ -122,23 +119,6 @@ def generate_oauth_headers(
     }
 
     return header_oauth
-
-
-def pem_to_dh_prime(pem_file_path):
-    """Convert dh prime file path to dh hex string
-    Args:
-        pem_file_path (str): file path to dh prime
-
-    Returns:
-        str: dh hex string
-    """
-    with open(pem_file_path, 'rb') as pem_file:
-        pem_data = pem_file.read()
-
-    parameters = load_pem_parameters(pem_data)
-    prime = parameters.parameter_numbers().p
-    prime = hex(prime)[2:]
-    return prime
 
 
 def generate_request_timestamp() -> str:

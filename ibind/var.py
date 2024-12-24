@@ -98,8 +98,8 @@ IBIND_ACCESS_TOKEN_SECRET = os.getenv('IBIND_ACCESS_TOKEN_SECRET', None)
 IBIND_CONSUMER_KEY = os.getenv('IBIND_CONSUMER_KEY', None)
 """ The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
 
-IBIND_DH_PRIME_FP = os.getenv('IBIND_DH_PRIME_FP', None)
-""" File path to the hex representation of the Diffie-Hellman prime. """
+IBIND_DH_PRIME = os.getenv('IBIND_DH_PRIME_FP', None)
+""" The hex representation of the Diffie-Hellman prime. """
 
 IBIND_ENCRYPTION_KEY_FP = os.getenv('IBIND_ENCRYPTION_KEY_FP', None)
 """ The path to the private OAuth encryption key. """
