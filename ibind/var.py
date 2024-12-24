@@ -17,6 +17,7 @@ _MAP = {
     '0': False
 }
 
+
 def strtobool(value):
     try:
         return _MAP[str(value).lower()]
@@ -76,3 +77,38 @@ IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2
 
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
 """ Whether raw WebSocket messages should be logged. """
+
+##### OAuth #####
+
+IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))
+""" Whether OAuth should be used. """
+
+IBIND_OAUTH_REST_URL = os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
+""" IBKR Client Portal OAuth base URL. """
+
+IBIND_LIVE_SESSION_TOKEN_ENDPOINT = os.getenv('IBIND_LIVE_SESSION_TOKEN_ENDPOINT', 'oauth/live_session_token')
+""" Endpoint for OAuth Live Session Token. """
+
+IBIND_ACCESS_TOKEN = os.getenv('IBIND_ACCESS_TOKEN', None)
+""" OAuth access token generated in the self-service portal. """
+
+IBIND_ACCESS_TOKEN_SECRET = os.getenv('IBIND_ACCESS_TOKEN_SECRET', None)
+""" OAuth access token secret generated in the self-service portal. """
+
+IBIND_CONSUMER_KEY = os.getenv('IBIND_CONSUMER_KEY', None)
+""" The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
+
+IBIND_DH_PRIME = os.getenv('IBIND_DH_PRIME_FP', None)
+""" The hex representation of the Diffie-Hellman prime. """
+
+IBIND_ENCRYPTION_KEY_FP = os.getenv('IBIND_ENCRYPTION_KEY_FP', None)
+""" The path to the private OAuth encryption key. """
+
+IBIND_SIGNATURE_KEY_FP = os.getenv('IBIND_SIGNATURE_KEY_FP', None)
+""" The path to the private OAuth signature key. """
+
+IBIND_DH_GENERATOR = int(os.getenv('IBIND_DH_GENERATOR', 2))
+""" The Diffie-Hellman generator value. """
+
+IBIND_REALM = os.getenv('IBIND_REALM', 'limited_poa')
+""" OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
