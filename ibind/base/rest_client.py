@@ -210,9 +210,8 @@ class RestClient:
                 continue  # Continue to the next iteration for a retry
 
             except Exception as e:
-                if log:
-                    self.logger.exception(e)
-                raise
+                self.logger.exception(e)
+                raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
 
     def _process_response(self, response, result: Result) -> Result:
         try:
