@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
+def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
     endpoint = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
@@ -44,14 +44,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
         prepend=prepend
     )
 
-    if not validate_live_session_token(
-            live_session_token=live_session_token,
-            live_session_token_signature=lst_signature,
-            consumer_key=var.IBIND_CONSUMER_KEY
-    ):
-        raise Exception("Live session token validation failed.")
-
-    return live_session_token, lst_expires
+    return live_session_token, lst_expires, lst_signature
 
 
 def prepare_oauth():
@@ -119,7 +112,14 @@ def generate_oauth_headers(
         realm=var.IBIND_REALM
     )
 
-    header_oauth = {"Authorization": headers_string}
+    header_oauth = {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip,deflate",
+        "Authorization": headers_string,
+        "Connection": "keep-alive",
+        "Host": "api.ibkr.com",
+        "User-Agent": "ibind"
+    }
 
     return header_oauth
 

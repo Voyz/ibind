@@ -1,3 +1,4 @@
+import importlib.util
 import os
 from typing import Union, Optional
 
@@ -81,11 +82,24 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
     def generate_live_session_token(self):
         from ibind.support.oauth import req_live_session_token
-        self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)
+        self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(self)
 
     def oauth_init(self):
+        if importlib.util.find_spec('Crypto') is None:
+            raise ImportError('Installation lacks OAuth support. Please install by using `pip install ibind[oauth]`')
+
         # get live session token for OAuth authentication
         self.generate_live_session_token()
+
+        # validate the live session token once
+        from ibind.support.oauth import validate_live_session_token
+        success = validate_live_session_token(
+            live_session_token=self.live_session_token,
+            live_session_token_signature=self.live_session_token_signature,
+            consumer_key=var.IBIND_CONSUMER_KEY
+        )
+        if not success:
+            raise RuntimeError("Live session token validation failed.")
 
         # start Tickler to maintain the connection alive
         self._tickler = Tickler(self)
