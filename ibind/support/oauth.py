@@ -32,11 +32,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
         prepend=prepend
     )
 
-    result = client.post(
-        path=endpoint,
-        extra_headers=headers,
-        log=True
-    )
+    result = client.post(endpoint, extra_headers=headers)
 
     lst_expires = result.data["live_session_token_expiration"]
     dh_response = result.data["diffie_hellman_response"]

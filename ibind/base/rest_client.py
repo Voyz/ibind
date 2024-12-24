@@ -154,7 +154,6 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             attempt: int = 0,
-            params=None,
             log: bool = True,
             **kwargs
     ) -> Result:
@@ -198,7 +197,7 @@ class RestClient:
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             try:
-                response = requests.request(method, url, verify=self.cacert, headers=headers, params=params, timeout=self._timeout, **kwargs)
+                response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
