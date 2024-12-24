@@ -12,7 +12,7 @@ from ibind.client.ibkr_client_mixins.scanner_mixin import ScannerMixin
 from ibind.client.ibkr_client_mixins.session_mixin import SessionMixin
 from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
-from ibind.support.oauth import req_live_session_token, generate_oauth_headers, prepare_oauth
+from ibind.support.oauth import req_live_session_token, generate_oauth_headers
 
 _LOGGER = project_logger(__file__)
 
@@ -59,21 +59,21 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
         """
 
+        self._use_oauth = use_oauth
+
+        url = var.IBIND_OAUTH_REST_URL if self._use_oauth else url
+
         if url is None:
             url = f'https://{host}:{port}{base_route}'
 
-        self._use_oauth = use_oauth
-        url = var.IBIND_OAUTH_REST_URL if self._use_oauth else var.IBIND_REST_URL
-        if url is None:
-            url = f'https://{host}:{port}{base_route}'
         self.account_id = account_id
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
-        if self._use_oauth:
-            self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)
-
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
+
+        if self._use_oauth:
+            self.live_session_token, self.live_session_token_expires_ms = req_live_session_token(self)
 
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
@@ -82,9 +82,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self,
             request_method: str,
             request_url: str
-            ):
+    ):
 
-        if (not self._use_oauth) or request_url == self.base_url+'oauth/live_session_token':
+        if (not self._use_oauth) or request_url == self.base_url + 'oauth/live_session_token':
             return {}
 
         # get headers for endpoints other than live session token request
@@ -95,4 +95,3 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         )
 
         return headers
-

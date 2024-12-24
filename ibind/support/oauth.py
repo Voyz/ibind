@@ -2,17 +2,17 @@ import base64
 import random
 import string
 import time
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from urllib import parse
 
-from ibind import var
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Hash import SHA256, HMAC, SHA1
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
 
-from typing import TYPE_CHECKING
+from ibind import var
+
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
@@ -20,27 +20,23 @@ if TYPE_CHECKING:  # pragma: no cover
 def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
-    ENCRYPTION_METHOD = "RSA-SHA256"
-    REQUEST_URL = "oauth/live_session_token"
-    REQUEST_BASE_URL = var.IBIND_OAUTH_REST_URL
-    REQUEST_METHOD = "POST"
+    endpoint = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
 
     prepend, extra_headers, dh_prime, dh_random = prepare_oauth()
 
     headers = generate_oauth_headers(
-        request_method=REQUEST_METHOD,
-        request_url=f'{REQUEST_BASE_URL}{REQUEST_URL}',
-        signature_method=ENCRYPTION_METHOD,
+        request_method="POST",
+        request_url=f'{client.base_url}{endpoint}',
+        signature_method="RSA-SHA256",
         extra_headers=extra_headers,
-        prepend=prepend        
+        prepend=prepend
     )
 
-    # call ibind request
     result = client.post(
-        path=REQUEST_URL,
-        base_url=REQUEST_BASE_URL, 
-        extra_headers=headers, 
-        log=True)
+        path=endpoint,
+        extra_headers=headers,
+        log=True
+    )
 
     lst_expires = result.data["live_session_token_expiration"]
     dh_response = result.data["diffie_hellman_response"]
@@ -63,7 +59,6 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int]:
 
 
 def prepare_oauth():
-
     dh_prime = pem_to_dh_prime(pem_file_path=var.IBIND_DH_PRIME_FP)
 
     dh_random = generate_dh_random_bytes()
@@ -83,19 +78,14 @@ def prepare_oauth():
 
 
 def generate_oauth_headers(
-        request_method:str,
-        request_url:str,
+        request_method: str,
+        request_url: str,
         live_session_token: Optional[str] = None,
         extra_headers: Optional[dict[str, str]] = None,
         request_params: dict = None,
         signature_method: str = "HMAC-SHA256",
         prepend: Optional[str] = None,
 ):
-
-    
-    # oauth_token = var.IBIND_ACCESS_TOKEN
-
-    # oauth token always added to header??
     headers = {
         "oauth_consumer_key": var.IBIND_CONSUMER_KEY,
         "oauth_nonce": generate_oauth_nonce(),
@@ -119,21 +109,21 @@ def generate_oauth_headers(
 
     if signature_method == "HMAC-SHA256":
         signature = generate_hmac_sha_256_signature(
-            base_string=base_string, 
+            base_string=base_string,
             live_session_token=live_session_token)
     else:
         private_signature_key = read_private_key(var.IBIND_SIGNATURE_KEY_FP)
         signature = generate_rsa_sha_256_signature(
-            base_string=base_string, 
+            base_string=base_string,
             private_signature_key=private_signature_key)
-        
+
     headers.update({"oauth_signature": signature})
     headers_string = generate_authorization_header_string(
-        request_data=headers, 
+        request_data=headers,
         realm=var.IBIND_REALM
-        )
+    )
 
-    header_oauth=  {"Authorization": headers_string}  
+    header_oauth = {"Authorization": headers_string}
 
     return header_oauth
 

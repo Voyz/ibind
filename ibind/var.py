@@ -17,6 +17,7 @@ _MAP = {
     '0': False
 }
 
+
 def strtobool(value):
     try:
         return _MAP[str(value).lower()]
@@ -26,6 +27,7 @@ def strtobool(value):
 
 def to_bool(value):
     return bool(strtobool(str(value)))
+
 
 ##### LOGS #####
 
@@ -46,35 +48,8 @@ LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 
 ##### IBKR #####
 
-IBIND_OAUTH_REST_URL= os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
-""" IBKR Client Portal Gateway's URL for OAuth REST API."""
-
 IBIND_REST_URL = os.getenv('IBIND_REST_URL', None)
 """ IBKR Client Portal Gateway's URL for REST API."""
-
-IBIND_ACCESS_TOKEN=os.getenv('IBIND_ACCESS_TOKEN',None)
-"""IBKR OAuth access token"""
-
-IBIND_ACCESS_TOKEN_SECRET=os.getenv('IBIND_ACCESS_TOKEN_SECRET',None)
-"""IBKR OAuth access token secret"""
-
-IBIND_CONSUMER_KEY=os.getenv('IBIND_CONSUMER_KEY',None)
-"""IBKR OAuth consumer key obtained from IBKR"""
-
-IBIND_DH_PRIME_FP=os.getenv('IBIND_DH_PRIME_FP',None)
-"""Diffie Hellman prime file path"""
-
-IBIND_DH_GENERATOR=os.getenv('IBIND_DH_GENERATOR',None)
-"""Diffie Hellnam generator"""
-
-IBIND_ENCRYPTION_KEY_FP=os.getenv('IBIND_ENCRYPTION_KEY_FP',None)
-"""IBKR OAuth encription key file path"""
-
-IBIND_SIGNATURE_KEY_FP=os.getenv('IBIND_SIGNATURE_KEY_FP',None)
-"""IBKR OAuth signature key file path"""
-
-IBIND_REALM=os.getenv('IBIND_REALM',None)
-"""IBKR OAuth connection type"""
 
 IBIND_WS_URL = os.getenv('IBIND_WS_URL', None)
 """ IBKR Client Portal Gateway's URL for WebSocket API."""
@@ -102,3 +77,35 @@ IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2
 
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
 """ Whether raw WebSocket messages should be logged. """
+
+##### OAuth #####
+
+IBIND_OAUTH_REST_URL = os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
+""" IBKR Client Portal OAuth base URL"""
+
+IBIND_LIVE_SESSION_TOKEN_ENDPOINT = os.getenv('IBIND_LIVE_SESSION_TOKEN_ENDPOINT', 'oauth/live_session_token')
+""" Endpoint for OAuth Live Session Token """
+
+IBIND_ACCESS_TOKEN = os.getenv('IBIND_ACCESS_TOKEN', None)
+""" OAuth access token """
+
+IBIND_ACCESS_TOKEN_SECRET = os.getenv('IBIND_ACCESS_TOKEN_SECRET', None)
+""" OAuth access token secret """
+
+IBIND_CONSUMER_KEY = os.getenv('IBIND_CONSUMER_KEY', None)
+""" OAuth consumer key obtained from IBKR """
+
+IBIND_DH_PRIME_FP = os.getenv('IBIND_DH_PRIME_FP', None)
+"""Diffie Hellman prime file path"""
+
+IBIND_DH_GENERATOR = os.getenv('IBIND_DH_GENERATOR', None)
+"""Diffie Hellnam generator"""
+
+IBIND_ENCRYPTION_KEY_FP = os.getenv('IBIND_ENCRYPTION_KEY_FP', None)
+""" OAuth encription key file path """
+
+IBIND_SIGNATURE_KEY_FP = os.getenv('IBIND_SIGNATURE_KEY_FP', None)
+""" OAuth signature key file path """
+
+IBIND_REALM = os.getenv('IBIND_REALM', None)
+""" OAuth connection type"""
