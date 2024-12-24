@@ -44,7 +44,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
             timeout: float = 10,
             max_retries: int = 3,
-            use_oauth: bool = False,
+            use_oauth: bool = var.IBIND_USE_OAUTH,
     ) -> None:
         """
         Parameters:

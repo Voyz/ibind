@@ -80,6 +80,10 @@ IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', 
 
 ##### OAuth #####
 
+
+IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))
+""" Whether OAuth should be used. """
+
 IBIND_OAUTH_REST_URL = os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
 """ IBKR Client Portal OAuth base URL"""
 
