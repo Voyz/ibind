@@ -95,8 +95,8 @@ class RestClient:
             self.base_url += '/'
 
         self.cacert = cacert
-        if not (self.cacert is False or Path(self.cacert).exists()):
-            raise ValueError(f"{self}: cacert must be a valid Path or False")
+        if not (isinstance(self.cacert, bool) or Path(self.cacert).exists()):
+            raise ValueError(f"{self}: cacert must be a valid Path or Boolean")
 
         self._timeout = timeout
         self._max_retries = max_retries

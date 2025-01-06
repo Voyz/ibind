@@ -55,7 +55,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             port (str, optional): Port for the IBKR REST API. Defaults to '5000'
             base_route (str, optional): Base route for the IBKR REST API. Defaults to '/v1/api/'.
             cacert (Union[os.PathLike, bool], optional): Path to the CA certificate file for SSL verification,
-                                                         or False to disable SSL verification. Defaults to False.
+                                                         or False to disable SSL verification. Always True when
+                                                         use_oauth is True. Defaults to False.
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
@@ -69,6 +70,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             url = f'https://{host}:{port}{base_route}'
 
         self.account_id = account_id
+
+        cacert = True if self._use_oauth else cacert
         super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
 
         self.logger.info('#################')
