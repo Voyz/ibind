@@ -1,6 +1,6 @@
 import importlib.util
 import os
-from typing import Union, Optional
+from typing import Union, Optional, TYPE_CHECKING
 
 from ibind import var
 from ibind.base.rest_client import RestClient
@@ -14,6 +14,9 @@ from ibind.client.ibkr_client_mixins.session_mixin import SessionMixin
 from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.client.ibkr_utils import Tickler
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ibind.support.oauth import OAuthConfig
 
 _LOGGER = project_logger(__file__)
 
@@ -46,6 +49,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout: float = 10,
             max_retries: int = 3,
             use_oauth: bool = var.IBIND_USE_OAUTH,
+            oauth_config: 'OAuthConfig' = None
     ) -> None:
         """
         Parameters:
@@ -78,16 +82,21 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
 
         if self._use_oauth:
-            self.oauth_init()
+            from ibind.support.oauth import OAuthConfig
+            self.oauth_config = oauth_config if oauth_config is not None else OAuthConfig()
+            if self.oauth_config.init_oauth:
+                self.oauth_init(self.oauth_config.maintain_oauth, self.oauth_config.shutdown_oauth)
 
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
     def generate_live_session_token(self):
         from ibind.support.oauth import req_live_session_token
-        self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(self)
+        self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature \
+            = req_live_session_token(self, self.oauth_config)
 
-    def oauth_init(self):
+    def oauth_init(self, maintain_oauth: bool, shutdown_oauth: bool):
+        _LOGGER.info(f'{self}: Initialising OAuth')
         if importlib.util.find_spec('Crypto') is None:
             raise ImportError('Installation lacks OAuth support. Please install by using `pip install ibind[oauth]`')
 
@@ -99,15 +108,29 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         success = validate_live_session_token(
             live_session_token=self.live_session_token,
             live_session_token_signature=self.live_session_token_signature,
-            consumer_key=var.IBIND_CONSUMER_KEY
+            consumer_key=self.oauth_config.consumer_key
         )
         if not success:
             raise RuntimeError("Live session token validation failed.")
 
+        if maintain_oauth:
+            self.start_tickler()
+
+        if shutdown_oauth:
+            self.register_shutdown_handler()
+
+    def start_tickler(self):
         # start Tickler to maintain the connection alive
+        _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
         self._tickler = Tickler(self)
         self._tickler.start()
 
+    def stop_tickler(self):
+        if hasattr(self, '_tickler') and self._tickler is not None:
+            self._tickler.stop()
+
+    def register_shutdown_handler(self):
+        _LOGGER.info(f'{self}: Registering automatic shutdown handler')
         # add signal handlers to gracefully shut down the Tickler and the client
         import signal
         existing_handler_int = signal.getsignal(signal.SIGINT)
@@ -126,21 +149,19 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         signal.signal(signal.SIGTERM, _stop)
 
     def oauth_shutdown(self):
-        _LOGGER.info(f'IbkrClient: Shutting down OAuth')
-
-        if hasattr(self, '_tickler') and self._tickler is not None:
-            self._tickler.stop()
-
+        _LOGGER.info(f'{self}: Shutting down OAuth')
+        self.stop_tickler()
         self.logout()
 
     def get_headers(self, request_method: str, request_url: str):
-        if (not self._use_oauth) or request_url == f'{self.base_url}{var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT}':
+        if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
 
         # get headers for endpoints other than live session token request
         from ibind.support.oauth import generate_oauth_headers
         headers = generate_oauth_headers(
+            oauth_config=self.oauth_config,
             request_method=request_method,
             request_url=request_url,
             live_session_token=self.live_session_token

@@ -112,3 +112,12 @@ IBIND_DH_GENERATOR = int(os.getenv('IBIND_DH_GENERATOR', 2))
 
 IBIND_REALM = os.getenv('IBIND_REALM', 'limited_poa')
 """ OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+
+IBIND_INIT_OAUTH = to_bool(os.environ.get('IBIND_INIT_OAUTH', True))
+""" Whether OAuth should be automatically initialised. """
+
+IBIND_MAINTAIN_OAUTH = to_bool(os.environ.get('IBIND_MAINTAIN_OAUTH', True))
+""" Whether OAuth should be automatically maintained. """
+
+IBIND_SHUTDOWN_OAUTH = to_bool(os.environ.get('IBIND_SHUTDOWN_OAUTH', True))
+""" Whether OAuth should be automatically stopped on termination. """

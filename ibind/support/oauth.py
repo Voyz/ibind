@@ -2,6 +2,7 @@ import base64
 import random
 import string
 import time
+from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 from urllib import parse
 
@@ -16,18 +17,35 @@ if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
+@dataclass
+class OAuthConfig():
+    live_session_token_endpoint: str = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
+    access_token: str = var.IBIND_ACCESS_TOKEN
+    access_token_secret: str = var.IBIND_ACCESS_TOKEN_SECRET
+    consumer_key: str = var.IBIND_CONSUMER_KEY
+    dh_prime: str = var.IBIND_DH_PRIME
+    encryption_key_fp: str = var.IBIND_ENCRYPTION_KEY_FP
+    signature_key_fp: str = var.IBIND_SIGNATURE_KEY_FP
+    dh_generator: str = var.IBIND_DH_GENERATOR
+    realm: str = var.IBIND_REALM
+    init_oauth: bool = var.IBIND_INIT_OAUTH
+    maintain_oauth: bool = var.IBIND_MAINTAIN_OAUTH
+    shutdown_oauth: bool = var.IBIND_SHUTDOWN_OAUTH
+
+
+def req_live_session_token(client: 'IbkrClient', oauth_config: OAuthConfig) -> tuple[str, int, str]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
-    endpoint = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
+    endpoint = oauth_config.live_session_token_endpoint
 
-    prepend, extra_headers, dh_random = prepare_oauth()
+    prepend, extra_headers, dh_random = prepare_oauth(oauth_config)
 
     headers = generate_oauth_headers(
+        oauth_config=oauth_config,
         request_method="POST",
         request_url=f'{client.base_url}{endpoint}',
-        signature_method="RSA-SHA256",
         extra_headers=extra_headers,
+        signature_method="RSA-SHA256",
         prepend=prepend
     )
 
@@ -37,7 +55,7 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
     dh_response = result.data["diffie_hellman_response"]
     lst_signature = result.data["live_session_token_signature"]
     live_session_token = calculate_live_session_token(
-        dh_prime=var.IBIND_DH_PRIME,
+        dh_prime=oauth_config.dh_prime,
         dh_random_value=dh_random,
         dh_response=dh_response,
         prepend=prepend
@@ -46,16 +64,16 @@ def req_live_session_token(client: 'IbkrClient') -> tuple[str, int, str]:
     return live_session_token, lst_expires, lst_signature
 
 
-def prepare_oauth():
+def prepare_oauth(oauth_config: OAuthConfig) -> tuple[str, dict, str]:
     dh_random = generate_dh_random_bytes()
     dh_challenge = generate_dh_challenge(
-        dh_prime=var.IBIND_DH_PRIME,
+        dh_prime=oauth_config.dh_prime,
         dh_random=dh_random,
-        dh_generator=int(var.IBIND_DH_GENERATOR),
+        dh_generator=int(oauth_config.dh_generator),
     )
     prepend = calculate_live_session_token_prepend(
-        access_token_secret=var.IBIND_ACCESS_TOKEN_SECRET,
-        private_encryption_key=read_private_key(private_key_fp=var.IBIND_ENCRYPTION_KEY_FP)
+        access_token_secret=oauth_config.access_token_secret,
+        private_encryption_key=read_private_key(private_key_fp=oauth_config.encryption_key_fp)
     )
 
     extra_headers = {"diffie_hellman_challenge": dh_challenge}
@@ -64,6 +82,7 @@ def prepare_oauth():
 
 
 def generate_oauth_headers(
+        oauth_config: OAuthConfig,
         request_method: str,
         request_url: str,
         live_session_token: Optional[str] = None,
@@ -73,15 +92,15 @@ def generate_oauth_headers(
         prepend: Optional[str] = None,
 ):
     headers = {
-        "oauth_consumer_key": var.IBIND_CONSUMER_KEY,
+        "oauth_consumer_key": oauth_config.consumer_key,
         "oauth_nonce": generate_oauth_nonce(),
         "oauth_signature_method": signature_method,
         "oauth_timestamp": generate_request_timestamp(),
-        "oauth_token": var.IBIND_ACCESS_TOKEN
+        "oauth_token": oauth_config.access_token
     }
 
-    if var.IBIND_ACCESS_TOKEN:
-        headers.update({"oauth_token": var.IBIND_ACCESS_TOKEN})
+    if oauth_config.access_token:
+        headers.update({"oauth_token": oauth_config.access_token})
     if extra_headers:
         headers.update(extra_headers)
 
@@ -98,7 +117,7 @@ def generate_oauth_headers(
             base_string=base_string,
             live_session_token=live_session_token)
     else:
-        private_signature_key = read_private_key(var.IBIND_SIGNATURE_KEY_FP)
+        private_signature_key = read_private_key(oauth_config.signature_key_fp)
         signature = generate_rsa_sha_256_signature(
             base_string=base_string,
             private_signature_key=private_signature_key)
@@ -106,7 +125,7 @@ def generate_oauth_headers(
     headers.update({"oauth_signature": signature})
     headers_string = generate_authorization_header_string(
         request_data=headers,
-        realm=var.IBIND_REALM
+        realm=oauth_config.realm
     )
 
     header_oauth = {
