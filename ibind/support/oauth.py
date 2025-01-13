@@ -1,5 +1,5 @@
 import base64
-import random
+import secrets
 import string
 import time
 from dataclasses import dataclass
@@ -163,7 +163,7 @@ def generate_oauth_nonce() -> str:
     """
     NONCE_LENGTH = 16
     NONCE_CHARACTERS = string.ascii_letters + string.digits
-    return "".join(random.choice(NONCE_CHARACTERS) for _ in range(NONCE_LENGTH))
+    return "".join(secrets.choice(NONCE_CHARACTERS) for _ in range(NONCE_LENGTH))
 
 
 def generate_base_string(
@@ -208,7 +208,7 @@ def generate_dh_random_bytes() -> str:
     This is used when generating the DH challenge.
     """
     NUM_RANDOM_BITS = 256
-    random_bytes = random.getrandbits(NUM_RANDOM_BITS)
+    random_bytes = secrets.randbits(NUM_RANDOM_BITS)
     random_bytes_hex = hex(random_bytes)[2:]
     return random_bytes_hex
 
