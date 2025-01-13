@@ -8,4 +8,4 @@ build/docs/mkdocs.yml
 .venv
 .env
 *.env
-.vcode
+.vscode
