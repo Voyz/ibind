@@ -21,19 +21,25 @@ Optionally, you can also set:
 - IBIND_REALM: OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. (optional, defaults to "limited_poa")
 - IBIND_DH_GENERATOR: The Diffie-Hellman generator value (optional, defaults to 2).
 
-If you prefer setting these variables inline, add these at the beginning of this script before importing from ibind:
-os.environ["IBIND_USE_OAUTH"] = True
-os.environ["IBIND_ACCESS_TOKEN"] = ...
-etc.
+If you prefer setting these variables inline, you can pass an instance of OAuthConfig class as an optional 'oauth_config' parameter to the IbkrClient constructor. Any variables not specified will be taken from the environment variables.
 """
 import os
 
 from ibind import IbkrClient, ibind_logs_initialize
+from ibind.support.oauth import OAuthConfig
 
 ibind_logs_initialize()
 
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
-client = IbkrClient(cacert=cacert)
+
+
+client = IbkrClient(
+    cacert=cacert,
+    use_oauth=True,
+
+    # Optionally, specify OAuth variables dynamically by passing an OAuthConfig instance
+    # oauth_config=OAuthConfig(access_token='my_access_token',access_token_secret='my_access_token_secret')
+)
 
 print('\n#### live session token ####')
 print(client.live_session_token)
