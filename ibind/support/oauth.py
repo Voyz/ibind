@@ -19,18 +19,43 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class OAuthConfig():
+    """ Dataclass encapsulating OAuth configuration parameters. """
+
     live_session_token_endpoint: str = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
+    """ Endpoint for OAuth Live Session Token. """
+
     access_token: str = var.IBIND_ACCESS_TOKEN
+    """ OAuth access token generated in the self-service portal. """
+
     access_token_secret: str = var.IBIND_ACCESS_TOKEN_SECRET
+    """ OAuth access token secret generated in the self-service portal. """
+
     consumer_key: str = var.IBIND_CONSUMER_KEY
+    """ The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
+
     dh_prime: str = var.IBIND_DH_PRIME
+    """ The hex representation of the Diffie-Hellman prime. """
+
     encryption_key_fp: str = var.IBIND_ENCRYPTION_KEY_FP
+    """ The path to the private OAuth encryption key. """
+
     signature_key_fp: str = var.IBIND_SIGNATURE_KEY_FP
+    """ The path to the private OAuth signature key. """
+
     dh_generator: str = var.IBIND_DH_GENERATOR
+    """ The Diffie-Hellman generator value. """
+
     realm: str = var.IBIND_REALM
+    """ OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+
     init_oauth: bool = var.IBIND_INIT_OAUTH
+    """ Whether OAuth should be automatically initialised. """
+
     maintain_oauth: bool = var.IBIND_MAINTAIN_OAUTH
+    """ Whether OAuth should be automatically maintained. """
+
     shutdown_oauth: bool = var.IBIND_SHUTDOWN_OAUTH
+    """ Whether OAuth should be automatically stopped on termination. """
 
 
 def req_live_session_token(client: 'IbkrClient', oauth_config: OAuthConfig) -> tuple[str, int, str]:
