@@ -64,6 +64,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
+            oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication.
         """
 
         self._use_oauth = use_oauth
