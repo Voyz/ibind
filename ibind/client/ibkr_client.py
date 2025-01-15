@@ -55,6 +55,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         Parameters:
             account_id (str): An identifier for the account. Defaults to None.
             url (str): The base URL for the REST API. Defaults to None.
+                       If 'use_oauth' is specified, the url is taken from oauth_config.
+                       Only if it couldn't be found in oauth_config, this url is used,
+                       or the parameters host, port and base_route.
             host (str, optional): Host for the IBKR REST API. Defaults to 'localhost'.
             port (str, optional): Port for the IBKR REST API. Defaults to '5000'
             base_route (str, optional): Base route for the IBKR REST API. Defaults to '/v1/api/'.
@@ -69,7 +72,14 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         self._use_oauth = use_oauth
 
-        url = var.IBIND_OAUTH_REST_URL if self._use_oauth else url
+        if self._use_oauth:
+            from ibind.support.oauth import OAuthConfig
+            self.oauth_config = oauth_config if oauth_config is not None else OAuthConfig()
+            oauth_url = self.oauth_config.oauth_rest_url
+            if oauth_url is not None:
+                # Override the url from the function parameter
+                url = oauth_url
+            # else: url is taken from the function parameter
 
         if url is None:
             url = f'https://{host}:{port}{base_route}'
@@ -83,8 +93,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries})')
 
         if self._use_oauth:
-            from ibind.support.oauth import OAuthConfig
-            self.oauth_config = oauth_config if oauth_config is not None else OAuthConfig()
             if self.oauth_config.init_oauth:
                 self.oauth_init(self.oauth_config.maintain_oauth, self.oauth_config.shutdown_oauth)
 

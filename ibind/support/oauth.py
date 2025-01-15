@@ -21,6 +21,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class OAuthConfig():
     """ Dataclass encapsulating OAuth configuration parameters. """
 
+    oauth_rest_url: str = var.IBIND_OAUTH_REST_URL
+    """ IBKR Client Portal OAuth base URL. """
+
     live_session_token_endpoint: str = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
     """ Endpoint for OAuth Live Session Token. """
 
