@@ -24,12 +24,8 @@ keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'i
 
 [project.optional-dependencies]
 oauth = [
-    'certifi>=2024.12.14',
-    'charset-normalizer~=3.4',
-    'idna~=3.10',
-    'pycryptodome~=3.19.0',
-    'python-dotenv==1.0.0',
-    'urllib3~=2.3',
+    'pycryptodome>=3.21',
+    'urllib3>=2.3',
 ]
 
 [project.urls]
