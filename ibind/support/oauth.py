@@ -1,4 +1,5 @@
 import base64
+import copy
 import secrets
 import string
 import time
@@ -59,6 +60,20 @@ class OAuthConfig():
 
     shutdown_oauth: bool = var.IBIND_SHUTDOWN_OAUTH
     """ Whether OAuth should be automatically stopped on termination. """
+
+    def copy(self, **kwargs):
+        """
+        Returns a shallow copy of the OAuthConfig with optional modifications.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments representing attributes to modify in the copy.
+        """
+        copied = copy.copy(self)
+        for kwarg, value in kwargs.items():
+            if not hasattr(copied, kwarg):
+                raise AttributeError(f'OAuthConfig does not have attribute "{kwarg}"')
+            setattr(copied, kwarg, value)
+        return copied
 
 
 def req_live_session_token(client: 'IbkrClient', oauth_config: OAuthConfig) -> tuple[str, int, str]:
