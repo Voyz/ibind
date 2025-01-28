@@ -170,7 +170,8 @@ class RestClient:
                 _LOGGER.info(f'{self}: Timeout for {method} {url}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
-
+            except ExternalBrokerError:
+                raise
             except Exception as e:
                 self.logger.exception(e)
                 raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
