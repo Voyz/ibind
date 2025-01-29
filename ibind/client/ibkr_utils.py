@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Union, TYPE_CHECKING
 
 from ibind.base.rest_client import Result, pass_result
+from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
@@ -104,14 +105,14 @@ def process_instruments(
 
 
 @ensure_list_arg('queries')
-def filter_stocks(queries: [StockQuery], result: Result, default_filtering: bool = True):
+def filter_stocks(queries: StockQueries, result: Result, default_filtering: bool = True):
     stocks = {}
     data = result.data
     for q in queries:
         symbol, name_match, instrument_conditions, contract_conditions = process_query(q, default_filtering)
 
         if symbol not in data or len(data[symbol]) == 0:
-            _LOGGER.error(f'Error getting stocks. Could not find valid instruments {symbol} in result: {result}')
+            _LOGGER.error(f'Error getting stocks. Could not find valid instruments {symbol} in result: {result}. Skipping query={q}.')
             continue
 
         filtered_instruments = process_instruments(
@@ -471,3 +472,35 @@ class Tickler():
 
         self._running = False
         self._thread.join(timeout)
+
+def cleanup_market_history_responses(
+        market_history_response: Dict[str, Union[Exception, Result]],
+        raise_on_error: bool = False,
+):
+    results = {}
+    for symbol, entry in market_history_response.items():
+        if isinstance(entry, Exception):  # pragma: no cover
+            if raise_on_error:
+                _LOGGER.error(f'Error fetching market data for {symbol}')
+                raise entry
+            else:
+                results[symbol] = entry
+                continue
+
+        # check if entry['mdAvailability'] has 'S' or 'R' in it
+        if 'mdAvailability' in entry.data and not (any((key in entry.data['mdAvailability'].upper()) for key in ['S', 'R'])):
+            _LOGGER.warning(f'Market data for {symbol} is not live: {decode_data_availability(entry.data["mdAvailability"])}')
+
+        data = entry.data['data']
+        records = []
+        for record in data:
+            records.append({
+                "open": record['o'],
+                "high": record['h'],
+                "low": record['l'],
+                "close": record['c'],
+                "volume": record['v'],
+                "date": datetime.datetime.fromtimestamp(record['t'] / 1000)
+            })
+        results[symbol] = records
+    return results

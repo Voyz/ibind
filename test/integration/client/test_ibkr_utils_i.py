@@ -35,7 +35,7 @@ class TestIbkrUtilsI(TestCase):
         with self.assertLogs(project_logger(), level='INFO') as cm:
             rv = filter_stocks(queries, Result(data=self.instruments), default_filtering=False)
 
-        verify_log(self, cm, [f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {self.result}'])
+        verify_log(self, cm, [f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {self.result}. Skipping query={queries[-1]}.'])
 
         # pprint(rv)
 

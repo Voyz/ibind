@@ -8,8 +8,10 @@ def init_wsa_mock(
         on_message: Callable = None,
         on_error: Callable = None,
         on_close: Callable = None,
+        cookie:str=None,
 ):
     wsa_mock.url = url
+    wsa_mock.cookie = cookie
 
     wsa_mock._on_open = on_open
     wsa_mock._on_message = on_message
@@ -31,7 +33,7 @@ def send(wsa_mock: MagicMock, message: str):
     wsa_mock.on_message(wsa_mock, message)
 
 
-def close(wsa_mock: MagicMock):
+def close(wsa_mock: MagicMock, status:str=None):
     wsa_mock.keep_running = False
     wsa_mock.on_close(wsa_mock, None, None)
 
@@ -44,7 +46,7 @@ def create_wsa_mock():
     wsa_mock = MagicMock()
 
     wsa_mock.send.side_effect = lambda *args, **kwargs: send(wsa_mock, *args, **kwargs)
-    wsa_mock.close.side_effect = lambda: close(wsa_mock)
+    wsa_mock.close.side_effect = lambda status=None: close(wsa_mock, status)
     wsa_mock.run_forever.side_effect = lambda *args, **kwargs: run_forever(wsa_mock, *args, **kwargs)
 
     return wsa_mock

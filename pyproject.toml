@@ -9,8 +9,8 @@ readme = "README.md"
 requires-python = ">=3.8"
 license={ file = "LICENSE" }
 dependencies = [
-    "requests==2.31.*",
-    "websocket-client==1.7.*"
+    "requests>=2.31",
+    "websocket-client>=1.7"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

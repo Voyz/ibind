@@ -56,7 +56,7 @@ class TestIbkrClientI(TestCase):
             rv = self.client.get(self.default_path)
 
         for i, record in enumerate(cm.records):
-            self.assertEqual(f'RestClient: Timeout for GET {self.default_url}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
+            self.assertEqual(f'RestClient: Timeout for GET {self.default_url} {{}}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
         self.assertEqual(f"RestClient: Reached max retries ({self.max_retries}) for GET {self.default_url} {{}}", str(cm_err.exception))
 
     def test_response_raise_timeout(self, requests_mock):

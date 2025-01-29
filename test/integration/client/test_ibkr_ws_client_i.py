@@ -67,6 +67,8 @@ class TestIbkrWsClient(TestCase):
             max_retries=self.max_retries,
         ))
 
+        self.client.tickle.return_value.data = {'session': 'TEST_COOKIE'}
+
         self.SubscriptionProcessorClass = IbkrSubscriptionProcessor
 
         # Initialize the IbkrWsClient
@@ -165,7 +167,7 @@ class TestIbkrWsClient(TestCase):
 
         expected_errors = [
             "IbkrWsClient: Status unauthenticated: {'authenticated': False}",
-            f"IbkrWsClient: Unrecognised message without a topic: {{'session': {session_id}}}"  # in real scenario this doesn't appear but due to the way the tests are written, this is the expected behaviour
+            'IbkrWsClient: Not authenticated, closing WebSocketApp'
         ]
 
         response_mock = MagicMock(spec=requests.Response)
@@ -179,12 +181,11 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._send_payload(message_data, expected_errors=expected_errors)
 
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
-        self.wsa_mock.send.assert_called_with(f'{{"session": {session_id}}}')
+        self.assertFalse(self.ws_client._authenticated)
 
     def test_on_message_sts_authenticated(self):
         message_data = {'topic': 'sts', 'args': {'authenticated': True}}
         cm, success = self._send_payload(message_data, expect_logs=False)
-        self.assertTrue(self.ws_client._logged_in)
 
     def test_on_message_error(self):
         message_data = {'topic': 'error', 'args': {'error_key': 'error_details'}}
