@@ -1,3 +1,4 @@
+from threading import Lock
 from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
@@ -13,6 +14,7 @@ class OrderMixin():
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
     """
+    order_submission_lock = Lock()
 
     @ensure_list_arg('filters')
     def live_orders(
@@ -115,17 +117,20 @@ class OrderMixin():
 
         Keep this in mind:
         https://interactivebrokers.github.io/tws-api/automated_considerations.html#order_placement
+
+        Note:
+            - Only one order can be placed at a time due to question-reply mechanism
         """
         if account_id is None:
             account_id = self.account_id
 
+        with self.order_submission_lock:
+            result = self.post(
+                f'iserver/account/{account_id}/orders',
+                params={"orders": order_request}
+            )
 
-        result = self.post(
-            f'iserver/account/{account_id}/orders',
-            params={"orders": order_request}
-        )
-
-        return handle_questions(result, answers, self.reply)
+            return handle_questions(result, answers, self.reply)
 
     def reply(self: 'IbkrClient', reply_id, confirmed: bool) -> Result:  # pragma: no cover
         """
@@ -184,13 +189,17 @@ class OrderMixin():
             order_request (dict): Used to the order content. The content should mirror the content of the original order.
             answers (Answers): List of question-answer pairs for order submission process.
             account_id (str): The account ID for which account should place the order.
+
+        Note:
+            - Only one order can be modified at a time due to question-reply mechanism
         """
         if account_id is None:
             account_id = self.account_id
 
-        result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
+        with self.order_submission_lock:
+            result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
 
-        return handle_questions(result, answers, self.reply)
+            return handle_questions(result, answers, self.reply)
 
     def suppress_messages(self: 'IbkrClient', message_ids: List[str]) -> Result:  # pragma: no cover
         """
