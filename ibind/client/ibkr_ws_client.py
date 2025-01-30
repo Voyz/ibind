@@ -318,8 +318,8 @@ class IbkrWsClient(WsClient):
             _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
             return None
         session_id = status.data['session']
-        payload = {'session': session_id}
-        return f'api={json.dumps(payload)}'
+        # payload = {'session': session_id}
+        return f'api={session_id}'
 
     def get_header(self):
         return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
