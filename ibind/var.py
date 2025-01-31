@@ -119,6 +119,9 @@ IBIND_REALM = os.getenv('IBIND_REALM', 'limited_poa')
 IBIND_INIT_OAUTH = to_bool(os.environ.get('IBIND_INIT_OAUTH', True))
 """ Whether OAuth should be automatically initialised. """
 
+IBIND_INIT_BROKERAGE_SESSION = to_bool(os.environ.get('IBIND_INIT_BROKERAGE_SESSION', True))
+""" Whether initialize_brokerage_session should be called automatically on startup. """
+
 IBIND_MAINTAIN_OAUTH = to_bool(os.environ.get('IBIND_MAINTAIN_OAUTH', True))
 """ Whether OAuth should be automatically maintained. """
 

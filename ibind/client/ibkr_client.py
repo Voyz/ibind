@@ -94,7 +94,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if self._use_oauth:
             if self.oauth_config.init_oauth:
-                self.oauth_init(self.oauth_config.maintain_oauth, self.oauth_config.shutdown_oauth)
+                self.oauth_init(
+                    maintain_oauth=self.oauth_config.maintain_oauth,
+                    shutdown_oauth=self.oauth_config.shutdown_oauth,
+                    init_brokerage_session=self.oauth_config.init_brokerage_session,
+                )
 
     def make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
@@ -104,7 +108,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature \
             = req_live_session_token(self, self.oauth_config)
 
-    def oauth_init(self, maintain_oauth: bool, shutdown_oauth: bool):
+    def oauth_init(self,
+                   maintain_oauth: bool,
+                   shutdown_oauth: bool,
+                   init_brokerage_session: bool
+                   ):
         _LOGGER.info(f'{self}: Initialising OAuth')
         if importlib.util.find_spec('Crypto') is None:
             raise ImportError('Installation lacks OAuth support. Please install by using `pip install ibind[oauth]`')
@@ -127,6 +135,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if shutdown_oauth:
             self.register_shutdown_handler()
+
+        if init_brokerage_session:
+            self.initialize_brokerage_session()
 
     def start_tickler(self):
         # start Tickler to maintain the connection alive
