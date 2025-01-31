@@ -156,7 +156,7 @@ class RestClient:
             attempt: int = 0,
             log: bool = True,
             **kwargs
-    ) -> Result:
+            ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -167,6 +167,8 @@ class RestClient:
         Parameters:
             method (str): The HTTP method to use ('GET', 'POST', etc.).
             endpoint (str): The API endpoint to which the request is sent.
+            base_url (str, optional): The base URL for the REST API. Defaults to the client's base URL.
+            extra_headers (dict, optional): Additional headers to be included in the request. Defaults to None.
             attempt (int, optional): The current attempt number for the request, used in recursive retries. Defaults to 0.
             log (bool, optional): Whether to log the request details. Defaults to True.
             **kwargs: Additional keyword arguments passed to the requests.request function.
@@ -178,6 +180,21 @@ class RestClient:
             TimeoutError: If the request times out and the maximum number of retries is reached.
             Exception: For any other errors that occur during the request.
 
+        """
+        return self._request(method, endpoint, base_url, extra_headers, attempt, log, **kwargs)
+
+    def _request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            attempt: int = 0,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
+        """
+        Wrapper function which allows overriding the default request and error handling logic in the subclass.
         """
 
         base_url = base_url if base_url is not None else self.base_url

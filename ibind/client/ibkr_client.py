@@ -3,7 +3,8 @@ import os
 from typing import Union, Optional, TYPE_CHECKING
 
 from ibind import var
-from ibind.base.rest_client import RestClient
+from ibind.support.errors import ExternalBrokerError
+from ibind.base.rest_client import RestClient, Result
 from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
@@ -172,6 +173,25 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         _LOGGER.info(f'{self}: Shutting down OAuth')
         self.stop_tickler()
         self.logout()
+
+    def _request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            attempt: int = 0,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
+        """ Handle IBKR-specific errors."""
+
+        try:
+            return super()._request(method, endpoint, base_url, extra_headers, attempt, log, **kwargs)
+        except ExternalBrokerError as e:
+            if 'Bad Request: no bridge' in str(e) and e.status_code == 400:
+                raise ExternalBrokerError(f'IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
+            raise
 
     def get_headers(self, request_method: str, request_url: str):
         if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
