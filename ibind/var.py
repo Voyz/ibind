@@ -84,7 +84,10 @@ IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))
 """ Whether OAuth should be used. """
 
 IBIND_OAUTH_REST_URL = os.getenv('IBIND_OAUTH_REST_URL', 'https://api.ibkr.com/v1/api/')
-""" IBKR Client Portal OAuth base URL. """
+""" IBKR Client Portal OAuth base URL for REST API. """
+
+IBIND_OAUTH_WS_URL = os.getenv('IBIND_OAUTH_WS_URL', 'wss://api.ibkr.com/v1/api/ws')
+""" IBKR Client Portal OAuth base URL for WebSocket API. """
 
 IBIND_LIVE_SESSION_TOKEN_ENDPOINT = os.getenv('IBIND_LIVE_SESSION_TOKEN_ENDPOINT', 'oauth/live_session_token')
 """ Endpoint for OAuth Live Session Token. """

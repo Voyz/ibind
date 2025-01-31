@@ -266,14 +266,19 @@ class IbkrWsClient(WsClient):
         """
 
         self._account_id = account_id
+
+        url = var.IBIND_OAUTH_WS_URL if url is None and use_oauth else url
+
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
 
         if use_oauth:
+            if access_token is None:
+                raise ValueError('OAuth access token not found. Please set IBIND_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
             url += f'?oauth_token={access_token}'
 
         if ibkr_client is None:
-            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert)
+            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert, use_oauth=use_oauth)
 
         self._ibkr_client = ibkr_client
 
