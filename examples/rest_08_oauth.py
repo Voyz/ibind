@@ -41,9 +41,6 @@ client = IbkrClient(
     # oauth_config=OAuthConfig(access_token='my_access_token',access_token_secret='my_access_token_secret')
 )
 
-print('\n#### live session token ####')
-print(client.live_session_token)
-
 print('\n#### get_accounts ####')
 accounts = client.portfolio_accounts().data
 client.account_id = accounts[0]['accountId']
