@@ -17,7 +17,7 @@ from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ibind.support.oauth import OAuthConfig
+    from ibind.oauth import OAuthConfig
 
 _LOGGER = project_logger(__file__)
 
@@ -74,7 +74,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self._use_oauth = use_oauth
 
         if self._use_oauth:
-            from ibind.support.oauth import OAuth1aConfig
+            from ibind.oauth.oauth1a import OAuth1aConfig
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
             url = url if self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
@@ -126,7 +126,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             return {}
 
         # get headers for endpoints other than live session token request
-        from ibind.support.oauth import generate_oauth_headers
+        from ibind.oauth.oauth1a import generate_oauth_headers
         headers = generate_oauth_headers(
             oauth_config=self.oauth_config,
             request_method=request_method,
@@ -137,7 +137,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         return headers
 
     def generate_live_session_token(self):
-        from ibind.support.oauth import req_live_session_token
+        from ibind.oauth.oauth1a import req_live_session_token
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature \
             = req_live_session_token(self, self.oauth_config)
 
@@ -156,7 +156,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.generate_live_session_token()
 
         # validate the live session token once
-        from ibind.support.oauth import validate_live_session_token
+        from ibind.oauth.oauth1a import validate_live_session_token
         success = validate_live_session_token(
             live_session_token=self.live_session_token,
             live_session_token_signature=self.live_session_token_signature,
