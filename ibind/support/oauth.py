@@ -3,6 +3,7 @@ import copy
 import secrets
 import string
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 from urllib import parse
@@ -18,39 +19,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-@dataclass
-class OAuthConfig():
-    """ Dataclass encapsulating OAuth configuration parameters. """
+class OAuthConfig(ABC):
+    """ Base Dataclass encapsulating OAuth configuration parameters. """
 
-    oauth_rest_url: str = var.IBIND_OAUTH_REST_URL
-    """ IBKR Client Portal OAuth base URL. """
-
-    live_session_token_endpoint: str = var.IBIND_LIVE_SESSION_TOKEN_ENDPOINT
-    """ Endpoint for OAuth Live Session Token. """
-
-    access_token: str = var.IBIND_ACCESS_TOKEN
-    """ OAuth access token generated in the self-service portal. """
-
-    access_token_secret: str = var.IBIND_ACCESS_TOKEN_SECRET
-    """ OAuth access token secret generated in the self-service portal. """
-
-    consumer_key: str = var.IBIND_CONSUMER_KEY
-    """ The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
-
-    dh_prime: str = var.IBIND_DH_PRIME
-    """ The hex representation of the Diffie-Hellman prime. """
-
-    encryption_key_fp: str = var.IBIND_ENCRYPTION_KEY_FP
-    """ The path to the private OAuth encryption key. """
-
-    signature_key_fp: str = var.IBIND_SIGNATURE_KEY_FP
-    """ The path to the private OAuth signature key. """
-
-    dh_generator: str = var.IBIND_DH_GENERATOR
-    """ The Diffie-Hellman generator value. """
-
-    realm: str = var.IBIND_REALM
-    """ OAuth connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+    @abstractmethod
+    def version(self):
+        raise NotImplementedError()
 
     init_oauth: bool = var.IBIND_INIT_OAUTH
     """ Whether OAuth should be automatically initialised. """
@@ -78,8 +52,46 @@ class OAuthConfig():
             setattr(copied, kwarg, value)
         return copied
 
+@dataclass
+class OAuth1aConfig(OAuthConfig):
+    """ Dataclass encapsulating OAuth 1.0a configuration parameters. """
 
-def req_live_session_token(client: 'IbkrClient', oauth_config: OAuthConfig) -> tuple[str, int, str]:
+    def version(self):
+        return '1.0a'
+
+    oauth_rest_url: str = var.IBIND_OAUTH1A_REST_URL
+    """ IBKR Client Portal OAuth base URL. """
+
+    live_session_token_endpoint: str = var.IBIND_OAUTH1A_LIVE_SESSION_TOKEN_ENDPOINT
+    """ Endpoint for OAuth 1.0a Live Session Token. """
+
+    access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN
+    """ OAuth 1.0a access token generated in the self-service portal. """
+
+    access_token_secret: str = var.IBIND_OAUTH1A_ACCESS_TOKEN_SECRET
+    """ OAuth 1.0a access token secret generated in the self-service portal. """
+
+    consumer_key: str = var.IBIND_OAUTH1A_CONSUMER_KEY
+    """ The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem. """
+
+    dh_prime: str = var.IBIND_OAUTH1A_DH_PRIME
+    """ The hex representation of the Diffie-Hellman prime. """
+
+    encryption_key_fp: str = var.IBIND_OAUTH1A_ENCRYPTION_KEY_FP
+    """ The path to the private OAuth 1.0a encryption key. """
+
+    signature_key_fp: str = var.IBIND_OAUTH1A_SIGNATURE_KEY_FP
+    """ The path to the private OAuth 1.0a signature key. """
+
+    dh_generator: str = var.IBIND_OAUTH1A_DH_GENERATOR
+    """ The Diffie-Hellman generator value. """
+
+    realm: str = var.IBIND_OAUTH1A_REALM
+    """ OAuth 1.0a connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+
+
+
+def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) -> tuple[str, int, str]:
     """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
 
     endpoint = oauth_config.live_session_token_endpoint
@@ -110,7 +122,7 @@ def req_live_session_token(client: 'IbkrClient', oauth_config: OAuthConfig) -> t
     return live_session_token, lst_expires, lst_signature
 
 
-def prepare_oauth(oauth_config: OAuthConfig) -> tuple[str, dict, str]:
+def prepare_oauth(oauth_config: OAuth1aConfig) -> tuple[str, dict, str]:
     dh_random = generate_dh_random_bytes()
     dh_challenge = generate_dh_challenge(
         dh_prime=oauth_config.dh_prime,
@@ -128,7 +140,7 @@ def prepare_oauth(oauth_config: OAuthConfig) -> tuple[str, dict, str]:
 
 
 def generate_oauth_headers(
-        oauth_config: OAuthConfig,
+        oauth_config: OAuth1aConfig,
         request_method: str,
         request_url: str,
         live_session_token: Optional[str] = None,

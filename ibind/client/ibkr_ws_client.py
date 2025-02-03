@@ -217,7 +217,7 @@ class IbkrWsClient(WsClient):
             unwrap_market_data: bool = True,
             start: bool = False,
             use_oauth: bool = False,
-            access_token: str = var.IBIND_ACCESS_TOKEN,
+            access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
 
             # inherited
             ping_interval: int = var.IBIND_WS_PING_INTERVAL,
@@ -267,14 +267,14 @@ class IbkrWsClient(WsClient):
 
         self._account_id = account_id
 
-        url = var.IBIND_OAUTH_WS_URL if url is None and use_oauth else url
+        url = var.IBIND_OAUTH1A_WS_URL if url is None and use_oauth else url
 
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
 
         if use_oauth:
             if access_token is None:
-                raise ValueError('OAuth access token not found. Please set IBIND_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
+                raise ValueError('OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
             url += f'?oauth_token={access_token}'
 
         if ibkr_client is None:
