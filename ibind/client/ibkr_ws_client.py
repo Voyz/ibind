@@ -323,6 +323,8 @@ class IbkrWsClient(WsClient):
             _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
             return None
         session_id = status.data['session']
+        if self._use_oauth:
+            return f'api={session_id}'
         payload = {'session': session_id}
         return f'api={json.dumps(payload)}'
 
