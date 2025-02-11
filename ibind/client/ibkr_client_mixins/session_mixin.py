@@ -23,16 +23,18 @@ class SessionMixin():
         """
         return self.post('iserver/auth/status')
 
-    def initialize_brokerage_session(self: 'IbkrClient', publish: bool, compete: bool) -> Result:  # pragma: no cover
+    def initialize_brokerage_session(self: 'IbkrClient', compete: bool = True) -> Result:  # pragma: no cover
         """
         After retrieving the access token and subsequent Live Session Token, customers can initialize their brokerage session with the ssodh/init endpoint.
         NOTE: This is essential for using all /iserver endpoints, including access to trading and market data.
 
         Parameters:
-            publish (Boolean): Determines if the request should be sent immediately. Users should always pass true. Otherwise, a ‘500’ response will be returned.
             compete (Boolean): Determines if other brokerage sessions should be disconnected to prioritize this connection.
+
+        Note:
+            - `publish` parameter is always set to `True` as per the documentation.
         """
-        return self.post('iserver/auth/ssodh/init', {'publish': publish, 'compete': compete})
+        return self.post('iserver/auth/ssodh/init', {'publish': True, 'compete': compete})
 
     def logout(self: 'IbkrClient') -> Result:  # pragma: no cover
         """

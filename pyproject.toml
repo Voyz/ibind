@@ -1,6 +1,6 @@
 [project]
 name = "ibind"
-version = "0.1.9"
+version = "0.1.10-rc2"
 authors = [
     { name="Voy Zan", email="voy1982@yahoo.co.uk" },
 ]
@@ -21,6 +21,12 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'ibkr web api', 'ib api', 'ibkr api', 'algo trading', 'algorithmic trading', 'quant', 'trading']
+
+[project.optional-dependencies]
+oauth = [
+    'pycryptodome>=3.21',
+    'urllib3>=2.3',
+]
 
 [project.urls]
 Homepage = "https://github.com/Voyz/ibind"

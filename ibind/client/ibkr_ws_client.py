@@ -7,13 +7,13 @@ from typing import Union, Type, Dict, List
 from websocket import WebSocketApp
 
 from ibind import var
-from ibind.support.errors import ExternalBrokerError
 from ibind.base.queue_controller import QueueController, QueueAccessor
 from ibind.base.subscription_controller import SubscriptionProcessor
 from ibind.base.ws_client import WsClient
 from ibind.client import ibkr_definitions
 from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import extract_conid
+from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import TimeoutLock, UNDEFINED
 
@@ -216,6 +216,9 @@ class IbkrWsClient(WsClient):
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             unwrap_market_data: bool = True,
             start: bool = False,
+            use_oauth: bool = False,
+            access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
+
             # inherited
             ping_interval: int = var.IBIND_WS_PING_INTERVAL,
             max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
@@ -224,6 +227,7 @@ class IbkrWsClient(WsClient):
             restart_on_critical: bool = True,
             max_connection_attempts: int = 10,
             cacert: Union[str, bool] = var.IBIND_CACERT,
+
             # subscription controller
             subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
             subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
@@ -245,7 +249,8 @@ class IbkrWsClient(WsClient):
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
             unwrap_market_data (bool, optional): Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
             start (bool, optional): Flag to start the client immediately after initialization. Defaults to False.
-
+            use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
+            access_token (str, optional): OAuth access token generated in the self-service portal. Defaults to None.
 
             Inherited parameters from WsClient:
 
@@ -261,11 +266,19 @@ class IbkrWsClient(WsClient):
         """
 
         self._account_id = account_id
+
+        url = var.IBIND_OAUTH1A_WS_URL if url is None and use_oauth else url
+
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
 
+        if use_oauth:
+            if access_token is None:
+                raise ValueError('OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
+            url += f'?oauth_token={access_token}'
+
         if ibkr_client is None:
-            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert)
+            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert, use_oauth=use_oauth)
 
         self._ibkr_client = ibkr_client
 
@@ -275,6 +288,8 @@ class IbkrWsClient(WsClient):
         self._log_raw_messages = log_raw_messages
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
         self._unwrap_market_data = unwrap_market_data
+        self._use_oauth = use_oauth
+
 
         super().__init__(
             subscription_processor=self._subscription_processor,
@@ -308,8 +323,13 @@ class IbkrWsClient(WsClient):
             _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
             return None
         session_id = status.data['session']
+        if self._use_oauth:
+            return f'api={session_id}'
         payload = {'session': session_id}
         return f'api={json.dumps(payload)}'
+
+    def get_header(self):
+        return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
 
     def on_reconnect(self):
         super().on_reconnect()

@@ -36,17 +36,17 @@ class TestIbkrClientI(TestCase):
 
         rv = self.client.get(self.default_path)
         self.assertEqual(self.result, rv)
-        requests_mock.request.assert_called_with('GET', self.default_url, verify=False, timeout=self.timeout)
+        requests_mock.request.assert_called_with('GET', self.default_url, verify=False, headers={}, timeout=self.timeout)
 
         test_post_kwargs = {'field1': 'value1', 'field2': 'value2'}
         test_json = {'json': {**test_post_kwargs}}
         rv = self.client.post(self.default_path, params=test_post_kwargs)
         self.assertEqual(self.result.copy(request={'url': self.default_url, **test_json}), rv)
-        requests_mock.request.assert_called_with('POST', self.default_url, verify=False, timeout=self.timeout, **test_json)
+        requests_mock.request.assert_called_with('POST', self.default_url, verify=False, headers={}, timeout=self.timeout, **test_json)
 
         rv = self.client.delete(self.default_path)
         self.assertEqual(self.result, rv)
-        requests_mock.request.assert_called_with('DELETE', self.default_url, verify=False, timeout=self.timeout)
+        requests_mock.request.assert_called_with('DELETE', self.default_url, verify=False, headers={}, timeout=self.timeout)
 
     def test_request_retries(self, requests_mock):
         requests_mock.request.side_effect = ReadTimeout()

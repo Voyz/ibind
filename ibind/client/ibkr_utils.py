@@ -1,15 +1,20 @@
 import datetime
 import pprint
+import threading
+import time
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, TYPE_CHECKING
 
 from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany
+from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
 
 _LOGGER = project_logger(__file__)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ibind import IbkrClient
 
 
 @dataclass
@@ -418,6 +423,55 @@ def extract_conid(data):
 
     return None
 
+
+class Tickler():
+    """
+    Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
+    """
+
+    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
+        """
+        Initialise the Tickler instance.
+
+        Args:
+            client (IbkrClient): The client instance with a `tickle` method.
+            interval (int | float): Interval between tickles in seconds. Default is 60 seconds.
+        """
+        self._client = client
+        self._interval = interval
+        self._running = True
+        self._thread = None
+
+    def _worker(self):
+        _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
+        while self._running:
+            try:
+                self._client.tickle()
+            except KeyboardInterrupt:
+                _LOGGER.info('Tickler interrupted')
+                break
+            except Exception as e:
+                _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
+
+            time.sleep(self._interval)
+
+        _LOGGER.info(f'Tickler gracefully stopped.')
+
+    def start(self):
+        if self._thread is not None:
+            _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
+            return
+
+        self._thread = threading.Thread(target=self._worker)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def stop(self, timeout=None):
+        if self._thread is None:
+            return
+
+        self._running = False
+        self._thread.join(timeout)
 
 def cleanup_market_history_responses(
         market_history_response: Dict[str, Union[Exception, Result]],
