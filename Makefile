@@ -6,16 +6,22 @@
 # Python interpreter to use
 PYTHON := python3
 
+.PHONY: install
+install: ## Install python dependencies
+	pip install -r requirements.txt
+	pip install -r requirements-oauth.txt
+	pip install -r requirements-dev.txt
+
 .PHONY: lint
-lint:  ## Run code linting (flake8, black, isort)
+lint:  ## Run code linting
 	ruff check --fix
 
 .PHONY: format
-format:  ## Format code using black and isort
+format:  ## Format code using ruff
 	ruff format
 
 .PHONY: scan
-scan:  ## Run security checks using bandit
+scan:  ## Run security checks
 	bandit -r . -ll -x site-packages
 
 .PHONY: clean
