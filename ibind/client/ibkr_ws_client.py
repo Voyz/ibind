@@ -210,8 +210,8 @@ class IbkrWsClient(WsClient):
             port: str = '5000',
             base_route: str = '/v1/api/ws',
             ibkr_client: IbkrClient = None,
-            SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
-            QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
+            subscription_processor_class: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
+            queue_controller_class: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             unwrap_market_data: bool = True,
@@ -244,8 +244,8 @@ class IbkrWsClient(WsClient):
             base_route (str, optional): Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
             account_id (str, optional): Account ID for subscription management.
             ibkr_client (IbkrClient, optional): An instance of the IbkrClient for related operations.
-            SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
-            QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
+            subscription_processor_class (Type[SubscriptionProcessor]): The class to process subscription payloads.
+            queue_controller_class (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
             unwrap_market_data (bool, optional): Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
             start (bool, optional): Flag to start the client immediately after initialization. Defaults to False.
@@ -282,8 +282,8 @@ class IbkrWsClient(WsClient):
 
         self._ibkr_client = ibkr_client
 
-        self._queue_controller = QueueControllerClass()
-        self._subscription_processor = SubscriptionProcessorClass()
+        self._queue_controller = queue_controller_class()
+        self._subscription_processor = subscription_processor_class()
 
         self._log_raw_messages = log_raw_messages
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
