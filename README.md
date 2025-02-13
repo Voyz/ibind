@@ -19,9 +19,9 @@ wrong? [Create an issue and let us know!][issues]*
 
 IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0.
 
-_Note: IBind currently supports only the Web API 1.0 since the [newer OAuth-based Web API][web-api] seems to be still in beta and is not fully documented. Once a complete version of the new Web API is released IBind will be extended to support it._
+_Note: IBind currently supports only the Web API 1.0 since the [newer Web API][web-api] seems to be still in beta and is not fully documented. Once a complete version of the new Web API is released IBind will be extended to support it._
 
-_OAuth: There is currently a development version of IBind that adds OAuth 1.0 support. Please install through `pip install ibind[oauth]==0.1.10-rc2 --pre` and report any issues found. See [this PR](https://github.com/Voyz/ibind/pull/34) for discussion and [rest_08_oauth.py](https://github.com/hughandersen/ibind/blob/oauth/examples/rest_08_oauth.py) for example use._
+_OAuth: There is currently a development version of IBind that adds OAuth 1.0 support. Please install through `pip install ibind[oauth]==0.1.10-rc17 --pre` and report any issues found. See [this PR](https://github.com/Voyz/ibind/pull/34) for discussion and [rest_08_oauth.py](https://github.com/hughandersen/ibind/blob/oauth/examples/rest_08_oauth.py) for example use._
 
 ## Installation
 
