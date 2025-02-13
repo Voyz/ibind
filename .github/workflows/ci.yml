@@ -51,12 +51,12 @@ jobs:
         cd modus
         make install
 
-    - name: Run Ruff
+    - name: Run Linting
       run: |
         cd modus
-	make lint
+        make lint
 
-    - name: Run Bandit
+    - name: Run Scanning
       run: |
         cd modus
         make scan
