@@ -57,7 +57,7 @@ class TestIbkrClientI(TestCase):
             StockQuery(symbol='INVALID_SYMBOL')
         ]
 
-        with self.assertLogs(project_logger(), level='INFO') as cm:
+        with self.assertLogs(project_logger(), level='INFO'):
             rv = self.client.stock_conid_by_symbol(queries, default_filtering=False)
 
         for symbol, conid in rv.data.items():
@@ -74,7 +74,7 @@ class TestIbkrClientI(TestCase):
         instruments = filter_stocks(query, Result(data={symbol: ibkr_responses.responses["stocks"][symbol]}), default_filtering=False).data[symbol]
 
         with self.assertRaises(RuntimeError) as cm_err:
-            rv = self.client.stock_conid_by_symbol(query, default_filtering=False)
+            self.client.stock_conid_by_symbol(query, default_filtering=False)
 
         self.maxDiff = None
         self.assertEqual(

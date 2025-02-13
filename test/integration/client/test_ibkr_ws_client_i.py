@@ -25,7 +25,7 @@ class TestPreprocessRawMessage(TestCase):
             url=self.url,
             ibkr_client=None,
             account_id=None,
-            SubscriptionProcessorClass=lambda: None,
+            subscription_processor_class=lambda: None,
         )
 
     def test_preprocess_with_well_formed_message(self):
@@ -76,7 +76,7 @@ class TestIbkrWsClient(TestCase):
             url=self.url,
             ibkr_client=self.client,
             account_id=self.account_id,
-            SubscriptionProcessorClass=self.SubscriptionProcessorClass,
+            subscription_processor_class=self.SubscriptionProcessorClass,
             subscription_retries=self.subscription_retries,
             subscription_timeout=0.01,
             cacert=False,
@@ -96,7 +96,7 @@ class TestIbkrWsClient(TestCase):
         with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
                 patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
                 SafeAssertLogs(self, 'ibind', level='DEBUG', logger_level='DEBUG', no_logs=not expect_logs) as cm, \
-                RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors) as cm2:
+                RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors):
 
             ws_client_logger = project_logger('ws_client')
             old_level = ws_client_logger.getEffectiveLevel()

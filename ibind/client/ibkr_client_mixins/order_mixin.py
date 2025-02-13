@@ -156,7 +156,7 @@ class OrderMixin():
             account_id (str): The account ID for which account should place the order. Financial Advisors may specify.
             order_request (dict): Used to the order content.
         """
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
 
         return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [order_request]})

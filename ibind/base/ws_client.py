@@ -88,7 +88,7 @@ class WsClient(SubscriptionController):
         if not (cacert is False or Path(cacert).exists()):
             raise ValueError(f"{self}: cacert must be a valid Path or False")
 
-        if cacert is None or cacert == False:
+        if cacert is None or not cacert:
             self._sslopt = {"cert_reqs": ssl.CERT_NONE}
         else:
             self._sslopt = {'ca_certs': cacert}
@@ -261,8 +261,8 @@ class WsClient(SubscriptionController):
             return False
 
     def set_authenticated(self, authenticated:bool):
-        self._authenticated = authenticated == True
-        if authenticated == False:
+        self._authenticated = authenticated is True
+        if not authenticated:
             if self._wsa is not None:
                 _LOGGER.warning(f'{self}: Not authenticated, closing WebSocketApp')
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)

@@ -98,7 +98,7 @@ class VerboseEnum(str, Enum, metaclass=VerboseEnumMeta):  # pragma: no cover
     def __lt__(self, other):
         return self.value < other.value
 
-    def toJSON(self):
+    def to_json(self):
         return f'{self.__class__.__name__}.{str(self)}'
 
     def copy(self):

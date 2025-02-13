@@ -159,7 +159,7 @@ class RaiseLogsContext:
         self.restore_loggers(loggers_to_be_patched)
         # self.context_manager.__exit__(exc_type, exc_val, exc_tb)
         if exc_type is not None:
-            if (exc_type == AssertionError and str(exc_val) != f'no logs of level {self._level} or higher triggered on {self._logger.name}'):
+            if (isinstance(exc_type, AssertionError) and str(exc_val) != f'no logs of level {self._level} or higher triggered on {self._logger.name}'):
                 return False
             else:
                 _testcapi.set_exc_info(exc_type, exc_val, exc_tb.tb_next)

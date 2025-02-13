@@ -391,11 +391,11 @@ class IbkrWsClient(WsClient):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
 
         if 'authenticated' in data:
-            if data.get('authenticated') == False:
+            if data.get('authenticated') is False:
                 _LOGGER.error(f'{self}: Status unauthenticated: {data}')
             self.set_authenticated(data.get('authenticated'))
         elif 'competing' in data:
-            if data.get('competing') == False:
+            if data.get('competing') is False:
                 pass
             _LOGGER.error(f'{self}: Status competing: {data}')
         elif data == {'message': ''}:
