@@ -25,6 +25,24 @@ keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'i
 [project.urls]
 Homepage = "https://github.com/Voyz/ibind"
 
+[tool.ruff.lint]
+# Defined rules here:
+# https://docs.astral.sh/ruff/rules/
+select = [
+    "F", # pyflakes
+    "E", # pycodestyle - Errors
+    "W", # pycodestyle - Warnings
+    "S", # Security
+    "N", # pep8-naming
+    "D", # pydocstyle
+    "DTZ", # Datetime timezone
+    "LOG", # Logging
+    "G", # flake8-logging-format
+    "PL", # pylint
+    "DOC", # Documentation
+]
+
+
 [build-system]
 requires = [
     "setuptools"
