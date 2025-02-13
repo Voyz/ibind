@@ -9,9 +9,11 @@ def init_wsa_mock(
         on_error: Callable = None,
         on_close: Callable = None,
         cookie:str=None,
+        header:dict=None,
 ):
     wsa_mock.url = url
     wsa_mock.cookie = cookie
+    wsa_mock.header = header
 
     wsa_mock._on_open = on_open
     wsa_mock._on_message = on_message

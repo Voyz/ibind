@@ -88,7 +88,7 @@ class WsClient(SubscriptionController):
         if not (cacert is False or Path(cacert).exists()):
             raise ValueError(f"{self}: cacert must be a valid Path or False")
 
-        if cacert is None or cacert == False:
+        if cacert is None or not cacert:
             self._sslopt = {"cert_reqs": ssl.CERT_NONE}
         else:
             self._sslopt = {'ca_certs': cacert}
@@ -181,6 +181,9 @@ class WsClient(SubscriptionController):
     def get_cookie(self):
         return None
 
+    def get_header(self):
+        return None
+
     def _new_websocket_app(self) -> bool:
         if self._wsa is not None:
             raise RuntimeError(f"{self}: WebSocketApp should be closed before attempting to create a new one")
@@ -193,6 +196,12 @@ class WsClient(SubscriptionController):
             _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
             cookie = None
 
+        try:
+            header = self.get_header()
+        except Exception as e:
+            _LOGGER.error(f'{self}: Failed to retrieve header: {exception_to_string(e)}')
+            header = None
+
         wsa = WebSocketApp(
             url=self._url,
             on_open=self._wrap_callback(self._handle_on_open),
@@ -200,6 +209,7 @@ class WsClient(SubscriptionController):
             on_close=self._wrap_callback(self._handle_on_close),
             on_error=self._wrap_callback(self._handle_on_error),
             cookie=cookie,
+            header=header,
         )
 
         self._wsa = wsa
@@ -251,8 +261,8 @@ class WsClient(SubscriptionController):
             return False
 
     def set_authenticated(self, authenticated:bool):
-        self._authenticated = authenticated == True
-        if authenticated == False:
+        self._authenticated = authenticated is True
+        if not authenticated:
             if self._wsa is not None:
                 _LOGGER.warning(f'{self}: Not authenticated, closing WebSocketApp')
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)

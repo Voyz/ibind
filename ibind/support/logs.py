@@ -49,7 +49,8 @@ def ibind_logs_initialize(
         - To get more verbose logs, set either the `log_level` parameter or the `IBIND_LOG_LEVEL` environment variable to `'DEBUG'`
     """
     global _initialized
-    if _initialized: return
+    if _initialized:
+        return
     _initialized = True
 
     global _log_to_file

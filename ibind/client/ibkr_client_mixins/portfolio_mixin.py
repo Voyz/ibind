@@ -41,7 +41,7 @@ class PortfolioMixin():  # pragma: no cover
         Parameters:
             account_id (str, optional): Specify the AccountID to receive portfolio information for.
         """
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
         return self.get(f'portfolio/{account_id}/meta')
 
@@ -52,7 +52,7 @@ class PortfolioMixin():  # pragma: no cover
         Parameters:
             account_id (str, optional): Specify the account ID for the request.
         """
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
         return self.get(f'portfolio/{account_id}/allocation')
 
@@ -88,7 +88,7 @@ class PortfolioMixin():  # pragma: no cover
             period (str, optional): Period for pnl column. Value Format: 1D, 7D, 1M.
         """
 
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
 
         params = params_dict(
@@ -120,7 +120,7 @@ class PortfolioMixin():  # pragma: no cover
             direction (str, optional): The order to sort by. 'a' means ascending 'd' means descending.
         """
 
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
 
         params = params_dict(
@@ -140,7 +140,7 @@ class PortfolioMixin():  # pragma: no cover
             account_id (str): The account ID for which account should place the order.
             conid (str): The contract ID to receive position information on.
         """
-        if account_id == None:
+        if account_id is None:
             account_id = self.account_id
         return self.get(f'/portfolio/{account_id}/position/{conid}')
 

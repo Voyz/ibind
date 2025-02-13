@@ -36,24 +36,24 @@ class TestIbkrClientI(TestCase):
 
         rv = self.client.get(self.default_path)
         self.assertEqual(self.result, rv)
-        requests_mock.request.assert_called_with('GET', self.default_url, verify=False, timeout=self.timeout)
+        requests_mock.request.assert_called_with('GET', self.default_url, verify=False, headers={}, timeout=self.timeout)
 
         test_post_kwargs = {'field1': 'value1', 'field2': 'value2'}
         test_json = {'json': {**test_post_kwargs}}
         rv = self.client.post(self.default_path, params=test_post_kwargs)
         self.assertEqual(self.result.copy(request={'url': self.default_url, **test_json}), rv)
-        requests_mock.request.assert_called_with('POST', self.default_url, verify=False, timeout=self.timeout, **test_json)
+        requests_mock.request.assert_called_with('POST', self.default_url, verify=False, headers={}, timeout=self.timeout, **test_json)
 
         rv = self.client.delete(self.default_path)
         self.assertEqual(self.result, rv)
-        requests_mock.request.assert_called_with('DELETE', self.default_url, verify=False, timeout=self.timeout)
+        requests_mock.request.assert_called_with('DELETE', self.default_url, verify=False, headers={}, timeout=self.timeout)
 
     def test_request_retries(self, requests_mock):
         requests_mock.request.side_effect = ReadTimeout()
 
         with self.assertLogs(project_logger(), level='INFO') as cm, \
                 self.assertRaises(TimeoutError) as cm_err:
-            rv = self.client.get(self.default_path)
+            self.client.get(self.default_path)
 
         for i, record in enumerate(cm.records):
             self.assertEqual(f'RestClient: Timeout for GET {self.default_url} {{}}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
@@ -64,7 +64,7 @@ class TestIbkrClientI(TestCase):
         self.response.raise_for_status.side_effect = Timeout()
 
         with self.assertRaises(ExternalBrokerError) as cm_err:
-            rv = self.client.get(self.default_path)
+            self.client.get(self.default_path)
 
         self.assertEqual(f"RestClient: Timeout error ({self.timeout}S)", str(cm_err.exception))
 
@@ -77,6 +77,6 @@ class TestIbkrClientI(TestCase):
         self.response.raise_for_status.side_effect = ValueError('Test generic error')
 
         with self.assertRaises(ExternalBrokerError) as cm_err:
-            rv = self.client.get(self.default_path)
+            self.client.get(self.default_path)
 
         self.assertEqual(f"RestClient: response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}", str(cm_err.exception))
