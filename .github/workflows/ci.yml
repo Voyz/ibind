@@ -48,16 +48,13 @@ jobs:
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
-        cd modus
         make install
 
     - name: Run Linting
       run: |
-        cd modus
         make lint
 
     - name: Run Scanning
       run: |
-        cd modus
         make scan
 
