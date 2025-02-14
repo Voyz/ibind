@@ -216,7 +216,7 @@ class IbkrWsClient(WsClient):
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             unwrap_market_data: bool = True,
             start: bool = False,
-            use_oauth: bool = False,
+            use_oauth: bool = var.IBIND_USE_OAUTH,
             access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
 
             # inherited
