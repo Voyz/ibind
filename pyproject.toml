@@ -40,6 +40,9 @@ select = [
     "W", # pycodestyle - Warnings
     "S", # Security
     "N", # pep8-naming
+    "PL", # pylint
+    "DOC", # Documentation
+    "D", # pydocstyle
 ]
 
 ignore = [
