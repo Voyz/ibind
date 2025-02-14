@@ -77,7 +77,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             from ibind.oauth.oauth1a import OAuth1aConfig
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
-            url = url if self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
+            url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
 
         if url is None:
             url = f'https://{host}:{port}{base_route}'
