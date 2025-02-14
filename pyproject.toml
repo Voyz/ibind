@@ -44,6 +44,7 @@ select = [
 
 ignore = [
     "E501",  # Ignore line length errors
+    "E712"
 ]
 
 
