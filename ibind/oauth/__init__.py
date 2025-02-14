@@ -1,9 +1,11 @@
 import copy
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from ibind import var
 
 
+@dataclass
 class OAuthConfig(ABC):
     """ Base Dataclass encapsulating OAuth configuration parameters. """
 
