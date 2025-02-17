@@ -101,9 +101,9 @@ class RestClient:
         self._timeout = timeout
         self._max_retries = max_retries
 
-        self.make_logger()
+        self._make_logger()
 
-    def make_logger(self):
+    def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
 
     @property
@@ -111,10 +111,10 @@ class RestClient:
         try:
             return self._logger
         except AttributeError:  # pragma: no cover
-            self.make_logger()
+            self._make_logger()
             return self._logger
 
-    def get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str):
         return {}
 
     def get(
@@ -199,7 +199,7 @@ class RestClient:
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
 
-        headers = self.get_headers(request_method=method, request_url=url)
+        headers = self._get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
 
         # we want to allow default values used by IBKR, so we remove all None parameters

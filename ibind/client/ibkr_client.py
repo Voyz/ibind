@@ -98,7 +98,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                     init_brokerage_session=self.oauth_config.init_brokerage_session,
                 )
 
-    def make_logger(self):
+    def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
     def _request(
@@ -119,7 +119,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                 raise ExternalBrokerError(f'IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
             raise
 
-    def get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str):
         if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
