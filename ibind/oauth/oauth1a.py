@@ -20,9 +20,19 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class OAuth1aConfig(OAuthConfig):
-    """ Dataclass encapsulating OAuth 1.0a configuration parameters. """
+    """
+    Dataclass encapsulating OAuth 1.0a configuration parameters.
+
+    This class extends `OAuthConfig` to provide configuration settings specific to OAuth 1.0a.
+    """
 
     def version(self):
+        """
+        Returns the OAuth version used.
+
+        Returns:
+            str: The string `'1.0a'`, indicating the OAuth version.
+        """
         return '1.0a'
 
     oauth_rest_url: str = var.IBIND_OAUTH1A_REST_URL
@@ -57,7 +67,28 @@ class OAuth1aConfig(OAuthConfig):
 
 
 def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) -> tuple[str, int, str]:
-    """ Get live session token and access token from IBKR Web API used to make API endpoint calls """
+    """
+    Requests a live session token from the IBKR Web API for authenticated API access.
+
+    This function performs the OAuth authentication flow required to retrieve a live session token,
+    which is necessary for making API calls. It prepares and signs the OAuth request,
+    sends it to the IBKR Web API, and processes the response.
+
+    Parameters:
+        client (IbkrClient): The IBKR client instance used to send the request.
+
+        oauth_config (OAuth1aConfig): The OAuth 1.0a configuration object containing authentication parameters.
+
+    Returns:
+        tuple[str, int, str]:
+            - `live_session_token` (str): The generated live session token used for authentication.
+            - `lst_expires` (int): The expiration time of the live session token in milliseconds.
+            - `lst_signature` (str): The signature of the live session token.
+
+    Raises:
+        ExternalBrokerError: If the API request fails or returns an invalid response.
+
+    """
 
     endpoint = oauth_config.live_session_token_endpoint
 

@@ -7,10 +7,25 @@ from ibind import var
 
 @dataclass
 class OAuthConfig(ABC):
-    """ Base Dataclass encapsulating OAuth configuration parameters. """
+    """
+    Base dataclass encapsulating OAuth configuration parameters.
+
+    This abstract base class defines the common attributes and methods for managing
+    OAuth authentication settings. It provides default configuration values for handling
+    the initialization, maintenance, and shutdown of OAuth authentication.
+    """
 
     @abstractmethod
     def version(self):
+        """
+        Returns the OAuth version.
+
+        This abstract method must be implemented by subclasses to return the OAuth protocol
+        version being used (e.g., OAuth 1.0a or OAuth 2.0).
+
+        Raises:
+            NotImplementedError: If called directly from the base class.
+        """
         raise NotImplementedError()
 
     init_oauth: bool = var.IBIND_INIT_OAUTH
