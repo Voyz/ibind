@@ -148,6 +148,11 @@ def process_query(q, default_filtering: bool = True):
 
 
 class QuestionType(VerboseEnum):
+    """
+    Enumeration of common warning messages encountered when submitting orders.
+
+    This enum class represents different types of precautionary messages that may be returned by IBKR's API when placing an order. These warnings often require user confirmation before proceeding.
+    """
     PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
     MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
@@ -155,7 +160,27 @@ class QuestionType(VerboseEnum):
 
 
 Answers = Dict[Union[QuestionType, str], bool]
+"""
+A mapping of order warnings to user responses.
 
+This dictionary type is used to associate specific warning messages from the IBKR API (either predefined in `QuestionType` or as raw strings) with a boolean response 
+indicating whether the user accepts or rejects the warning.
+
+Key:
+    - `QuestionType`: A predefined enum representing common IBKR warning messages.
+    - `str`: A raw string warning message (if not covered by `QuestionType`).
+
+Value:
+    - `bool`: 
+        - `True` if the user acknowledges and accepts the warning.
+        - `False` if the user rejects it, potentially preventing the order submission.
+
+Example:
+    >>> user_answers = {
+    ...     QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
+    ...     "Some custom warning message": False
+    ... }
+"""
 
 def find_answer(question: str, answers: Answers):
     """
