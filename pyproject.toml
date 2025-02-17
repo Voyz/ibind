@@ -41,13 +41,13 @@ select = [
     "S", # Security
     "N", # pep8-naming
     "PL", # pylint
-    "DOC", # Documentation
-    "D", # pydocstyle
 ]
 
 ignore = [
     "E501",  # Ignore line length errors
-    "E712"
+    "E712", # Ignore true-false-comparison
+    "PLR2004", # Ignore Pylint rule Magic Values
+    "PLW1508", # Ignore Environment variable default type
 ]
 
 
