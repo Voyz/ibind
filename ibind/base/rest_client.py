@@ -153,7 +153,6 @@ class RestClient:
             endpoint: str,
             base_url: str = None,
             extra_headers: dict = None,
-            attempt: int = 0,
             log: bool = True,
             **kwargs
             ) -> Result:
@@ -169,7 +168,6 @@ class RestClient:
             endpoint (str): The API endpoint to which the request is sent.
             base_url (str, optional): The base URL for the REST API. Defaults to the client's base URL.
             extra_headers (dict, optional): Additional headers to be included in the request. Defaults to None.
-            attempt (int, optional): The current attempt number for the request, used in recursive retries. Defaults to 0.
             log (bool, optional): Whether to log the request details. Defaults to True.
             **kwargs: Additional keyword arguments passed to the requests.request function.
 
@@ -181,7 +179,7 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
-        return self._request(method, endpoint, base_url, extra_headers, attempt, log, **kwargs)
+        return self._request(method, endpoint, base_url, extra_headers, log, **kwargs)
 
     def _request(
             self,
@@ -189,7 +187,6 @@ class RestClient:
             endpoint: str,
             base_url: str = None,
             extra_headers: dict = None,
-            attempt: int = 0,
             log: bool = True,
             **kwargs
     ) -> Result:
@@ -208,11 +205,11 @@ class RestClient:
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
-        if log:
-            self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
-
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
+            if log:
+                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
+
             try:
                 response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
