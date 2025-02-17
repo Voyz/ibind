@@ -426,17 +426,20 @@ def extract_conid(data):
 
 class Tickler():
     """
-    Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
-    """
+       Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
+
+       The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
+       the session from expiring. This is essential for keeping the OAuth session active.
+       """
 
     def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
         """
-        Initialise the Tickler instance.
+       Initializes the Tickler instance.
 
-        Args:
-            client (IbkrClient): The client instance with a `tickle` method.
-            interval (int | float): Interval between tickles in seconds. Default is 60 seconds.
-        """
+       Parameters:
+           client (IbkrClient): The client instance with a `tickle` method that maintains the session.
+           interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
+       """
         self._client = client
         self._interval = interval
         self._running = True
@@ -458,6 +461,12 @@ class Tickler():
         _LOGGER.info(f'Tickler gracefully stopped.')
 
     def start(self):
+        """
+        Starts the Tickler in a separate thread.
+
+        This method creates and starts a daemon thread that periodically calls `tickle()` to keep the
+        session alive.
+        """
         if self._thread is not None:
             _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
             return
@@ -467,16 +476,76 @@ class Tickler():
         self._thread.start()
 
     def stop(self, timeout=None):
+        """
+        Stops the Tickler thread.
+
+        This method stops and joins the Tickler thread.
+
+        Parameters:
+            timeout (Optional[float]): Maximum time to wait for the Tickler thread to terminate.
+                                       If None, waits indefinitely.
+        """
         if self._thread is None:
             return
 
         self._running = False
         self._thread.join(timeout)
 
+
 def cleanup_market_history_responses(
         market_history_response: Dict[str, Union[Exception, Result]],
         raise_on_error: bool = False,
 ):
+    """
+    Processes and cleans up market history responses, converting raw data into structured records.
+
+    This function iterates over market history responses, extracts relevant trading data, and
+    formats it into a structured dictionary. If errors are encountered, they are either logged
+    and included in the results or raised based on the `raise_on_error` flag.
+
+    Parameters:
+        market_history_response (Dict[str, Union[Exception, Result]]):
+            A dictionary where keys are symbols and values are either:
+            - `Result` objects containing market history data.
+            - `Exception` instances representing failed requests.
+
+        raise_on_error (bool, optional):
+            If `True`, raises encountered exceptions instead of storing them in the results.
+            Defaults to `False`.
+
+    Returns:
+        Dict[str, Union[list[dict], Exception]]:
+            A dictionary where keys are symbols and values are either:
+            - A list of structured historical market data records, each containing:
+                - `"open"`: Open price.
+                - `"high"`: High price.
+                - `"low"`: Low price.
+                - `"close"`: Close price.
+                - `"volume"`: Trading volume.
+                - `"date"`: Datetime object representing the timestamp.
+            - An `Exception` object if an error occurred (only if `raise_on_error=False`).
+
+    Logs:
+        - Errors when fetching market data if `raise_on_error=True`.
+        - Warnings if market data is not live (i.e., missing 'S' or 'R' in `mdAvailability`).
+
+    Raises:
+        Exception: If `raise_on_error=True` and an error occurs.
+
+    Example:
+        >>> market_history_responses = {
+        ...     symbol: client.marketdata_history_by_conid(**request)
+        ...     for symbol, request in requests.items()
+        ... }
+        >>> results = cleanup_market_history_responses(market_history_responses)
+        {
+            "AAPL": [
+                {"open": 150.0, "high": 155.0, "low": 149.0, "close": 153.0,
+                 "volume": 500000, "date": datetime.datetime(2023, 11, 14, 10, 53, 20)}
+            ],
+            "TSLA": Exception("Failed to fetch data")
+        }
+    """
     results = {}
     for symbol, entry in market_history_response.items():
         if isinstance(entry, Exception):  # pragma: no cover
