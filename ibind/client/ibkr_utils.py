@@ -97,7 +97,7 @@ def process_instruments(
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
-            instrument = {**instrument, 'contracts': filtered_contracts}
+            instrument['contracts'] =  filtered_contracts
 
         filtered_instruments.append(instrument)
 
