@@ -2,8 +2,9 @@ import datetime
 import pprint
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Optional, Dict, Union, TYPE_CHECKING
+from warnings import warn
 
 from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
@@ -280,6 +281,78 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
     raise RuntimeError(f'Too many questions: {original_result}: {questions}')
 
+@dataclass
+class OrderRequest:
+    conid: Union[int, str]
+    side: str
+    quantity: float
+    order_type: str
+    acct_id: str
+
+    # optional
+    price: Optional[float] = field(default=None)
+    conidex: Optional[str] = field(default=None)
+    sec_type: Optional[str] = field(default=None)
+    coid: Optional[str] = field(default=None)
+    parent_id: Optional[str] = field(default=None)
+    listing_exchange: Optional[str] = field(default=None)
+    is_single_group: Optional[bool] = field(default=None)
+    outside_rth: Optional[bool] = field(default=None)
+    aux_price: Optional[float] = field(default=None)
+    ticker: Optional[str] = field(default=None)
+    tif: Optional[str] = field(default='GTC')
+    trailing_amt: Optional[float] = field(default=None)
+    trailing_type: Optional[str] = field(default=None)
+    referrer: Optional[str] = field(default=None)
+    cash_qty: Optional[float] = field(default=None)
+    fx_qty: Optional[float] = field(default=None)
+    use_adaptive: Optional[bool] = field(default=None)
+    is_ccy_conv: Optional[bool] = field(default=None)
+    allocation_method: Optional[str] = field(default=None)
+    strategy: Optional[str] = field(default=None)
+    strategy_parameters: Optional[dict] = field(default=None)
+
+    def to_dict(self) -> dict:
+        """ Convert dataclass to a dictionary, excluding None values. """
+        return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
+
+_ORDER_REQUEST_MAPPING = {
+    'conid': "conid",
+    'side': "side",
+    'quantity': "quantity",
+    'order_type': "orderType",
+    'price': "price",
+    'coid': "cOID",
+    'acct_id': "acctId",
+    'conidex': "conidex",
+    'sec_type': "secType",
+    'parent_id': "parentId",
+    'listing_exchange': "listingExchange",
+    'is_single_group': "isSingleGroup",
+    'outside_rth': "outsideRTH",
+    'aux_price': "auxPrice",
+    'ticker': "ticker",
+    'tif': "tif" ,
+    'trailing_amt': "trailingAmt",
+    'trailing_type': "trailingType",
+    'referrer': "referrer",
+    'cash_qty': "cashQty",
+    'fx_qty': "fxQty",
+    'use_adaptive': "useAdaptive",
+    'is_ccy_conv': "isCcyConv",
+    'allocation_method': "allocationMethod",
+    'strategy': "strategy",
+    'strategy_parameters': "strategyParameters",
+}
+
+def parse_order_request(order_request: OrderRequest) -> dict:
+    if isinstance(order_request, dict):
+        _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
+        return order_request
+    else:
+        return {
+            _ORDER_REQUEST_MAPPING[k]: v for k, v in order_request.to_dict().items() if v is not None
+        }
 
 def make_order_request(
         conid: Union[int, str],
@@ -344,6 +417,7 @@ def make_order_request(
         strategy (str, Optional): IB Algo algorithm to use for the order.
         strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
      """
+    warn("'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.", DeprecationWarning, stacklevel=2)
 
     order_request = {}
 

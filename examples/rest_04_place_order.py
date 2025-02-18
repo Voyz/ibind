@@ -14,7 +14,8 @@ import datetime
 import os
 from unittest.mock import patch, MagicMock
 
-from ibind import IbkrClient, make_order_request, QuestionType, ibind_logs_initialize
+from ibind import IbkrClient, QuestionType, ibind_logs_initialize
+from ibind.client.ibkr_utils import OrderRequest
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -28,7 +29,7 @@ size = 1
 order_type = 'MKT'
 order_tag = f'my_order-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}'
 
-order_request = make_order_request(
+order_request = OrderRequest(
     conid=conid,
     side=side,
     quantity=size,

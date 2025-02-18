@@ -2,7 +2,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_utils import Answers, handle_questions
+from ibind.client.ibkr_utils import Answers, handle_questions, OrderRequest, parse_order_request
 from ibind.support.py_utils import OneOrMany, params_dict, ensure_list_arg
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -102,7 +102,7 @@ class OrderMixin():
         return self.get(f'iserver/account/trades/', params=params)
 
     @ensure_list_arg('order_request')
-    def place_order(self: 'IbkrClient', order_request: OneOrMany[dict], answers: Answers, account_id: str = None) -> Result:
+    def place_order(self: 'IbkrClient', order_request: OneOrMany[OrderRequest], answers: Answers, account_id: str = None) -> Result:
         """
         When connected to an IServer Brokerage Session, this endpoint will allow you to submit orders.
 
@@ -111,9 +111,9 @@ class OrderMixin():
         - Developers should not attempt to place another order until the previous order has been fully acknowledged, that is, when no further warnings are received deferring the client to the reply endpoint.
 
         Parameters:
-            account_id (str): The account ID for which account should place the order.
+            order_request (OneOrMany[OrderRequest]): Used to the order content.
             answers (Answers): List of question-answer pairs for order submission process.
-            order_request (OneOrMany[dict]): Used to the order content.
+            account_id (str): The account ID for which account should place the order.
 
         Keep this in mind:
         https://interactivebrokers.github.io/tws-api/automated_considerations.html#order_placement
@@ -121,13 +121,16 @@ class OrderMixin():
         Note:
             - Only one order can be placed at a time due to question-reply mechanism
         """
+
         if account_id is None:
             account_id = self.account_id
+
+        parsed_order_request = [parse_order_request(request) for request in order_request]
 
         with self.order_submission_lock:
             result = self.post(
                 f'iserver/account/{account_id}/orders',
-                params={"orders": order_request}
+                params={"orders": parsed_order_request}
             )
 
             return handle_questions(result, answers, self.reply)
@@ -144,7 +147,7 @@ class OrderMixin():
         """
         return self.post(f'iserver/reply/{reply_id}', params={"confirmed": confirmed})
 
-    def whatif_order(self: 'IbkrClient', order_request: dict, account_id: str) -> Result:  # pragma: no cover
+    def whatif_order(self: 'IbkrClient', order_request: OrderRequest, account_id: str) -> Result:  # pragma: no cover
         """
         This endpoint allows you to preview order without actually submitting the order and you can get commission information in the response. Also supports bracket orders.
 
@@ -159,7 +162,9 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
-        return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [order_request]})
+        parsed_order_request = parse_order_request(order_request)
+
+        return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [parsed_order_request]})
 
     def cancel_order(self: 'IbkrClient', order_id: str, account_id: str = None) -> Result:  # pragma: no cover
         """
@@ -177,7 +182,7 @@ class OrderMixin():
 
         return self.delete(f'iserver/account/{account_id}/order/{order_id}')
 
-    def modify_order(self: 'IbkrClient', order_id: str, order_request: dict, answers: Answers, account_id: str = None) -> Result:
+    def modify_order(self: 'IbkrClient', order_id: str, order_request: OrderRequest, answers: Answers, account_id: str = None) -> Result:
         """
         Modifies an open order.
 
@@ -186,7 +191,7 @@ class OrderMixin():
 
         Parameters:
             order_id (str): The orderID for that should be modified. Can be retrieved from /iserver/account/orders.
-            order_request (dict): Used to the order content. The content should mirror the content of the original order.
+            order_request (OrderRequest): Used to the order content. The content should mirror the content of the original order.
             answers (Answers): List of question-answer pairs for order submission process.
             account_id (str): The account ID for which account should place the order.
 
@@ -196,8 +201,10 @@ class OrderMixin():
         if account_id is None:
             account_id = self.account_id
 
+        parsed_order_request = parse_order_request(order_request)
+
         with self.order_submission_lock:
-            result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=order_request)
+            result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=parsed_order_request)
 
             return handle_questions(result, answers, self.reply)
 
