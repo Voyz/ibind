@@ -309,7 +309,7 @@ class MarketdataMixin():
             conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
-        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
+        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
         results = execute_in_parallel(self.post, unsubscribe_requests)
 
         for conid, result in results.items():
