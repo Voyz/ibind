@@ -27,6 +27,7 @@ class TestIbkrClientI(TestCase):
             account_id=self.account_id,
             timeout=self.timeout,
             max_retries=self.max_retries,
+            use_session=False,
         )
 
         self.data = {'Test key': 'Test value'}

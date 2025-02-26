@@ -20,6 +20,7 @@ class TestIbkrClientI(TestCase):
             url=self.url,
             timeout=self.timeout,
             max_retries=self.max_retries,
+            use_session=False,
         )
 
         self.data = {'Test key': 'Test value'}
