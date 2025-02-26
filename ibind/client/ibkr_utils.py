@@ -98,7 +98,7 @@ def process_instruments(
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
-            instrument['contracts'] =  filtered_contracts
+            instrument['contracts'] = filtered_contracts
 
         filtered_instruments.append(instrument)
 
@@ -182,6 +182,7 @@ Example:
     ...     "Some custom warning message": False
     ... }
 """
+
 
 def find_answer(question: str, answers: Answers):
     """
@@ -281,6 +282,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
     raise RuntimeError(f'Too many questions: {original_result}: {questions}')
 
+
 @dataclass
 class OrderRequest:
     conid: Union[int, str]
@@ -319,6 +321,7 @@ class OrderRequest:
         """ Convert dataclass to a dictionary, excluding None values. """
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
 
+
 _ORDER_REQUEST_MAPPING = {
     'conid': "conid",
     'side': "side",
@@ -335,7 +338,7 @@ _ORDER_REQUEST_MAPPING = {
     'outside_rth': "outsideRTH",
     'aux_price': "auxPrice",
     'ticker': "ticker",
-    'tif': "tif" ,
+    'tif': "tif",
     'trailing_amt': "trailingAmt",
     'trailing_type': "trailingType",
     'referrer': "referrer",
@@ -349,14 +352,19 @@ _ORDER_REQUEST_MAPPING = {
     'is_close': 'isClose',
 }
 
-def parse_order_request(order_request: OrderRequest) -> dict:
+
+def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> dict:
+    if mapping is None:
+        mapping = _ORDER_REQUEST_MAPPING
+
     if isinstance(order_request, dict):
         _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         return order_request
     else:
         return {
-            _ORDER_REQUEST_MAPPING[k]: v for k, v in order_request.to_dict().items() if v is not None
+            mapping[k]: v for k, v in order_request.to_dict().items() if v is not None
         }
+
 
 def make_order_request(
         conid: Union[int, str],
