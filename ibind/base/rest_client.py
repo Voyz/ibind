@@ -5,6 +5,7 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
+from requests.adapters import HTTPAdapter
 
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
@@ -102,6 +103,11 @@ class RestClient:
         self._max_retries = max_retries
 
         self._make_logger()
+
+        self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10, pool_block=True)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
@@ -211,7 +217,8 @@ class RestClient:
                 self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
             try:
-                response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
+                # response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
+                response = self.session.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 

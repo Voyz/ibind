@@ -122,7 +122,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     def _get_headers(self, request_method: str, request_url: str):
         if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
-            return {}
+            return {
+                "Connection": "close"
+            }
 
         # get headers for endpoints other than live session token request
         from ibind.oauth.oauth1a import generate_oauth_headers
