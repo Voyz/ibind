@@ -312,6 +312,9 @@ class OrderRequest:
     strategy: Optional[str] = field(default=None)
     strategy_parameters: Optional[dict] = field(default=None)
 
+    # undocumented
+    is_close: Optional[bool] = field(default=None)
+
     def to_dict(self) -> dict:
         """ Convert dataclass to a dictionary, excluding None values. """
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
@@ -343,6 +346,7 @@ _ORDER_REQUEST_MAPPING = {
     'allocation_method': "allocationMethod",
     'strategy': "strategy",
     'strategy_parameters': "strategyParameters",
+    'is_close': 'isClose',
 }
 
 def parse_order_request(order_request: OrderRequest) -> dict:
