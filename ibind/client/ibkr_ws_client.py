@@ -216,7 +216,7 @@ class IbkrWsClient(WsClient):
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             unwrap_market_data: bool = True,
             start: bool = False,
-            use_oauth: bool = False,
+            use_oauth: bool = var.IBIND_USE_OAUTH,
             access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
 
             # inherited
@@ -316,7 +316,7 @@ class IbkrWsClient(WsClient):
         if start:
             self.start()
 
-    def get_cookie(self):
+    def _get_cookie(self):
         try:
             status = self._ibkr_client.tickle()
         except ExternalBrokerError:
@@ -328,11 +328,11 @@ class IbkrWsClient(WsClient):
         payload = {'session': session_id}
         return f'api={json.dumps(payload)}'
 
-    def get_header(self):
+    def _get_header(self):
         return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
 
-    def on_reconnect(self):
-        super().on_reconnect()
+    def _on_reconnect(self):
+        super()._on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
         """
@@ -461,7 +461,7 @@ class IbkrWsClient(WsClient):
 
         return message, topic, data, subscribed, channel
 
-    def on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
+    def _on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
         if self._log_raw_messages:
             _LOGGER.debug(f'{self}: Raw message: {raw_message}')
         message, topic, data, subscribed, channel = self._preprocess_raw_message(raw_message)

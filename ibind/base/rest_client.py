@@ -101,9 +101,9 @@ class RestClient:
         self._timeout = timeout
         self._max_retries = max_retries
 
-        self.make_logger()
+        self._make_logger()
 
-    def make_logger(self):
+    def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
 
     @property
@@ -111,10 +111,10 @@ class RestClient:
         try:
             return self._logger
         except AttributeError:  # pragma: no cover
-            self.make_logger()
+            self._make_logger()
             return self._logger
 
-    def get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str):
         return {}
 
     def get(
@@ -153,7 +153,6 @@ class RestClient:
             endpoint: str,
             base_url: str = None,
             extra_headers: dict = None,
-            attempt: int = 0,
             log: bool = True,
             **kwargs
             ) -> Result:
@@ -169,7 +168,6 @@ class RestClient:
             endpoint (str): The API endpoint to which the request is sent.
             base_url (str, optional): The base URL for the REST API. Defaults to the client's base URL.
             extra_headers (dict, optional): Additional headers to be included in the request. Defaults to None.
-            attempt (int, optional): The current attempt number for the request, used in recursive retries. Defaults to 0.
             log (bool, optional): Whether to log the request details. Defaults to True.
             **kwargs: Additional keyword arguments passed to the requests.request function.
 
@@ -181,7 +179,7 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
-        return self._request(method, endpoint, base_url, extra_headers, attempt, log, **kwargs)
+        return self._request(method, endpoint, base_url, extra_headers, log, **kwargs)
 
     def _request(
             self,
@@ -189,7 +187,6 @@ class RestClient:
             endpoint: str,
             base_url: str = None,
             extra_headers: dict = None,
-            attempt: int = 0,
             log: bool = True,
             **kwargs
     ) -> Result:
@@ -202,17 +199,17 @@ class RestClient:
         endpoint = endpoint.lstrip("/")
         url = f"{base_url}{endpoint}"
 
-        headers = self.get_headers(request_method=method, request_url=url)
+        headers = self._get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
-        if log:
-            self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
-
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
+            if log:
+                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
+
             try:
                 response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})

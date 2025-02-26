@@ -79,7 +79,7 @@ class AccountsMixin():  # pragma: no cover
         """
         result = self.post('iserver/account', params={"acctId": account_id})
         self.account_id = account_id
-        self.make_logger()
+        self._make_logger()
         _LOGGER.warning(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
         return result
 

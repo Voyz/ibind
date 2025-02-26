@@ -2,6 +2,7 @@
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
 See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
 """
+from typing import Union
 
 snapshot_by_key = {
     # Contract
@@ -13,12 +14,11 @@ snapshot_by_key = {
     'conid_exchange': '7094',  # Conid + Exchange
 
     ##Regulator snapshot
-    'ask_codes':'7057', # Returns the series of character codes for the Ask exchange.
+    'ask_codes': '7057',  # Returns the series of character codes for the Ask exchange.
 
-    'bid_codes': '7068', #Returns the series of character codes for the Bid exchange.
+    'bid_codes': '7068',  # Returns the series of character codes for the Bid exchange.
 
-    'last_exch_codes': '7058', #Returns the series of character codes for the Last exchange.
-
+    'last_exch_codes': '7058',  # Returns the series of character codes for the Last exchange.
 
     # Price and Volume
     'open': '7295',  # Open - Today's opening price.
@@ -138,11 +138,49 @@ snapshot_by_key = {
 snapshot_by_id = {str(value): key for key, value in snapshot_by_key.items()}
 
 
-def snapshot_ids_to_keys(ids):  # pragma: no cover
-    return [snapshot_by_id[idx] for idx in ids]
+def snapshot_ids_to_keys(ids: [Union[str, int]]):  # pragma: no cover
+    """
+    Converts a list of IBKR market data field IDs to their corresponding human-readable keys.
+
+    Parameters:
+        ids (list[Union[str, int]]): A list of numeric field IDs, as strings or integers.
+
+    Returns:
+        list[str]: A list of human-readable field keys.
+
+    Example:
+        >>> snapshot_ids_to_keys(["55", 6008])
+        ["symbol", "conid"]
+
+    Raises:
+        KeyError: If an invalid field ID is provided.
+
+    See:
+        - `snapshot_by_id`: Dictionary mapping IBKR market data field IDs to human-readable keys.
+    """
+    return [snapshot_by_id[str(idx)] for idx in ids]
 
 
-def snapshot_keys_to_ids(keys):  # pragma: no cover
+def snapshot_keys_to_ids(keys: [str]):  # pragma: no cover
+    """
+    Converts a list of human-readable IBKR market data field keys to their corresponding numeric field IDs.
+
+    Parameters:
+        keys (list[str]): A list of human-readable field keys.
+
+    Returns:
+        list[str]: A list of numeric field IDs.
+
+    Example:
+        >>> snapshot_keys_to_ids(["symbol", "conid"])
+        ["55", "6008"]
+
+    Raises:
+        KeyError: If an invalid field key is provided.
+
+    See:
+        - `snapshot_by_key`: Dictionary mapping human-readable keys to IBKR market data field IDs.
+    """
     return [snapshot_by_key[key] for key in keys]
 
 
@@ -157,5 +195,33 @@ data_availability_by_key = {
 }
 
 
-def decode_data_availability(md_availability: str):
+def decode_data_availability(md_availability: [str]):
+    """
+    Decodes a list of market data availability codes into human-readable descriptions.
+
+    The availability string may contain multiple characters indicating different states:
+    - 'S': Streaming
+    - 'R': Realtime
+    - 'D': Delayed
+    - 'Z': Frozen
+    - 'Y': Frozen Delayed
+    - 'P': Snapshot Available
+    - 'p': Consolidated
+
+    Parameters:
+        md_availability (list[str]): A list of market data availability codes.
+
+    Returns:
+        str: A human-readable description of the market data availability.
+
+    Example:
+        >>> decode_data_availability(["S", "R"])
+        "Streaming, Realtime"
+
+    Raises:
+        KeyError: If an invalid availability code is provided.
+
+    See:
+        - `data_availability_by_key`: Dictionary mapping availability codes to human-readable descriptions.
+    """
     return ", ".join([data_availability_by_key[c] for c in md_availability])

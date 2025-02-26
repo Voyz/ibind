@@ -2,8 +2,9 @@ import datetime
 import pprint
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Optional, Dict, Union, TYPE_CHECKING
+from warnings import warn
 
 from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
@@ -97,7 +98,7 @@ def process_instruments(
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
-            instrument = {**instrument, 'contracts': filtered_contracts}
+            instrument['contracts'] =  filtered_contracts
 
         filtered_instruments.append(instrument)
 
@@ -148,6 +149,11 @@ def process_query(q, default_filtering: bool = True):
 
 
 class QuestionType(VerboseEnum):
+    """
+    Enumeration of common warning messages encountered when submitting orders.
+
+    This enum class represents different types of precautionary messages that may be returned by IBKR's API when placing an order. These warnings often require user confirmation before proceeding.
+    """
     PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
     MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
@@ -155,7 +161,27 @@ class QuestionType(VerboseEnum):
 
 
 Answers = Dict[Union[QuestionType, str], bool]
+"""
+A mapping of order warnings to user responses.
 
+This dictionary type is used to associate specific warning messages from the IBKR API (either predefined in `QuestionType` or as raw strings) with a boolean response 
+indicating whether the user accepts or rejects the warning.
+
+Key:
+    - `QuestionType`: A predefined enum representing common IBKR warning messages.
+    - `str`: A raw string warning message (if not covered by `QuestionType`).
+
+Value:
+    - `bool`: 
+        - `True` if the user acknowledges and accepts the warning.
+        - `False` if the user rejects it, potentially preventing the order submission.
+
+Example:
+    >>> user_answers = {
+    ...     QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
+    ...     "Some custom warning message": False
+    ... }
+"""
 
 def find_answer(question: str, answers: Answers):
     """
@@ -255,6 +281,78 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
     raise RuntimeError(f'Too many questions: {original_result}: {questions}')
 
+@dataclass
+class OrderRequest:
+    conid: Union[int, str]
+    side: str
+    quantity: float
+    order_type: str
+    acct_id: str
+
+    # optional
+    price: Optional[float] = field(default=None)
+    conidex: Optional[str] = field(default=None)
+    sec_type: Optional[str] = field(default=None)
+    coid: Optional[str] = field(default=None)
+    parent_id: Optional[str] = field(default=None)
+    listing_exchange: Optional[str] = field(default=None)
+    is_single_group: Optional[bool] = field(default=None)
+    outside_rth: Optional[bool] = field(default=None)
+    aux_price: Optional[float] = field(default=None)
+    ticker: Optional[str] = field(default=None)
+    tif: Optional[str] = field(default='GTC')
+    trailing_amt: Optional[float] = field(default=None)
+    trailing_type: Optional[str] = field(default=None)
+    referrer: Optional[str] = field(default=None)
+    cash_qty: Optional[float] = field(default=None)
+    fx_qty: Optional[float] = field(default=None)
+    use_adaptive: Optional[bool] = field(default=None)
+    is_ccy_conv: Optional[bool] = field(default=None)
+    allocation_method: Optional[str] = field(default=None)
+    strategy: Optional[str] = field(default=None)
+    strategy_parameters: Optional[dict] = field(default=None)
+
+    def to_dict(self) -> dict:
+        """ Convert dataclass to a dictionary, excluding None values. """
+        return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
+
+_ORDER_REQUEST_MAPPING = {
+    'conid': "conid",
+    'side': "side",
+    'quantity': "quantity",
+    'order_type': "orderType",
+    'price': "price",
+    'coid': "cOID",
+    'acct_id': "acctId",
+    'conidex': "conidex",
+    'sec_type': "secType",
+    'parent_id': "parentId",
+    'listing_exchange': "listingExchange",
+    'is_single_group': "isSingleGroup",
+    'outside_rth': "outsideRTH",
+    'aux_price': "auxPrice",
+    'ticker': "ticker",
+    'tif': "tif" ,
+    'trailing_amt': "trailingAmt",
+    'trailing_type': "trailingType",
+    'referrer': "referrer",
+    'cash_qty': "cashQty",
+    'fx_qty': "fxQty",
+    'use_adaptive': "useAdaptive",
+    'is_ccy_conv': "isCcyConv",
+    'allocation_method': "allocationMethod",
+    'strategy': "strategy",
+    'strategy_parameters': "strategyParameters",
+}
+
+def parse_order_request(order_request: OrderRequest) -> dict:
+    if isinstance(order_request, dict):
+        _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
+        return order_request
+    else:
+        return {
+            _ORDER_REQUEST_MAPPING[k]: v for k, v in order_request.to_dict().items() if v is not None
+        }
 
 def make_order_request(
         conid: Union[int, str],
@@ -319,6 +417,7 @@ def make_order_request(
         strategy (str, Optional): IB Algo algorithm to use for the order.
         strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
      """
+    warn("'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.", DeprecationWarning, stacklevel=2)
 
     order_request = {}
 
@@ -426,17 +525,20 @@ def extract_conid(data):
 
 class Tickler():
     """
-    Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
-    """
+       Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
+
+       The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
+       the session from expiring. This is essential for keeping the OAuth session active.
+       """
 
     def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
         """
-        Initialise the Tickler instance.
+       Initializes the Tickler instance.
 
-        Args:
-            client (IbkrClient): The client instance with a `tickle` method.
-            interval (int | float): Interval between tickles in seconds. Default is 60 seconds.
-        """
+       Parameters:
+           client (IbkrClient): The client instance with a `tickle` method that maintains the session.
+           interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
+       """
         self._client = client
         self._interval = interval
         self._running = True
@@ -458,6 +560,12 @@ class Tickler():
         _LOGGER.info(f'Tickler gracefully stopped.')
 
     def start(self):
+        """
+        Starts the Tickler in a separate thread.
+
+        This method creates and starts a daemon thread that periodically calls `tickle()` to keep the
+        session alive.
+        """
         if self._thread is not None:
             _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
             return
@@ -467,16 +575,76 @@ class Tickler():
         self._thread.start()
 
     def stop(self, timeout=None):
+        """
+        Stops the Tickler thread.
+
+        This method stops and joins the Tickler thread.
+
+        Parameters:
+            timeout (Optional[float]): Maximum time to wait for the Tickler thread to terminate.
+                                       If None, waits indefinitely.
+        """
         if self._thread is None:
             return
 
         self._running = False
         self._thread.join(timeout)
 
+
 def cleanup_market_history_responses(
         market_history_response: Dict[str, Union[Exception, Result]],
         raise_on_error: bool = False,
 ):
+    """
+    Processes and cleans up market history responses, converting raw data into structured records.
+
+    This function iterates over market history responses, extracts relevant trading data, and
+    formats it into a structured dictionary. If errors are encountered, they are either logged
+    and included in the results or raised based on the `raise_on_error` flag.
+
+    Parameters:
+        market_history_response (Dict[str, Union[Exception, Result]]):
+            A dictionary where keys are symbols and values are either:
+            - `Result` objects containing market history data.
+            - `Exception` instances representing failed requests.
+
+        raise_on_error (bool, optional):
+            If `True`, raises encountered exceptions instead of storing them in the results.
+            Defaults to `False`.
+
+    Returns:
+        Dict[str, Union[list[dict], Exception]]:
+            A dictionary where keys are symbols and values are either:
+            - A list of structured historical market data records, each containing:
+                - `"open"`: Open price.
+                - `"high"`: High price.
+                - `"low"`: Low price.
+                - `"close"`: Close price.
+                - `"volume"`: Trading volume.
+                - `"date"`: Datetime object representing the timestamp.
+            - An `Exception` object if an error occurred (only if `raise_on_error=False`).
+
+    Logs:
+        - Errors when fetching market data if `raise_on_error=True`.
+        - Warnings if market data is not live (i.e., missing 'S' or 'R' in `mdAvailability`).
+
+    Raises:
+        Exception: If `raise_on_error=True` and an error occurs.
+
+    Example:
+        >>> market_history_responses = {
+        ...     symbol: client.marketdata_history_by_conid(**request)
+        ...     for symbol, request in requests.items()
+        ... }
+        >>> results = cleanup_market_history_responses(market_history_responses)
+        {
+            "AAPL": [
+                {"open": 150.0, "high": 155.0, "low": 149.0, "close": 153.0,
+                 "volume": 500000, "date": datetime.datetime(2023, 11, 14, 10, 53, 20)}
+            ],
+            "TSLA": Exception("Failed to fetch data")
+        }
+    """
     results = {}
     for symbol, entry in market_history_response.items():
         if isinstance(entry, Exception):  # pragma: no cover

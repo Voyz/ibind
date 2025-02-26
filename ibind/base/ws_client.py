@@ -178,10 +178,10 @@ class WsClient(SubscriptionController):
         if self._restart_on_close and self._running:
             self._reconnect()
 
-    def get_cookie(self):
+    def _get_cookie(self):
         return None
 
-    def get_header(self):
+    def _get_header(self):
         return None
 
     def _new_websocket_app(self) -> bool:
@@ -191,13 +191,13 @@ class WsClient(SubscriptionController):
         _LOGGER.debug(f'{self}: Creating new WebSocketApp')
 
         try:
-            cookie = self.get_cookie()
+            cookie = self._get_cookie()
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
             cookie = None
 
         try:
-            header = self.get_header()
+            header = self._get_header()
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to retrieve header: {exception_to_string(e)}')
             header = None
@@ -267,40 +267,40 @@ class WsClient(SubscriptionController):
                 _LOGGER.warning(f'{self}: Not authenticated, closing WebSocketApp')
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
 
-    def on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
+    def _on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
         pass
 
-    def on_reconnect(self):  # pragma: no cover
+    def _on_reconnect(self):  # pragma: no cover
         if not wait_until(lambda: self._authenticated, f'{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.', timeout=10):
             # This may appear in the flow of reestablishing connection after loss of authentication
             # Returning should be expected and fine, as we should only recreate subscriptions once we're authenticated
             return
         self.recreate_subscriptions()
 
-    def on_open(self, was: WebSocketApp):  # pragma: no cover
+    def _on_open(self, was: WebSocketApp):  # pragma: no cover
         pass
 
-    def on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
+    def _on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
         self.invalidate_subscriptions()
 
-    def on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
+    def _on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
         pass
 
     def _handle_on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
-        self.on_message(wsa, message)
+        self._on_message(wsa, message)
 
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
         self._connected = True
-        self.on_open(wsa)
+        self._on_open(wsa)
 
     def _handle_on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
         _LOGGER.error(f'{self}: on_error: {error}')
-        self.on_error(wsa, error)
+        self._on_error(wsa, error)
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         _LOGGER.info(f'{self}: on_close')
-        self.on_close(wsa, close_status_code, close_msg)
+        self._on_close(wsa, close_status_code, close_msg)
         # if we're not connected we shouldn't need to do anything
         if not self._connected:
             _LOGGER.info(f'{self}: on_close event while disconnected')
@@ -378,7 +378,7 @@ class WsClient(SubscriptionController):
                 self._try_connecting()
 
             if self._has_active_connection():
-                self.on_reconnect()
+                self._on_reconnect()
 
     def disconnect(self):  # pragma: no cover
         """

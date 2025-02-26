@@ -3,7 +3,14 @@
 * [Result](#base.rest_client.Result)
 * [IbkrClient](#client.ibkr_client.IbkrClient)
   * [\_\_init\_\_](#client.ibkr_client.IbkrClient.__init__)
+  * [generate\_live\_session\_token](#client.ibkr_client.IbkrClient.generate_live_session_token)
+  * [oauth\_init](#client.ibkr_client.IbkrClient.oauth_init)
+  * [start\_tickler](#client.ibkr_client.IbkrClient.start_tickler)
+  * [stop\_tickler](#client.ibkr_client.IbkrClient.stop_tickler)
+  * [register\_shutdown\_handler](#client.ibkr_client.IbkrClient.register_shutdown_handler)
+  * [oauth\_shutdown](#client.ibkr_client.IbkrClient.oauth_shutdown)
 * [AccountsMixin](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin)
+  * [account\_summary](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin.account_summary)
   * [account\_profit\_and\_loss](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin.account_profit_and_loss)
   * [search\_dynamic\_account](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin.search_dynamic_account)
   * [set\_dynamic\_account](#client.ibkr_client_mixins.accounts_mixin.AccountsMixin.set_dynamic_account)
@@ -29,10 +36,12 @@
   * [trading\_schedule\_by\_symbol](#client.ibkr_client_mixins.contract_mixin.ContractMixin.trading_schedule_by_symbol)
 * [MarketdataMixin](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin)
   * [live\_marketdata\_snapshot](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot)
+  * [live\_marketdata\_snapshot\_by\_symbol](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot_by_symbol)
   * [regulatory\_snapshot](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.regulatory_snapshot)
   * [marketdata\_history\_by\_conid](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_conid)
   * [historical\_marketdata\_beta](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.historical_marketdata_beta)
   * [marketdata\_history\_by\_symbol](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbol)
+  * [marketdata\_history\_by\_conids](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_conids)
   * [marketdata\_history\_by\_symbols](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbols)
   * [marketdata\_unsubscribe](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_unsubscribe)
   * [marketdata\_unsubscribe\_all](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_unsubscribe_all)
@@ -127,26 +136,169 @@ def __init__(account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
              base_route: str = '/v1/api/',
              cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
              timeout: float = 10,
-             max_retries: int = 3) -> None
+             max_retries: int = 3,
+             use_oauth: bool = var.IBIND_USE_OAUTH,
+             oauth_config: 'OAuthConfig' = None) -> None
 ```
 
 Arguments:
 
-- `account_id` _str_ - An identifier for the account.
-- `url` _str_ - The base URL for the REST API.
+- `account_id` _str_ - An identifier for the account. Defaults to None.
+- `url` _str_ - The base URL for the REST API. Defaults to None.
+  If 'use_oauth' is specified, the url is taken from oauth_config.
+  Only if it couldn't be found in oauth_config, this url is used,
+  or the parameters host, port and base_route.
 - `host` _str, optional_ - Host for the IBKR REST API. Defaults to 'localhost'.
 - `port` _str, optional_ - Port for the IBKR REST API. Defaults to '5000'
 - `base_route` _str, optional_ - Base route for the IBKR REST API. Defaults to '/v1/api/'.
 - `cacert` _Union[os.PathLike, bool], optional_ - Path to the CA certificate file for SSL verification,
-  or False to disable SSL verification. Defaults to False.
+  or False to disable SSL verification. Always True when
+  use_oauth is True. Defaults to False.
 - `timeout` _float, optional_ - Timeout in seconds for the API requests. Defaults to 10.
 - `max_retries` _int, optional_ - Maximum number of retries for failed API requests. Defaults to 3.
+- `use_oauth` _bool, optional_ - Whether to use OAuth authentication. Defaults to False.
+- `oauth_config` _OAuthConfig, optional_ - The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
+
+<a id="client.ibkr_client.IbkrClient.generate_live_session_token"></a>
+
+### generate\_live\_session\_token
+
+```python
+def generate_live_session_token()
+```
+
+Generates a new live session token for OAuth 1.0a authentication.
+
+This method requests a new OAuth live session token from the IBKR API using the configured
+OAuth credentials. The token is stored along with its expiration time and signature.
+
+The live session token is required for authenticated requests to IBKR's OAuth 1.0a API.
+
+Raises:
+
+- `ExternalBrokerError` - If the token request fails.
+
+<a id="client.ibkr_client.IbkrClient.oauth_init"></a>
+
+### oauth\_init
+
+```python
+def oauth_init(maintain_oauth: bool, shutdown_oauth: bool,
+               init_brokerage_session: bool)
+```
+
+Initializes the OAuth authentication flow for the IBKR API.
+
+This method sets up OAuth authentication by generating a live session token, validating it,
+and optionally starting a tickler to maintain the session. It also allows registering a
+shutdown handler and initializing a brokerage session if specified.
+
+OAuth authentication is required for certain IBKR API operations. The process includes:
+- Checking for the necessary cryptographic dependencies.
+- Generating and validating a live session token.
+- Optionally maintaining the session by running a tickler.
+- Registering a shutdown handler to clean up OAuth-related processes.
+- Initializing a brokerage session if required.
+
+Arguments:
+
+- `maintain_oauth` _bool_ - If True, starts the Tickler process to keep the session alive.
+- `shutdown_oauth` _bool_ - If True, registers a shutdown handler to clean up OAuth-related resources.
+- `init_brokerage_session` _bool_ - If True, initializes the brokerage session after authentication.
+  
+
+Raises:
+
+- `ImportError` - If the required cryptographic dependencies (`Crypto` module) are missing.
+- `RuntimeError` - If live session token validation fails.
+  
+  See:
+  - `generate_live_session_token`: Generates a new OAuth session token.
+  - `validate_live_session_token`: Validates the generated OAuth session token.
+  - `start_tickler`: Maintains the session by periodically sending requests.
+  - `register_shutdown_handler`: Registers cleanup processes for session termination.
+  - `initialize_brokerage_session`: Establishes a brokerage session post-authentication.
+
+<a id="client.ibkr_client.IbkrClient.start_tickler"></a>
+
+### start\_tickler
+
+```python
+def start_tickler()
+```
+
+Starts the `Tickler` instance and starts it in a separate thread to maintain the OAuth session.
+
+The Tickler sends periodic requests to the IBKR API to prevent the session from expiring.
+This is necessary when using OAuth authentication to keep the connection active.
+
+Notes:
+
+  - The Tickler should be stopped when the session is no longer needed using `stop_tickler()`.
+
+<a id="client.ibkr_client.IbkrClient.stop_tickler"></a>
+
+### stop\_tickler
+
+```python
+def stop_tickler()
+```
+
+Stops the Tickler thread if the Tickler is running.
+
+The Tickler is responsible for maintaining an active session by sending periodic requests to
+the IBKR API. This method stops the Tickler process, preventing further requests.
+
+<a id="client.ibkr_client.IbkrClient.register_shutdown_handler"></a>
+
+### register\_shutdown\_handler
+
+```python
+def register_shutdown_handler()
+```
+
+Registers a signal-based shutdown handler for graceful session termination.
+
+This method sets up signal handlers to ensure the OAuth session and Tickler process
+are properly shut down when the program receives termination signals (`SIGINT` or `SIGTERM`).
+
+When the specified signals are received:
+- `oauth_shutdown()` is called to stop the Tickler and log out.
+- Any previously registered signal handlers for `SIGINT` and `SIGTERM` are preserved and
+executed after the shutdown process.
+
+<a id="client.ibkr_client.IbkrClient.oauth_shutdown"></a>
+
+### oauth\_shutdown
+
+```python
+def oauth_shutdown()
+```
+
+Shuts down the OAuth session and cleans up resources.
+
+This method stops the Tickler process, which keeps the session alive, and logs out from
+the IBKR API to ensure a clean session termination.
 
 <a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin"></a>
 
 ## AccountsMixin
 
 https://ibkrcampus.com/ibkr-api-page/webapi-doc/#accounts
+
+<a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin.account_summary"></a>
+
+### account\_summary
+
+```python
+def account_summary(account_id: str = None) -> Result
+```
+
+Returns a summary of the account's information.
+
+Arguments:
+
+- `account_id` _str_ - The account identifier. If not provided, the active account is used.
 
 <a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin.account_profit_and_loss"></a>
 
@@ -590,6 +742,30 @@ Notes:
   - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
   - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
 
+<a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot_by_symbol"></a>
+
+### live\_marketdata\_snapshot\_by\_symbol
+
+```python
+def live_marketdata_snapshot_by_symbol(queries: StockQueries,
+                                       fields: OneOrMany[str]) -> dict
+```
+
+Get Market Data for the given symbols(s).
+
+A pre-flight request must be made prior to ever receiving data.
+
+Arguments:
+
+- `queries` _List[StockQuery]_ - A list of StockQuery objects to specify filtering criteria for stocks.
+- `fields` _OneOrMany[str]_ - Specify a series of tick values to be returned.
+  
+
+Notes:
+
+  - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
+  - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
+
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.regulatory_snapshot"></a>
 
 ### regulatory\_snapshot
@@ -698,23 +874,58 @@ Arguments:
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 
+<a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_conids"></a>
+
+### marketdata\_history\_by\_conids
+
+```python
+def marketdata_history_by_conids(conids: Union[List[str], Dict[str, str]],
+                                 period: str = "1min",
+                                 bar: str = "1min",
+                                 outside_rth: bool = True,
+                                 start_time: datetime.datetime = None,
+                                 raise_on_error: bool = False,
+                                 run_in_parallel: bool = True) -> dict
+```
+
+An extended version of the marketdata_history_by_conid method.
+
+For each conid provided, it queries the marketdata history for the specified symbols. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+
+Arguments:
+
+- `conids` _OneOrMany[str]_ - A list of conids to get market data for.
+- `exchange` _str, optional_ - Returns the exchange you want to receive data from.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
+- `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
+- `raise_on_error` _bool, optional_ - If True, raise an exception if an error occurs during the request. Defaults to False.
+- `run_in_parallel` _bool, optional_ - If True, send requests in parallel to speed up the response. Defaults to True.
+  
+
+Notes:
+
+  - This method returns data directly without the `Result` dataclass.
+
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.marketdata_history_by_symbols"></a>
 
 ### marketdata\_history\_by\_symbols
 
 ```python
 @ensure_list_arg('queries')
-def marketdata_history_by_symbols(
-        queries: StockQueries,
-        period: str = "1min",
-        bar: str = "1min",
-        outside_rth: bool = True,
-        start_time: datetime.datetime = None) -> dict
+def marketdata_history_by_symbols(queries: StockQueries,
+                                  period: str = "1min",
+                                  bar: str = "1min",
+                                  outside_rth: bool = True,
+                                  start_time: datetime.datetime = None,
+                                  raise_on_error: bool = False,
+                                  run_in_parallel: bool = True) -> dict
 ```
 
-An extended version of the marketdata_history_by_symbol method.
+An extended version of the marketdata_history_by_conids method.
 
-For each StockQuery provided, it queries the marketdata history for the specified symbols in parallel. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+For each StockQuery provided, it queries the marketdata history for the specified symbols. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
 
 Arguments:
 
@@ -724,6 +935,8 @@ Arguments:
 - `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
+- `raise_on_error` _bool, optional_ - If True, raise an exception if an error occurs during the request. Defaults to False.
+- `run_in_parallel` _bool, optional_ - If True, send requests in parallel to speed up the response. Defaults to True.
   
 
 Notes:
@@ -840,7 +1053,8 @@ Arguments:
 ### place\_order
 
 ```python
-def place_order(order_request: dict,
+@ensure_list_arg('order_request')
+def place_order(order_request: OneOrMany[dict],
                 answers: Answers,
                 account_id: str = None) -> Result
 ```
@@ -857,10 +1071,15 @@ Arguments:
 
 - `account_id` _str_ - The account ID for which account should place the order.
 - `answers` _Answers_ - List of question-answer pairs for order submission process.
-- `order_request` _dict_ - Used to the order content.
+- `order_request` _OneOrMany[dict]_ - Used to the order content.
   
   Keep this in mind:
   https://interactivebrokers.github.io/tws-api/automated_considerations.html#order_placement
+  
+
+Notes:
+
+  - Only one order can be placed at a time due to question-reply mechanism
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.reply"></a>
 
@@ -938,6 +1157,11 @@ Arguments:
 - `order_request` _dict_ - Used to the order content. The content should mirror the content of the original order.
 - `answers` _Answers_ - List of question-answer pairs for order submission process.
 - `account_id` _str_ - The account ID for which account should place the order.
+  
+
+Notes:
+
+  - Only one order can be modified at a time due to question-reply mechanism
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.suppress_messages"></a>
 
@@ -1292,7 +1516,7 @@ Current Authentication status to the Brokerage system. Market Data and Trading i
 ### initialize\_brokerage\_session
 
 ```python
-def initialize_brokerage_session(publish: bool, compete: bool) -> Result
+def initialize_brokerage_session(compete: bool = True) -> Result
 ```
 
 After retrieving the access token and subsequent Live Session Token, customers can initialize their brokerage session with the ssodh/init endpoint.
@@ -1300,8 +1524,12 @@ NOTE: This is essential for using all /iserver endpoints, including access to tr
 
 Arguments:
 
-- `publish` _Boolean_ - Determines if the request should be sent immediately. Users should always pass true. Otherwise, a ‘500’ response will be returned.
 - `compete` _Boolean_ - Determines if other brokerage sessions should be disconnected to prioritize this connection.
+  
+
+Notes:
+
+  - `publish` parameter is always set to `True` as per the documentation.
 
 <a id="client.ibkr_client_mixins.session_mixin.SessionMixin.logout"></a>
 

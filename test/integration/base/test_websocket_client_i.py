@@ -110,11 +110,11 @@ class TestWsClient(TestCase):
 
     def _verify_started(self):
         self.wsa_mock.run_forever.assert_called_with(sslopt=self.ws_client._sslopt, ping_interval=self.ws_client._ping_interval, ping_timeout=0.95 * self.ws_client._ping_interval)
-        self.wsa_mock.on_open.assert_called_with(self.wsa_mock)
+        self.wsa_mock._on_open.assert_called_with(self.wsa_mock)
 
     def _verify_failed_starting(self):
         self.wsa_mock.run_forever.assert_not_called()
-        self.wsa_mock.on_open.assert_not_called()
+        self.wsa_mock._on_open.assert_not_called()
         self.wsa_mock.close.assert_called()
 
     def test_start_success(self):
@@ -220,11 +220,11 @@ class TestWsClient(TestCase):
             self.ws_client.shutdown()
             return success
 
-        self.ws_client.on_message = MagicMock()
+        self.ws_client._on_message = MagicMock()
 
         cm, success = self.run_in_test_context(run)
 
-        self.ws_client.on_message.assert_called_once_with(self.wsa_mock, 'test')
+        self.ws_client._on_message.assert_called_once_with(self.wsa_mock, 'test')
 
         exact_log(self, cm,
                   self._logs_start_success_beginning() +
@@ -236,7 +236,7 @@ class TestWsClient(TestCase):
             self.ws_client.send('test')
             self.ws_client.shutdown()
 
-        self.ws_client.on_message = MagicMock()
+        self.ws_client._on_message = MagicMock()
 
         expected_errors = [
             'WsClient: Must be started before sending payloads'
@@ -257,7 +257,7 @@ class TestWsClient(TestCase):
             self.ws_client.start()
             self.ws_client.check_ping()
             # we simulate that closing the WebSocketApp doesn't work since we have connectivity issues
-            self.wsa_mock.on_close.side_effect = lambda x, y, z: None
+            self.wsa_mock._on_close.side_effect = lambda x, y, z: None
             with patch('ibind.base.ws_client.time') as time_mock:
                 time_mock.time.side_effect = fake_time
                 self.wsa_mock.last_ping_tm = self.max_ping_interval
@@ -265,7 +265,7 @@ class TestWsClient(TestCase):
                 self.assertTrue(self.ws_client.ready())
                 self.ws_client.shutdown()
 
-        self.ws_client.on_message = MagicMock()
+        self.ws_client._on_message = MagicMock()
 
         expected_errors = [
             'WsClient: Must be started before sending payloads',

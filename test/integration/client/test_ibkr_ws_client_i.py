@@ -128,10 +128,10 @@ class TestIbkrWsClient(TestCase):
                 if response is None:
                     return
                 raw_message = json.dumps(response)
-                wsa_mock._on_message(wsa_mock, raw_message)
+                wsa_mock.__on_message__(wsa_mock, raw_message)
 
             self.ws_client.start()
-            self.wsa_mock.on_message.side_effect = override_on_message
+            self.wsa_mock._on_message.side_effect = override_on_message
             rv = self.ws_client.subscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation':request.get('needs_confirmation')})
             self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation': request.get('confirms_unsubscription')})
             self.ws_client.shutdown()
@@ -324,12 +324,12 @@ class TestIbkrWsClient(TestCase):
             # ensures each time WebSocketApp's mock is created, we override its on_message method
             def override_init_wsa_mock(wsa_mock: MagicMock, *args, **kwargs):
                 wsa_mock = init_wsa_mock(wsa_mock, *args, **kwargs)
-                wsa_mock.on_message.side_effect = lambda wsa_mock, message: wsa_mock._on_message(wsa_mock, json.dumps(response))
+                wsa_mock._on_message.side_effect = lambda wsa_mock, message: wsa_mock.__on_message__(wsa_mock, json.dumps(response))
                 return wsa_mock
 
             self.ws_client.start()
             self.ws_client.check_health()
-            self.wsa_mock.on_message.side_effect = lambda wsa_mock, message: wsa_mock._on_message(wsa_mock, json.dumps(response))
+            self.wsa_mock._on_message.side_effect = lambda wsa_mock, message: wsa_mock.__on_message__(wsa_mock, json.dumps(response))
 
             # create the original subscription
             self.ws_client.subscribe(**request)

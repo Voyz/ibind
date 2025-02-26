@@ -77,7 +77,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             from ibind.oauth.oauth1a import OAuth1aConfig
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
-            url = url if self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
+            url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
 
         if url is None:
             url = f'https://{host}:{port}{base_route}'
@@ -98,7 +98,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                     init_brokerage_session=self.oauth_config.init_brokerage_session,
                 )
 
-    def make_logger(self):
+    def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
     def _request(
@@ -107,20 +107,19 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             endpoint: str,
             base_url: str = None,
             extra_headers: dict = None,
-            attempt: int = 0,
             log: bool = True,
             **kwargs
     ) -> Result:
         """ Handle IBKR-specific errors."""
 
         try:
-            return super()._request(method, endpoint, base_url, extra_headers, attempt, log, **kwargs)
+            return super()._request(method, endpoint, base_url, extra_headers, log, **kwargs)
         except ExternalBrokerError as e:
             if 'Bad Request: no bridge' in str(e) and e.status_code == 400:
                 raise ExternalBrokerError(f'IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
             raise
 
-    def get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str):
         if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
@@ -137,6 +136,17 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         return headers
 
     def generate_live_session_token(self):
+        """
+        Generates a new live session token for OAuth 1.0a authentication.
+
+        This method requests a new OAuth live session token from the IBKR API using the configured
+        OAuth credentials. The token is stored along with its expiration time and signature.
+
+        The live session token is required for authenticated requests to IBKR's OAuth 1.0a API.
+
+        Raises:
+            ExternalBrokerError: If the token request fails.
+        """
         from ibind.oauth.oauth1a import req_live_session_token
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature \
             = req_live_session_token(self, self.oauth_config)
@@ -147,6 +157,36 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             shutdown_oauth: bool,
             init_brokerage_session: bool
     ):
+        """
+        Initializes the OAuth authentication flow for the IBKR API.
+
+        This method sets up OAuth authentication by generating a live session token, validating it,
+        and optionally starting a tickler to maintain the session. It also allows registering a
+        shutdown handler and initializing a brokerage session if specified.
+
+        OAuth authentication is required for certain IBKR API operations. The process includes:
+        - Checking for the necessary cryptographic dependencies.
+        - Generating and validating a live session token.
+        - Optionally maintaining the session by running a tickler.
+        - Registering a shutdown handler to clean up OAuth-related processes.
+        - Initializing a brokerage session if required.
+
+        Parameters:
+            maintain_oauth (bool): If True, starts the Tickler process to keep the session alive.
+            shutdown_oauth (bool): If True, registers a shutdown handler to clean up OAuth-related resources.
+            init_brokerage_session (bool): If True, initializes the brokerage session after authentication.
+
+        Raises:
+            ImportError: If the required cryptographic dependencies (`Crypto` module) are missing.
+            RuntimeError: If live session token validation fails.
+
+        See:
+            - `generate_live_session_token`: Generates a new OAuth session token.
+            - `validate_live_session_token`: Validates the generated OAuth session token.
+            - `start_tickler`: Maintains the session by periodically sending requests.
+            - `register_shutdown_handler`: Registers cleanup processes for session termination.
+            - `initialize_brokerage_session`: Establishes a brokerage session post-authentication.
+        """
         _LOGGER.info(f'{self}: Initialising OAuth {self.oauth_config.version()}')
 
         if importlib.util.find_spec('Crypto') is None:
@@ -175,16 +215,42 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self.initialize_brokerage_session()
 
     def start_tickler(self):
-        # start Tickler to maintain the connection alive
+        """
+        Starts the `Tickler` instance and starts it in a separate thread to maintain the OAuth session.
+
+        The Tickler sends periodic requests to the IBKR API to prevent the session from expiring.
+        This is necessary when using OAuth authentication to keep the connection active.
+
+        Note:
+            - The Tickler should be stopped when the session is no longer needed using `stop_tickler()`.
+
+        """
         _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
         self._tickler = Tickler(self)
         self._tickler.start()
 
     def stop_tickler(self):
+        """
+        Stops the Tickler thread if the Tickler is running.
+
+        The Tickler is responsible for maintaining an active session by sending periodic requests to
+        the IBKR API. This method stops the Tickler process, preventing further requests.
+        """
         if hasattr(self, '_tickler') and self._tickler is not None:
             self._tickler.stop()
 
     def register_shutdown_handler(self):
+        """
+        Registers a signal-based shutdown handler for graceful session termination.
+
+        This method sets up signal handlers to ensure the OAuth session and Tickler process
+        are properly shut down when the program receives termination signals (`SIGINT` or `SIGTERM`).
+
+        When the specified signals are received:
+        - `oauth_shutdown()` is called to stop the Tickler and log out.
+        - Any previously registered signal handlers for `SIGINT` and `SIGTERM` are preserved and
+          executed after the shutdown process.
+        """
         _LOGGER.info(f'{self}: Registering automatic shutdown handler')
         # add signal handlers to gracefully shut down the Tickler and the client
         import signal
@@ -204,6 +270,12 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         signal.signal(signal.SIGTERM, _stop)
 
     def oauth_shutdown(self):
+        """
+        Shuts down the OAuth session and cleans up resources.
+
+        This method stops the Tickler process, which keeps the session alive, and logs out from
+        the IBKR API to ensure a clean session termination.
+        """
         _LOGGER.info(f'{self}: Shutting down OAuth')
         self.stop_tickler()
         self.logout()
