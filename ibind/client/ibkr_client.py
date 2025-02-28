@@ -43,7 +43,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self,
             account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
             url: str = var.IBIND_REST_URL,
-            host: str = 'localhost',
+            host: str = '127.0.0.1',
             port: str = '5000',
             base_route: str = '/v1/api/',
             cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
