@@ -49,6 +49,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
             timeout: float = 10,
             max_retries: int = 3,
+            use_session: bool = var.IBIND_USE_SESSION,
             use_oauth: bool = var.IBIND_USE_OAUTH,
             oauth_config: 'OAuthConfig' = None
     ) -> None:
@@ -67,6 +68,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                                                          use_oauth is True. Defaults to False.
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
+            use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
             oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
         """
@@ -85,7 +87,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.account_id = account_id
 
         cacert = True if self._use_oauth else cacert
-        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries)
+        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries, use_session=use_session)
 
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})')
@@ -94,7 +96,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             if self.oauth_config.init_oauth:
                 self.oauth_init(
                     maintain_oauth=self.oauth_config.maintain_oauth,
-                    shutdown_oauth=self.oauth_config.shutdown_oauth,
                     init_brokerage_session=self.oauth_config.init_brokerage_session,
                 )
 
@@ -154,26 +155,22 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     def oauth_init(
             self,
             maintain_oauth: bool,
-            shutdown_oauth: bool,
             init_brokerage_session: bool
     ):
         """
         Initializes the OAuth authentication flow for the IBKR API.
 
         This method sets up OAuth authentication by generating a live session token, validating it,
-        and optionally starting a tickler to maintain the session. It also allows registering a
-        shutdown handler and initializing a brokerage session if specified.
+        and optionally starting a tickler to maintain the session. It also allows initializing a brokerage session if specified.
 
         OAuth authentication is required for certain IBKR API operations. The process includes:
         - Checking for the necessary cryptographic dependencies.
         - Generating and validating a live session token.
         - Optionally maintaining the session by running a tickler.
-        - Registering a shutdown handler to clean up OAuth-related processes.
         - Initializing a brokerage session if required.
 
         Parameters:
             maintain_oauth (bool): If True, starts the Tickler process to keep the session alive.
-            shutdown_oauth (bool): If True, registers a shutdown handler to clean up OAuth-related resources.
             init_brokerage_session (bool): If True, initializes the brokerage session after authentication.
 
         Raises:
@@ -184,7 +181,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             - `generate_live_session_token`: Generates a new OAuth session token.
             - `validate_live_session_token`: Validates the generated OAuth session token.
             - `start_tickler`: Maintains the session by periodically sending requests.
-            - `register_shutdown_handler`: Registers cleanup processes for session termination.
             - `initialize_brokerage_session`: Establishes a brokerage session post-authentication.
         """
         _LOGGER.info(f'{self}: Initialising OAuth {self.oauth_config.version()}')
@@ -207,9 +203,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if maintain_oauth:
             self.start_tickler()
-
-        if shutdown_oauth:
-            self.register_shutdown_handler()
 
         if init_brokerage_session:
             self.initialize_brokerage_session()
@@ -239,35 +232,10 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         if hasattr(self, '_tickler') and self._tickler is not None:
             self._tickler.stop()
 
-    def register_shutdown_handler(self):
-        """
-        Registers a signal-based shutdown handler for graceful session termination.
-
-        This method sets up signal handlers to ensure the OAuth session and Tickler process
-        are properly shut down when the program receives termination signals (`SIGINT` or `SIGTERM`).
-
-        When the specified signals are received:
-        - `oauth_shutdown()` is called to stop the Tickler and log out.
-        - Any previously registered signal handlers for `SIGINT` and `SIGTERM` are preserved and
-          executed after the shutdown process.
-        """
-        _LOGGER.info(f'{self}: Registering automatic shutdown handler')
-        # add signal handlers to gracefully shut down the Tickler and the client
-        import signal
-        existing_handler_int = signal.getsignal(signal.SIGINT)
-        existing_handler_term = signal.getsignal(signal.SIGTERM)
-
-        def _stop(signum, frame):
+    def close(self):
+        if self._use_oauth and self.oauth_config.shutdown_oauth:
             self.oauth_shutdown()
-
-            if signum == signal.SIGINT and callable(existing_handler_int):
-                existing_handler_int(signum, frame)
-
-            if signum == signal.SIGTERM and callable(existing_handler_term):
-                existing_handler_term(signum, frame)
-
-        signal.signal(signal.SIGINT, _stop)
-        signal.signal(signal.SIGTERM, _stop)
+        super().close()
 
     def oauth_shutdown(self):
         """

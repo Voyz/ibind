@@ -28,6 +28,10 @@ def strtobool(value):
 def to_bool(value):
     return bool(strtobool(str(value)))
 
+##### GENERAL #####
+
+IBIND_USE_SESSION = to_bool(os.environ.get('IBIND_USE_SESSION', True))
+""" Whether to use persistent session in REST requests. """
 
 ##### LOGS #####
 

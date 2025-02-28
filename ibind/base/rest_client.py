@@ -1,3 +1,5 @@
+import atexit
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -5,6 +7,8 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
@@ -79,6 +83,7 @@ class RestClient:
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
+            use_session: bool = var.IBIND_USE_SESSION,
     ) -> None:
         """
         Parameters:
@@ -87,7 +92,9 @@ class RestClient:
                                                          or False to disable SSL verification. Defaults to False.
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
+            use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
         """
+
         if url is None:
             raise ValueError(f"{self}: url must not be None")
         self.base_url = url
@@ -103,8 +110,22 @@ class RestClient:
 
         self._make_logger()
 
+        self.use_session = use_session
+
+        if use_session:
+            self.make_session()
+
+        self.register_shutdown_handler()
+
     def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
+
+    def make_session(self):
+        """Creates a new session, ensuring old one (if exists) is closed properly."""
+        self._session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10, pool_block=True)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
 
     @property
     def logger(self):
@@ -155,7 +176,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True,
             **kwargs
-            ) -> Result:
+    ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -205,13 +226,16 @@ class RestClient:
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
+        # choose which function should be used to make a reqeust based on use_session field
+        request_function = self._session.request if self.use_session else requests.request
+
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             if log:
                 self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
             try:
-                response = requests.request(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
+                response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
@@ -219,11 +243,21 @@ class RestClient:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
 
+                self.logger.info(f"{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}")
                 _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
+
+            except (ConnectionError, ChunkedEncodingError) as e:
+                self.logger.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                _LOGGER.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                self.close()
+                self.make_session()  # Recreate session automatically
+                continue  # Retry the request with a fresh session
+
             except ExternalBrokerError:
                 raise
+
             except Exception as e:
                 self.logger.exception(e)
                 raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
@@ -233,12 +267,60 @@ class RestClient:
             response.raise_for_status()
             result.data = response.json()
             return result
+
         except Timeout as e:
             raise ExternalBrokerError(f'{self}: Timeout error ({self._timeout}S)', status_code=response.status_code) from e
-        # TODO: add further network exceptions for graceful handling
-        # TODO: add JSON parse exception handling
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON response: {str(e)}")
+            raise ExternalBrokerError(f'{self}: API returned invalid JSON.') from e
+
         except Exception as e:
             raise ExternalBrokerError(f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+
+    def close(self):
+        """ Closes the session to release resources."""
+        if hasattr(self, 'session'):
+            self._session.close()
+            self._session = None
+
+    def register_shutdown_handler(self):
+        """
+        Registers a signal-based and atexit shutdown handler for graceful session termination.
+
+        This method sets up signal and atexit handlers to ensure the session is closed when the `SIGINT` or `SIGTERM` signals are received, or when the program is terminated.
+
+        When the specified signals are received:
+        - `close()` is called to close the session.
+        - Any previously registered signal handlers for `SIGINT` and `SIGTERM` are preserved and
+          executed after the shutdown process.
+        """
+
+        import signal
+        existing_handler_int = signal.getsignal(signal.SIGINT)
+        existing_handler_term = signal.getsignal(signal.SIGTERM)
+
+        self._closed = False
+
+        def _close_handler():
+            if self._closed:
+                return
+            self._closed = True
+
+            self.close()
+
+        def _signal_handler(signum, frame):
+            _close_handler()
+
+            if signum == signal.SIGINT and callable(existing_handler_int):
+                existing_handler_int(signum, frame)
+
+            if signum == signal.SIGTERM and callable(existing_handler_term):
+                existing_handler_term(signum, frame)
+
+        signal.signal(signal.SIGINT, _signal_handler)
+        signal.signal(signal.SIGTERM, _signal_handler)
+        atexit.register(_close_handler)
 
     def __str__(self):
         return f'{self.__class__.__qualname__}'
