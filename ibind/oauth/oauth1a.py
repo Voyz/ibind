@@ -3,6 +3,7 @@ import secrets
 import string
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib import parse
 
@@ -64,6 +65,43 @@ class OAuth1aConfig(OAuthConfig):
 
     realm: str = var.IBIND_OAUTH1A_REALM
     """ OAuth 1.0a connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+
+    def verify_config(self) -> None:
+        """
+        Validates the OAuth 1.0a configuration parameters.
+
+        Checks if all required parameters are set and raises an exception if any are missing.
+
+        Parameters:
+            oauth_config (OAuth1aConfig): The OAuth 1.0a configuration object to validate.
+
+        Raises:
+            ValueError: If any required parameter is missing.
+        """
+
+        required_params = [
+            'oauth_rest_url',
+            'live_session_token_endpoint',
+            'access_token',
+            'access_token_secret',
+            'consumer_key',
+            'dh_prime',
+            'encryption_key_fp',
+            'signature_key_fp',
+        ]
+        missing_params = [param for param in required_params if getattr(self, param) is None]
+        if missing_params:
+            raise ValueError(f"OAuth1aConfig is missing required parameters: {', '.join(missing_params)}")
+
+        required_filepaths = [
+            'encryption_key_fp',
+            'signature_key_fp',
+        ]
+        missing_filepaths = [filepath for filepath in required_filepaths if not Path(getattr(self, filepath)).exists()]
+        if missing_filepaths:
+            raise ValueError(f"OAuth1aConfig's filepaths don't exist: {', '.join(missing_filepaths)}")
+
+        return
 
 
 def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) -> tuple[str, int, str]:

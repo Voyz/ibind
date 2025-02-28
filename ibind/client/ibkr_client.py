@@ -93,6 +93,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})')
 
         if self._use_oauth:
+            self.oauth_config.verify_config()
+
             if self.oauth_config.init_oauth:
                 self.oauth_init(
                     maintain_oauth=self.oauth_config.maintain_oauth,
