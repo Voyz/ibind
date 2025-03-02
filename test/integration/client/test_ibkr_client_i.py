@@ -251,7 +251,7 @@ class TestIbkrClientI(TestCase):
             12345: MagicMock(status_code=200),
             67890: MagicMock(status_code=200)
         }
-        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
+        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
         self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}), __name__='client_get_mock')
 
         results = self.client.marketdata_unsubscribe(conids)
@@ -268,7 +268,7 @@ class TestIbkrClientI(TestCase):
             12345: MagicMock(status_code=404),  # Simulate not found error for one conid
             67890: MagicMock(status_code=200)
         }
-        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
+        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
         self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}) if '67890' in url else ExternalBrokerError(status_code=404), __name__='client_get_mock')
 
         results = self.client.marketdata_unsubscribe(conids)
