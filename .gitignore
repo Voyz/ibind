@@ -9,5 +9,3 @@ build/docs/mkdocs.yml
 .env
 *.env
 .vscode
-
-.DS_store
