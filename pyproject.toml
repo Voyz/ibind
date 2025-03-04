@@ -36,7 +36,3 @@ requires = [
     "setuptools"
 ]
 build-backend = "setuptools.build_meta"
-
-[tool.ruff]
-# Disable ruff formatting
-disable = ["all"]
