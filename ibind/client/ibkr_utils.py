@@ -1,7 +1,6 @@
 import datetime
 import pprint
 import threading
-import time
 from dataclasses import dataclass, field, fields
 from typing import Optional, Dict, Union, TYPE_CHECKING
 from warnings import warn
@@ -553,12 +552,12 @@ class Tickler():
        """
         self._client = client
         self._interval = interval
-        self._running = True
+        self._stop_event = threading.Event()
         self._thread = None
 
     def _worker(self):
         _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
-        while self._running:
+        while not self._stop_event.wait(self._interval):
             try:
                 self._client.tickle()
             except KeyboardInterrupt:
@@ -566,8 +565,6 @@ class Tickler():
                 break
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
-
-            time.sleep(self._interval)
 
         _LOGGER.info(f'Tickler gracefully stopped.')
 
@@ -582,8 +579,8 @@ class Tickler():
             _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
             return
 
-        self._thread = threading.Thread(target=self._worker)
-        self._thread.daemon = True
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
 
     def stop(self, timeout=None):
@@ -599,8 +596,9 @@ class Tickler():
         if self._thread is None:
             return
 
-        self._running = False
+        self._stop_event.set()  # Wake up the sleeping thread immediately
         self._thread.join(timeout)
+        self._thread = None  # Ensure cleanup
 
 
 def cleanup_market_history_responses(
