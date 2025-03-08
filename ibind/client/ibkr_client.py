@@ -81,13 +81,15 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
             url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
 
+        shutdown_oauth = var.IBIND_SHUTDOWN_OAUTH if not self._use_oauth else self.oauth_config.shutdown_oauth
+
         if url is None:
             url = f'https://{host}:{port}{base_route}'
 
         self.account_id = account_id
 
         cacert = True if self._use_oauth else cacert
-        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries, use_session=use_session)
+        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries, use_session=use_session, shutdown_oauth=shutdown_oauth)
 
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})')

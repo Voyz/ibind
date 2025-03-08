@@ -84,6 +84,7 @@ class RestClient:
             timeout: float = 10,
             max_retries: int = 3,
             use_session: bool = var.IBIND_USE_SESSION,
+            shutdown_oauth: bool = var.IBIND_SHUTDOWN_OAUTH,
     ) -> None:
         """
         Parameters:
@@ -115,7 +116,8 @@ class RestClient:
         if use_session:
             self.make_session()
 
-        self.register_shutdown_handler()
+        if shutdown_oauth:
+            self.register_shutdown_handler()
 
     def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
