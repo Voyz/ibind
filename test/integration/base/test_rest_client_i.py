@@ -1,5 +1,7 @@
+import threading
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
+import asyncio
 
 from requests import ReadTimeout, Timeout
 
@@ -10,7 +12,7 @@ from ibind.base.rest_client import Result, RestClient
 
 
 @patch('ibind.base.rest_client.requests')
-class TestIbkrClientI(TestCase):
+class TestRestClientI(TestCase):
     def setUp(self):
         self.url = 'https://localhost:5000'
         self.account_id = 'TEST_ACCOUNT_ID'
@@ -81,3 +83,65 @@ class TestIbkrClientI(TestCase):
             self.client.get(self.default_path)
 
         self.assertEqual(f"RestClient: response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}", str(cm_err.exception))
+
+class TestRestClientInThread(TestCase):
+    def _worker(self, results:[]):
+        try:
+            IbkrClient()
+        except Exception as e:
+            results.append(e)
+
+    def test_in_thread(self):
+        """ Run in thread ensuring client still is constructed without an exception."""
+        results = []
+        t = threading.Thread(target=self._worker, args=(results,))
+        t.daemon = True
+        t.start()
+        t.join(1)
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+
+
+    def test_without_thread(self):
+        """ Run without a thread to ensure it still works as expected."""
+        results = []
+        self._worker(results)
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+
+
+class TestRestClientAsync(TestCase):
+    def _worker(self, results: []):
+        """Runs the async test inside a new thread to check if signal handling breaks."""
+        try:
+            asyncio.run(self._async_worker(results))
+        except Exception as e:
+            results.append(e)
+
+    async def _async_worker(self, results: []):
+        """Async version of the worker function to run in an asyncio event loop."""
+        try:
+            IbkrClient()
+        except Exception as e:
+            results.append(e)
+
+    def test_in_thread_async(self):
+        """Test that IbkrClient() does not break in an asyncio thread."""
+        results = []
+        t = threading.Thread(target=self._worker, args=(results,))
+        t.daemon = True
+        t.start()
+        t.join(1)
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+
+    def test_without_thread_async(self):
+        """Test that IbkrClient() does not break in the main asyncio event loop."""
+        results = []
+        asyncio.run(self._async_worker(results))
+        for result in results:
+            if isinstance(result, Exception):
+                raise result

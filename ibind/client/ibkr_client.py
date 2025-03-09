@@ -50,8 +50,10 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout: float = 10,
             max_retries: int = 3,
             use_session: bool = var.IBIND_USE_SESSION,
+            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
             use_oauth: bool = var.IBIND_USE_OAUTH,
-            oauth_config: 'OAuthConfig' = None
+            oauth_config: 'OAuthConfig' = None,
+
     ) -> None:
         """
         Parameters:
@@ -69,6 +71,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
             oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
         """
@@ -87,7 +90,14 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.account_id = account_id
 
         cacert = True if self._use_oauth else cacert
-        super().__init__(url=url, cacert=cacert, timeout=timeout, max_retries=max_retries, use_session=use_session)
+        super().__init__(
+            url=url,
+            cacert=cacert,
+            timeout=timeout,
+            max_retries=max_retries,
+            use_session=use_session,
+            auto_register_shutdown=auto_register_shutdown,
+        )
 
         self.logger.info('#################')
         self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})')

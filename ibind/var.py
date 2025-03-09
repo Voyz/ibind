@@ -33,6 +33,9 @@ def to_bool(value):
 IBIND_USE_SESSION = to_bool(os.environ.get('IBIND_USE_SESSION', True))
 """ Whether to use persistent session in REST requests. """
 
+IBIND_AUTO_REGISTER_SHUTDOWN = to_bool(os.environ.get('IBIND_AUTO_REGISTER_SHUTDOWN', True))
+""" Whether to automatically register the shutdown handler. """
+
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))

@@ -84,6 +84,7 @@ class RestClient:
             timeout: float = 10,
             max_retries: int = 3,
             use_session: bool = var.IBIND_USE_SESSION,
+            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
     ) -> None:
         """
         Parameters:
@@ -93,6 +94,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
         """
 
         if url is None:
@@ -115,7 +117,8 @@ class RestClient:
         if use_session:
             self.make_session()
 
-        self.register_shutdown_handler()
+        if auto_register_shutdown:
+            self.register_shutdown_handler()
 
     def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
@@ -123,9 +126,6 @@ class RestClient:
     def make_session(self):
         """Creates a new session, ensuring old one (if exists) is closed properly."""
         self._session = requests.Session()
-        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10, pool_block=True)
-        self._session.mount("https://", adapter)
-        self._session.mount("http://", adapter)
 
     @property
     def logger(self):
@@ -306,7 +306,6 @@ class RestClient:
             if self._closed:
                 return
             self._closed = True
-
             self.close()
 
         def _signal_handler(signum, frame):
@@ -318,8 +317,14 @@ class RestClient:
             if signum == signal.SIGTERM and callable(existing_handler_term):
                 existing_handler_term(signum, frame)
 
-        signal.signal(signal.SIGINT, _signal_handler)
-        signal.signal(signal.SIGTERM, _signal_handler)
+        try:
+            signal.signal(signal.SIGINT, _signal_handler)
+            signal.signal(signal.SIGTERM, _signal_handler)
+        except ValueError as e:
+            if str(e) == 'signal only works in main thread of the main interpreter':
+                pass # we cannot register signal, we ignore it and continue working as normal
+            else:
+                raise
         atexit.register(_close_handler)
 
     def __str__(self):
