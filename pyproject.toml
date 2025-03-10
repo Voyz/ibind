@@ -48,6 +48,10 @@ ignore = [
     "E712", # Ignore true-false-comparison
     "PLR2004", # Ignore Pylint rule Magic Values
     "PLW1508", # Ignore Environment variable default type
+    "PLR0913", # Too many arguments # TODO: Remove this once we have refactored the code
+    "PLR0915", # Too many statements # TODO: Remove this once we have refactored  the code
+    "PLR0912", # Too many branches # TODO: Remove this once we have refactored the code
+    "PLW0603" # Global vars # TODO: Remove this once we have refactored the code
 ]
 
 
