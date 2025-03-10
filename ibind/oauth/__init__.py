@@ -28,6 +28,9 @@ class OAuthConfig(ABC):
         """
         raise NotImplementedError()
 
+    def verify_config(self):
+        return
+
     init_oauth: bool = var.IBIND_INIT_OAUTH
     """ Whether OAuth should be automatically initialised. """
 
@@ -53,3 +56,4 @@ class OAuthConfig(ABC):
                 raise AttributeError(f'OAuthConfig does not have attribute "{kwarg}"')
             setattr(copied, kwarg, value)
         return copied
+

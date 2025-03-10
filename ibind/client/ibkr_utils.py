@@ -1,7 +1,6 @@
 import datetime
 import pprint
 import threading
-import time
 from dataclasses import dataclass, field, fields
 from typing import Optional, Dict, Union, TYPE_CHECKING
 from warnings import warn
@@ -98,7 +97,7 @@ def process_instruments(
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
-            instrument['contracts'] =  filtered_contracts
+            instrument['contracts'] = filtered_contracts
 
         filtered_instruments.append(instrument)
 
@@ -182,6 +181,7 @@ Example:
     ...     "Some custom warning message": False
     ... }
 """
+
 
 def find_answer(question: str, answers: Answers):
     """
@@ -281,6 +281,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
     raise RuntimeError(f'Too many questions: {original_result}: {questions}')
 
+
 @dataclass
 class OrderRequest:
     conid: Union[int, str]
@@ -312,9 +313,13 @@ class OrderRequest:
     strategy: Optional[str] = field(default=None)
     strategy_parameters: Optional[dict] = field(default=None)
 
+    # undocumented
+    is_close: Optional[bool] = field(default=None)
+
     def to_dict(self) -> dict:
         """ Convert dataclass to a dictionary, excluding None values. """
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
+
 
 _ORDER_REQUEST_MAPPING = {
     'conid': "conid",
@@ -332,7 +337,7 @@ _ORDER_REQUEST_MAPPING = {
     'outside_rth': "outsideRTH",
     'aux_price': "auxPrice",
     'ticker': "ticker",
-    'tif': "tif" ,
+    'tif': "tif",
     'trailing_amt': "trailingAmt",
     'trailing_type': "trailingType",
     'referrer': "referrer",
@@ -343,16 +348,22 @@ _ORDER_REQUEST_MAPPING = {
     'allocation_method': "allocationMethod",
     'strategy': "strategy",
     'strategy_parameters': "strategyParameters",
+    'is_close': 'isClose',
 }
 
-def parse_order_request(order_request: OrderRequest) -> dict:
+
+def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> dict:
+    if mapping is None:
+        mapping = _ORDER_REQUEST_MAPPING
+
     if isinstance(order_request, dict):
         _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         return order_request
     else:
         return {
-            _ORDER_REQUEST_MAPPING[k]: v for k, v in order_request.to_dict().items() if v is not None
+            mapping[k]: v for k, v in order_request.to_dict().items() if v is not None
         }
+
 
 def make_order_request(
         conid: Union[int, str],
@@ -541,12 +552,12 @@ class Tickler():
        """
         self._client = client
         self._interval = interval
-        self._running = True
+        self._stop_event = threading.Event()
         self._thread = None
 
     def _worker(self):
         _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
-        while self._running:
+        while not self._stop_event.wait(self._interval):
             try:
                 self._client.tickle()
             except KeyboardInterrupt:
@@ -554,8 +565,6 @@ class Tickler():
                 break
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
-
-            time.sleep(self._interval)
 
         _LOGGER.info(f'Tickler gracefully stopped.')
 
@@ -570,8 +579,8 @@ class Tickler():
             _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
             return
 
-        self._thread = threading.Thread(target=self._worker)
-        self._thread.daemon = True
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
 
     def stop(self, timeout=None):
@@ -587,8 +596,9 @@ class Tickler():
         if self._thread is None:
             return
 
-        self._running = False
+        self._stop_event.set()  # Wake up the sleeping thread immediately
         self._thread.join(timeout)
+        self._thread = None  # Ensure cleanup
 
 
 def cleanup_market_history_responses(

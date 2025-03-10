@@ -206,7 +206,7 @@ class IbkrWsClient(WsClient):
             self,
             account_id: str = var.IBIND_ACCOUNT_ID,
             url: str = var.IBIND_WS_URL,
-            host: str = 'localhost',
+            host: str = '127.0.0.1',
             port: str = '5000',
             base_route: str = '/v1/api/ws',
             ibkr_client: IbkrClient = None,

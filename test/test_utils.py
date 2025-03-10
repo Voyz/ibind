@@ -7,9 +7,6 @@ import unittest
 from unittest import TestCase
 from unittest._log import _CapturingHandler, _AssertLogsContext
 
-import _testcapi
-
-from ibind import var
 from ibind.support.py_utils import make_clean_stack
 
 
@@ -67,7 +64,7 @@ class SafeAssertLogs(_AssertLogsContext):
         self.old_level = logger.level
         self.old_propagate = logger.propagate
         logger.handlers = [handler]
-        handler.setLevel(self.level)  # this is different, was logger.setLevel
+        handler.setLevel(self.level)  # this one line is different, originally was `logger.setLevel`
         logger.propagate = False
         if self.logger_level is not None:
             logger.setLevel(getattr(logging, self.logger_level))
@@ -99,10 +96,30 @@ def get_logger_children(main_logger) -> list[logging.Logger]:
 
 class RaiseLogsContext:
     """
-    Raises any messages above the level raised by a logger.
+    Captures log messages at or above a specified level and raises unexpected ones as exceptions.
 
-    When used in conjunction with self.assertLogs, make sure this context manager is defined after self.assertLogs.
+    This context manager monitors log messages from a specified logger. Any log messages
+    at or above the given logging level are recorded. If a message is not explicitly
+    expected, a `RuntimeError` is raised, including the stack trace of the log call. It ensures
+    loggers are restored to their original state after use.
+
+    Note:
+        - When used in conjunction with `self.assertLogs` or `SafeAssertLogs`, ensure this context manager is defined last to properly assert log expectations.
+
+    Args:
+        test_case (TestCase): The test case instance, typically from `unittest.TestCase`.
+        logger_name (str | None): The name of the logger to monitor. Defaults to the root logger.
+        level (str): The logging level threshold (e.g., 'ERROR', 'WARNING'). Logs at or above this level are captured.
+        expected_errors (list[str] | None): A list of log messages that are expected and should not trigger an exception.
+        comparison (Callable[[str, str], bool]): A function to compare expected errors with log messages.
+            Defaults to an exact string match (`lambda x, y: x == y`).
+
+    Example Usage:
+        >>> with RaiseLogsContext(self, logger_name="my_logger", level="WARNING", expected_errors=["My expected warning"]):
+        ...     logging.getLogger("my_logger").warning("My expected warning")  # No error
+        ...     logging.getLogger("my_logger").error("Unexpected issue")  # Raises RuntimeError
     """
+
     def __init__(self,
                  test_case:TestCase,
                  logger_name=None,
@@ -120,68 +137,108 @@ class RaiseLogsContext:
         self._comparison = comparison
 
     def monkey_patch_log(self, original_method):
+        """Wraps a logger method to attach a manually captured stack trace to log records."""
+
         def new_method(msg, *args, **kwargs):
+            # Store the manually captured stack trace in the log record
             stack = make_clean_stack()
             if 'extra' not in kwargs:
                 kwargs['extra'] = {}
             kwargs['extra']['manual_trace'] = stack
+
+            # Call the original logging method with the modified arguments
             return original_method(msg, *args, **kwargs)
 
         return new_method
 
     def monkey_patch_loggers(self, loggers):
+        """Monkey-patches loggers to attach a stack trace to warning and error messages."""
         for logger in loggers:
             if self._level_no <= logging.ERROR:
                 logger.__old_error_method__ = logger.error
                 logger.error = self.monkey_patch_log(logger.error)
+
             if self._level_no <= logging.WARNING:
                 logger.__old_warning_method__ = logger.warning
                 logger.warning = self.monkey_patch_log(logger.warning)
 
     def restore_loggers(self, loggers):
+        """Restores the original error and warning logging methods after patching."""
         for logger in loggers:
             if self._level_no <= logging.ERROR:
-                logger.error = logger.__old_error_method__
+                logger.error = logger.__old_error_method__  # Restore the original error method
+
             if self._level_no <= logging.WARNING:
-                logger.warning = logger.__old_warning_method__
+                logger.warning = logger.__old_warning_method__  # Restore the original warning method
 
     def __enter__(self):
-        # Directly mimicking the wrapper function inside raise_logs
+        """
+        Initializes the logging context by patching loggers and setting up a log watcher.
+
+        This method ensures that logs at the specified level are captured and asserts
+        that unexpected log messages are raised as errors.
+        """
+
         self._logger = logging.getLogger(self._logger_name)
         loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
-        self.monkey_patch_loggers(loggers_to_be_patched)
-        self._context_manager = SafeAssertLogs(self._test_case, self._logger, level=self._level, no_logs=False)
+        self.monkey_patch_loggers(loggers_to_be_patched) # Apply monkey-patching to attach stack traces to logged messages
+
+        # Initialize SafeAssertLogs, a helper to capture and assert log records
+        self._context_manager = SafeAssertLogs(
+            self._test_case, self._logger, level=self._level, no_logs=False
+        )
+
+        # Enter the SafeAssertLogs context, starting log capture and returning the watcher
         self._watcher = self._context_manager.__enter__(include_original_handlers=True)
         return self._watcher
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Restores original logger methods and verifies captured log messages.
+
+        This method is called when exiting the context manager. It ensures that:
+        - Monkey-patched loggers are restored to their original state.
+        - If an exception occurred inside the `with` block, it is propagated normally.
+        - If no exception occurred, all captured log messages are checked against expected errors.
+        - Unexpected log messages result in a `RuntimeError`.
+        """
+
+        # Restore original logging methods that were monkey-patched
         loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
         self.restore_loggers(loggers_to_be_patched)
-        # self.context_manager.__exit__(exc_type, exc_val, exc_tb)
+
+        # If an exception occurred inside the 'with' block, return False to let Python re-raise it
         if exc_type is not None:
-            if (isinstance(exc_type, AssertionError) and str(exc_val) != f'no logs of level {self._level} or higher triggered on {self._logger.name}'):
-                return False
-            else:
-                _testcapi.set_exc_info(exc_type, exc_val, exc_tb.tb_next)
-                return False
+            return False
 
-        if len(self._watcher.records) > 0:
-            for record in self._watcher.records:
-                found = False
-                for expected_error in self._expected_errors:
-                    if self._comparison(expected_error, record.msg):
-                        found = True
-                        break
-                if found:
-                    continue
-                # if record.exc_info is not None:
-                #     raise record.exc_info[1].with_traceback(record.exc_info[2])
+        # If no logs were captured return True to indicate that no errors were encountered and that the context exited cleanly
+        if len(self._watcher.records) == 0:
+            return True
 
-                if hasattr(record, 'manual_trace'):
-                    raise RuntimeError(f'\n' + ''.join(traceback.format_list(record.manual_trace)) + f'Logger {self._logger} logged an unexpected message:\n{record.msg}')
+        for record in self._watcher.records:
+            found = False
 
-                raise RuntimeError(f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}')
-        return True
+            # Check if the log message matches any of the expected error messages
+            for expected_error in self._expected_errors:
+                if self._comparison(expected_error, record.msg):
+                    found = True
+                    break
+
+            # If the message is expected, move on to the next record
+            if found:
+                continue
+
+            # If the log record has a manually stored traceback, raise an error with that traceback
+            if hasattr(record, 'manual_trace'):
+                raise RuntimeError(
+                    f'\n' + ''.join(traceback.format_list(record.manual_trace)) +
+                    f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
+                )
+
+            # Otherwise, raise an error using the log record's location
+            raise RuntimeError(
+                f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}'
+            )
 
 
 def raise_logs(level='ERROR', logger_name=None):
