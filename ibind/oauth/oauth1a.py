@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib import parse
 
-from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
-from Crypto.Hash import SHA256, HMAC, SHA1
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
+# TODO: Remove bandit ignore once we have a new Crypto implementation
+# Check repo wiki for more details on Security consideration
+from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher # nosec
+from Crypto.Hash import SHA256, HMAC, SHA1 # nosec
+from Crypto.PublicKey import RSA # nosec
+from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature # nosec
 
 from ibind import var
 from ibind.oauth import OAuthConfig
