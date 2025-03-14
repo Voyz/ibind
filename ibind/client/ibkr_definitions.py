@@ -133,6 +133,18 @@ snapshot_by_key = {
     'server_id': 'string',
     'conid_str': 'integer_str',
     '_updated_str': 'integer_str',
+    'Opt. Volume Change %. Todays option volume as a percentage of the average option volume.':'7607',
+    'Shortable Shares. Number of shares available for shorting.':'7636',
+    'Fee Rate. Interest rate charged on borrowed shares.':'7637',
+    'Morningstar Rating. Displays Morningstar Rating provided value. Requires Morningstar subscription.':'7655',
+    'Dividends. This value is the total of the expected dividend payments over the next twelve months per share.':'7671',
+    'Dividends TTM. This value is the total of the expected dividend payments over the last twelve months per share.':'7672',
+    'Price/EMA(50). Price to Exponential moving average (N=50) ratio -1':'7724',
+    'Probability of Max Return. Customer implied probability of maximum potential gain.':'7700',
+    'Ask Yield. Implied yield of the bond if it is purchased at the current offer. Ask yield is calculated using the Bid on all possible call dates. It is assumed that prepayment occurs if the bond has call or put provisions and the issuer can offer a lower coupon rate based on current market rates. The yield to worst will be the lowest of the yield to maturity or yield to call (if the bond has prepayment provisions). Yield to worse may be the same as yield to maturity but never higher.':'7720'
+
+
+
 }
 
 snapshot_by_id = {str(value): key for key, value in snapshot_by_key.items()}
