@@ -41,7 +41,7 @@ def unsubscribe():
 
         confirmed = ws_client.unsubscribe(channel, conid, {'server_id': server_id}, needs_confirmation, subscription_processor)
 
-        print(f'Unsubscribing channel {channel!r} from server {server_id!r}: {"unconfirmed" if confirmed == False else "confirmed"}.')
+        print(f'Unsubscribing channel {channel!r} from server {server_id!r}: {"unconfirmed" if not confirmed else "confirmed"}.')
 
 
 request = {

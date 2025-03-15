@@ -17,7 +17,9 @@ wrong? [Create an issue and let us know!][issues]*
     </a>
 </p>
 
-IBind is a REST and WebSocket client library for [Interactive Brokers Client Portal Web API.][ibkr-docs]
+IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with [OAuth 1.0a][wiki-oauth1a] support.
+
+_Note: IBind currently supports only the Web API 1.0 since the [newer Web API][web-api] seems to be still in beta and is not fully documented. Some of its features may work, but it is recommended to use the Web API 1.0's documentation for the time being. Once a complete version of the new Web API is released IBind will be extended to support it._
 
 ## Installation
 
@@ -25,14 +27,21 @@ IBind is a REST and WebSocket client library for [Interactive Brokers Client Por
 pip install ibind
 ```
 
-Use [IBeam][ibeam] along with this library for easier authentication with IBKR.
+## Authentication
+
+IBind supports fully headless authentication using [OAuth 1.0a][wiki-oauth1a]. This means no longer needing to run any type software to communicate with IBKR API.
+
+Alternatively, use [IBeam][ibeam] along with this library for easier setup and maintenance of the CP Gateway.
+
+See [Authentication][wiki-authentication] page to learn more.
 
 ## Documentation
 
 See full [IBind documentation][wiki].
 
 * [Installation][wiki-installation]
-* [Basic Concepts][wiki-basic-concepts]
+* [Authentication][wiki-authentication]
+* [OAuth 1.0a][wiki-oauth1a]
 * [IBind Configuration][wiki-ibind-configuration]
 * [IbkrClient][wiki-ibkr-client] - REST Python client for [IBKR REST API][ibkr-endpoints].
 * [IbkrWsClient][wiki-ibkr-ws-client] - WebSocket Python client for [IBKR WebSocket API][ibkr-websocket].
@@ -169,11 +178,13 @@ Thanks and have an awesome day 👋
 [ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
 [ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
 [ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+[web-api]: https://www.interactivebrokers.com/campus/ibkr-api-page/webapi-doc
 
 
 [wiki]: https://github.com/Voyz/ibind/wiki
 [wiki-installation]: https://github.com/Voyz/ibind/wiki/Installation
-[wiki-basic-concepts]: https://github.com/Voyz/ibind/wiki/Basic-Concepts
+[wiki-authentication]: https://github.com/Voyz/ibind/wiki/Authentication
+[wiki-oauth1a]: https://github.com/Voyz/ibind/wiki/OAuth-1.0a
 [wiki-ibind-configuration]: https://github.com/Voyz/ibind/wiki/IBind-Configuration
 [wiki-ibkr-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
 [wiki-ibkr-ws-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client

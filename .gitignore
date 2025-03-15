@@ -4,3 +4,9 @@ __pycache__
 ibind.egg-info
 build/docs/.generated-files.txt
 build/docs/mkdocs.yml
+
+.venv
+.env
+*.env
+.vscode
+.DS_Store

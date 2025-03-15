@@ -14,6 +14,7 @@ from ibind.base.ws_client import WsClient
 from ibind.client import ibkr_definitions
 from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import extract_conid
+from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import TimeoutLock, UNDEFINED
 
@@ -246,16 +247,19 @@ class IbkrWsClient(WsClient):
             self,
             account_id: str = var.IBIND_ACCOUNT_ID,
             url: str = var.IBIND_WS_URL,
-            host: str = 'localhost',
+            host: str = '127.0.0.1',
             port: str = '5000',
             base_route: str = '/v1/api/ws',
             ibkr_client: IbkrClient = None,
-            SubscriptionProcessorClass: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
-            QueueControllerClass: Type[QueueController] = QueueController[IbkrWsKey],
+            subscription_processor_class: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
+            queue_controller_class: Type[QueueController] = QueueController[IbkrWsKey],
             log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
             unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
             unwrap_market_data: bool = True,
             start: bool = False,
+            use_oauth: bool = var.IBIND_USE_OAUTH,
+            access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
+
             # inherited
             ping_interval: int = var.IBIND_WS_PING_INTERVAL,
             max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
@@ -264,6 +268,7 @@ class IbkrWsClient(WsClient):
             restart_on_critical: bool = True,
             max_connection_attempts: int = 10,
             cacert: Union[str, bool] = var.IBIND_CACERT,
+
             # subscription controller
             subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
             subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
@@ -280,12 +285,13 @@ class IbkrWsClient(WsClient):
             base_route (str, optional): Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
             account_id (str, optional): Account ID for subscription management.
             ibkr_client (IbkrClient, optional): An instance of the IbkrClient for related operations.
-            SubscriptionProcessorClass (Type[SubscriptionProcessor]): The class to process subscription payloads.
-            QueueControllerClass (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
+            subscription_processor_class (Type[SubscriptionProcessor]): The class to process subscription payloads.
+            queue_controller_class (Type[QueueController[IbkrWsKey]], optional): The class to manage message queues. Defaults to QueueController[IbkrWsKey].
             unsolicited_channels_to_be_queued (List[IbkrWsKey], optional): List of unsolicited channels to be queued. Defaults to None.
             unwrap_market_data (bool, optional): Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
             start (bool, optional): Flag to start the client immediately after initialization. Defaults to False.
-
+            use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
+            access_token (str, optional): OAuth access token generated in the self-service portal. Defaults to None.
 
             Inherited parameters from WsClient:
 
@@ -301,22 +307,33 @@ class IbkrWsClient(WsClient):
         """
 
         self._account_id = account_id
+
+        url = var.IBIND_OAUTH1A_WS_URL if url is None and use_oauth else url
+
         if url is None:
             url = f'wss://{host}:{port}{base_route}'
 
+        if use_oauth:
+            if access_token is None:
+                raise ValueError('OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
+            url += f'?oauth_token={access_token}'
+
         if ibkr_client is None:
-            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert)
+            ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert, use_oauth=use_oauth)
 
         self._ibkr_client = ibkr_client
 
-        self._queue_controller = QueueControllerClass()
+        self._queue_controller = queue_controller_class()
+        self._subscription_processor = subscription_processor_class()
 
         self._log_raw_messages = log_raw_messages
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
         self._unwrap_market_data = unwrap_market_data
+        self._use_oauth = use_oauth
+
 
         super().__init__(
-            subscription_processor=SubscriptionProcessorClass(),
+            subscription_processor=self._subscription_processor,
             url=url,
             timeout=timeout,
             restart_on_close=restart_on_close,
@@ -333,7 +350,6 @@ class IbkrWsClient(WsClient):
 
         self._queue_controller.register_queues(list(IbkrWsKey))
 
-        self._logged_in = False
         self._last_heartbeat = 0
         self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
         self._queue_accessors: Dict[IbkrWsKey, QueueAccessor] = {}
@@ -341,15 +357,23 @@ class IbkrWsClient(WsClient):
         if start:
             self.start()
 
-    def _login(self):
-        status = self._ibkr_client.tickle()
+    def _get_cookie(self):
+        try:
+            status = self._ibkr_client.tickle()
+        except ExternalBrokerError:
+            _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
+            return None
         session_id = status.data['session']
+        if self._use_oauth:
+            return f'api={session_id}'
         payload = {'session': session_id}
-        self.send_json(payload)
+        return f'api={json.dumps(payload)}'
 
-    def on_reconnect(self):
-        self._logged_in = False
-        super().on_reconnect()
+    def _get_header(self):
+        return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
+
+    def _on_reconnect(self):
+        super()._on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
         """
@@ -408,14 +432,15 @@ class IbkrWsClient(WsClient):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
 
         if 'authenticated' in data:
-            if data.get('authenticated') == False:
+            if data.get('authenticated') is False:
                 _LOGGER.error(f'{self}: Status unauthenticated: {data}')
-                self._login()
-            else:
-                self._logged_in = True
-        elif 'competing' in data and data.get('competing') == True:
+            self.set_authenticated(data.get('authenticated'))
+        elif 'competing' in data:
+            if data.get('competing') is False:
+                pass
             _LOGGER.error(f'{self}: Status competing: {data}')
-            self._login()
+        elif data == {'message': ''}:
+            pass
         else:
             _LOGGER.info(f'{self}: Unknown status response: {message}')
 
@@ -477,7 +502,7 @@ class IbkrWsClient(WsClient):
 
         return message, topic, data, subscribed, channel
 
-    def on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
+    def _on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
         if self._log_raw_messages:
             _LOGGER.debug(f'{self}: Raw message: {raw_message}')
         message, topic, data, subscribed, channel = self._preprocess_raw_message(raw_message)

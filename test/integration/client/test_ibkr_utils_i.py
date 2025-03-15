@@ -35,7 +35,7 @@ class TestIbkrUtilsI(TestCase):
         with self.assertLogs(project_logger(), level='INFO') as cm:
             rv = filter_stocks(queries, Result(data=self.instruments), default_filtering=False)
 
-        verify_log(self, cm, [f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {self.result}'])
+        verify_log(self, cm, [f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {self.result}. Skipping query={queries[-1]}.'])
 
         # pprint(rv)
 
@@ -199,14 +199,14 @@ class TestHandleQuestionsI(TestCase):
 
 
     @patch('ibind.client.ibkr_utils.QuestionType')
-    def test_successful_handling(self, QuestionTypeMock):
+    def test_successful_handling(self, question_type_mock):
         # Mocking the QuestionType enum
-        QuestionTypeMock.PRICE_PERCENTAGE_CONSTRAINT.__str__.return_value = 'price exceeds the Percentage constraint of 3%.'
-        QuestionTypeMock.ADDITIONAL_QUESTION_TYPE.__str__.return_value = 'This is an additional question.'
+        question_type_mock.PRICE_PERCENTAGE_CONSTRAINT.__str__.return_value = 'price exceeds the Percentage constraint of 3%.'
+        question_type_mock.ADDITIONAL_QUESTION_TYPE.__str__.return_value = 'This is an additional question.'
 
         self.answers = {
-            QuestionTypeMock.PRICE_PERCENTAGE_CONSTRAINT: True,
-            QuestionTypeMock.ADDITIONAL_QUESTION_TYPE: True
+            question_type_mock.PRICE_PERCENTAGE_CONSTRAINT: True,
+            question_type_mock.ADDITIONAL_QUESTION_TYPE: True
         }
 
         # Mock reply_callback to simulate the sequence of question-answer interactions
@@ -221,8 +221,8 @@ class TestHandleQuestionsI(TestCase):
         self.assertEqual(len(self.reply_callback.call_args_list), 2)
         # Expected calls to self.reply_callback
         expected_calls = [
-            call(self.original_result.data[0]['id'], self.answers[QuestionTypeMock.PRICE_PERCENTAGE_CONSTRAINT]),  # First call with question ID '12346' and reply True
-            call(replies[0].data[0]['id'], self.answers[QuestionTypeMock.ADDITIONAL_QUESTION_TYPE])   # Second call with question ID '12347' and reply True
+            call(self.original_result.data[0]['id'], self.answers[question_type_mock.PRICE_PERCENTAGE_CONSTRAINT]),  # First call with question ID '12346' and reply True
+            call(replies[0].data[0]['id'], self.answers[question_type_mock.ADDITIONAL_QUESTION_TYPE])   # Second call with question ID '12347' and reply True
         ]
 
         # Check if the calls to self.reply_callback are as expected

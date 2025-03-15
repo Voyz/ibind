@@ -34,7 +34,7 @@ class TestPreprocessRawMessage(TestCase):
             url=self.url,
             ibkr_client=None,
             account_id=None,
-            SubscriptionProcessorClass=lambda: None,
+            subscription_processor_class=lambda: None,
         )
 
     def test_preprocess_with_well_formed_message(self):
@@ -75,6 +75,8 @@ class TestIbkrWsClient(TestCase):
             max_retries=self.max_retries,
         ))
 
+        self.client.tickle.return_value.data = {'session': 'TEST_COOKIE'}
+
         self.SubscriptionProcessorClass = IbkrSubscriptionProcessor
 
         # Initialize the IbkrWsClient
@@ -82,7 +84,7 @@ class TestIbkrWsClient(TestCase):
             url=self.url,
             ibkr_client=self.client,
             account_id=self.account_id,
-            SubscriptionProcessorClass=self.SubscriptionProcessorClass,
+            subscription_processor_class=self.SubscriptionProcessorClass,
             subscription_retries=self.subscription_retries,
             subscription_timeout=0.01,
             cacert=False,
@@ -102,7 +104,7 @@ class TestIbkrWsClient(TestCase):
         with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
                 patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
                 SafeAssertLogs(self, 'ibind', level='DEBUG', logger_level='DEBUG', no_logs=not expect_logs) as cm, \
-                RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors) as cm2:
+                RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors):
 
             ws_client_logger = project_logger('ws_client')
             old_level = ws_client_logger.getEffectiveLevel()
@@ -134,10 +136,10 @@ class TestIbkrWsClient(TestCase):
                 if response is None:
                     return
                 raw_message = json.dumps(response)
-                wsa_mock._on_message(wsa_mock, raw_message)
+                wsa_mock.__on_message__(wsa_mock, raw_message)
 
             self.ws_client.start()
-            self.wsa_mock.on_message.side_effect = override_on_message
+            self.wsa_mock._on_message.side_effect = override_on_message
             rv = self.ws_client.subscribe(**{'key': request.get('key'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('needs_confirmation')})
             self.ws_client.unsubscribe(**{'key': request.get('key'), 'conid': request.get('conid'), 'params': request.get('params'), 'needs_confirmation': request.get('confirms_unsubscription')})
             self.ws_client.shutdown()
@@ -173,7 +175,7 @@ class TestIbkrWsClient(TestCase):
 
         expected_errors = [
             "IbkrWsClient: Status unauthenticated: {'authenticated': False}",
-            f"IbkrWsClient: Unrecognised message without a topic: {{'session': {session_id}}}"  # in real scenario this doesn't appear but due to the way the tests are written, this is the expected behaviour
+            'IbkrWsClient: Not authenticated, closing WebSocketApp'
         ]
 
         response_mock = MagicMock(spec=requests.Response)
@@ -187,12 +189,11 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._send_payload(message_data, expected_errors=expected_errors)
 
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
-        self.wsa_mock.send.assert_called_with(f'{{"session": {session_id}}}')
+        self.assertFalse(self.ws_client._authenticated)
 
     def test_on_message_sts_authenticated(self):
         message_data = {'topic': 'sts', 'args': {'authenticated': True}}
         cm, success = self._send_payload(message_data, expect_logs=False)
-        self.assertTrue(self.ws_client._logged_in)
 
     def test_on_message_error(self):
         message_data = {'topic': 'error', 'args': {'error_key': 'error_details'}}
@@ -331,12 +332,12 @@ class TestIbkrWsClient(TestCase):
             # ensures each time WebSocketApp's mock is created, we override its on_message method
             def override_init_wsa_mock(wsa_mock: MagicMock, *args, **kwargs):
                 wsa_mock = init_wsa_mock(wsa_mock, *args, **kwargs)
-                wsa_mock.on_message.side_effect = lambda wsa_mock, message: wsa_mock._on_message(wsa_mock, json.dumps(response))
+                wsa_mock._on_message.side_effect = lambda wsa_mock, message: wsa_mock.__on_message__(wsa_mock, json.dumps(response))
                 return wsa_mock
 
             self.ws_client.start()
             self.ws_client.check_health()
-            self.wsa_mock.on_message.side_effect = lambda wsa_mock, message: wsa_mock._on_message(wsa_mock, json.dumps(response))
+            self.wsa_mock._on_message.side_effect = lambda wsa_mock, message: wsa_mock.__on_message__(wsa_mock, json.dumps(response))
 
             # create the original subscription
             self.ws_client.subscribe(**request)

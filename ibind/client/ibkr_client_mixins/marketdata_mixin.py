@@ -1,9 +1,9 @@
 import datetime
-from typing import Union, TYPE_CHECKING, List
+from typing import Union, TYPE_CHECKING, List, Dict
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_definitions import decode_data_availability
-from ibind.client.ibkr_utils import StockQuery, StockQueries
+from ibind.client.ibkr_definitions import snapshot_by_id
+from ibind.client.ibkr_utils import StockQuery, StockQueries, cleanup_market_history_responses
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import ensure_list_arg, OneOrMany, execute_in_parallel, params_dict
@@ -39,6 +39,52 @@ class MarketdataMixin():
             'fields': ','.join(fields)
         }
         return self.get(f'iserver/marketdata/snapshot', params)
+
+    def live_marketdata_snapshot_by_symbol(self: 'IbkrClient', queries: StockQueries, fields: OneOrMany[str]) -> dict:
+        """
+        Get Market Data for the given symbols(s).
+
+        A pre-flight request must be made prior to ever receiving data.
+
+        Parameters:
+            queries (List[StockQuery]): A list of StockQuery objects to specify filtering criteria for stocks.
+            fields (OneOrMany[str]): Specify a series of tick values to be returned.
+
+        Note:
+            - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
+            - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
+        """
+        conids_by_symbol = self.stock_conid_by_symbol(queries).data
+
+        conids = []
+        symbols_by_conids = {}
+        for symbol, conid in conids_by_symbol.items():
+            conids.append(str(conid))
+            symbols_by_conids[conid] = symbol
+
+        # There needs to be a pre-flight request for some reason, so we default to calling this twice
+        self.receive_brokerage_accounts()
+        self.live_marketdata_snapshot(conids, fields=fields)
+        entries = self.live_marketdata_snapshot(conids, fields=fields).data
+
+        results = {}
+        for entry in entries:
+            try:
+                result = {}
+
+                for key, value in entry.items():
+                    if key not in snapshot_by_id:
+                        continue
+
+                    result[snapshot_by_id[key]] = value
+                results[entry['conid']] = result
+            except Exception as e:  # pragma: no cover
+                _LOGGER.exception(f'Error post-processing live market data for {entry}: {str(e)}')
+
+        # reformat the results by symbol instead of conid
+        results_by_symbol = {symbols_by_conids[conid]: result for conid, result in results.items()}
+
+        return results_by_symbol
 
     def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
@@ -164,6 +210,56 @@ class MarketdataMixin():
         conid = str(self.stock_conid_by_symbol(symbol).data[symbol])
         return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
+    def marketdata_history_by_conids(
+            self: 'IbkrClient',
+            conids: Union[List[str], Dict[str, str]],
+            period: str = "1min",
+            bar: str = "1min",
+            outside_rth: bool = True,
+            start_time: datetime.datetime = None,
+            raise_on_error: bool = False,
+            run_in_parallel: bool = True,
+    ) -> dict:
+        """
+        An extended version of the marketdata_history_by_conid method.
+
+        For each conid provided, it queries the marketdata history for the specified symbols. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+
+        Parameters:
+            conids (OneOrMany[str]): A list of conids to get market data for.
+            exchange (str, optional): Returns the exchange you want to receive data from.
+            period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+            bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+            outside_rth (bool, optional): Determine if you want data after regular trading hours.
+            start_time (datetime.datetime, optional): Starting date of the request duration.
+            raise_on_error (bool, optional): If True, raise an exception if an error occurs during the request. Defaults to False.
+            run_in_parallel (bool, optional): If True, send requests in parallel to speed up the response. Defaults to True.
+
+        Note:
+            - This method returns data directly without the `Result` dataclass.
+        """
+
+        if not isinstance(conids, dict):
+            # In case conids aren't a symbol->conid dict, generate a dummy conid->conid dict in order to preserve the functionality. In such case, the 'symbol' variable actually is a 'conid'.
+            conids = {conid: conid for conid in conids}
+
+        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
+        requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}
+
+        # when there is only one conid, we avoid running in parallel
+        if run_in_parallel and len(conids) > 1:
+            # /iserver/marketdata/history accepts 5 concurrent requests in theory, but sometime throttles above 4
+            market_history_responses = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=4)
+        else:
+            market_history_responses = {
+                symbol: self.marketdata_history_by_conid(**request['kwargs'])
+                for symbol, request in requests.items()
+            }
+
+        results = cleanup_market_history_responses(market_history_responses, raise_on_error=raise_on_error)
+
+        return results
+
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
             self: 'IbkrClient',
@@ -172,11 +268,13 @@ class MarketdataMixin():
             bar: str = "1min",
             outside_rth: bool = True,
             start_time: datetime.datetime = None,
+            raise_on_error: bool = False,
+            run_in_parallel: bool = True,
     ) -> dict:
         """
-        An extended version of the marketdata_history_by_symbol method.
+        An extended version of the marketdata_history_by_conids method.
 
-        For each StockQuery provided, it queries the marketdata history for the specified symbols in parallel. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
+        For each StockQuery provided, it queries the marketdata history for the specified symbols. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
 
         Parameters:
             queries (List[StockQuery]): A list of StockQuery objects to specify filtering criteria for stocks.
@@ -185,42 +283,22 @@ class MarketdataMixin():
             bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
             outside_rth (bool, optional): Determine if you want data after regular trading hours.
             start_time (datetime.datetime, optional): Starting date of the request duration.
+            raise_on_error (bool, optional): If True, raise an exception if an error occurs during the request. Defaults to False.
+            run_in_parallel (bool, optional): If True, send requests in parallel to speed up the response. Defaults to True.
 
         Note:
             - This method returns data directly without the `Result` dataclass.
         """
         conids = self.stock_conid_by_symbol(queries).data
-
-        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
-        requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}
-
-        # /iserver/marketdata/history accepts 5 concurrent requests at a time
-        history = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=5)
-
-        results = {}
-        for symbol, entry in history.items():
-            if isinstance(entry, Exception):  # pragma: no cover
-                _LOGGER.error(f'Error fetching market data for {symbol}')
-                raise entry
-
-            # check if entry['mdAvailability'] has 'S' or 'R' in it
-            if 'mdAvailability' in entry.data and not (any((key in entry.data['mdAvailability'].upper()) for key in ['S', 'R'])):
-                _LOGGER.warning(f'Market data for {symbol} is not live: {decode_data_availability(entry.data["mdAvailability"])}')
-
-            data = entry.data['data']
-            records = []
-            for record in data:
-                records.append({
-                    "open": record['o'],
-                    "high": record['h'],
-                    "low": record['l'],
-                    "close": record['c'],
-                    "volume": record['v'],
-                    "date": datetime.datetime.fromtimestamp(record['t'] / 1000)
-                })
-            results[symbol] = records
-
-        return results
+        return self.marketdata_history_by_conids(
+            conids=conids,
+            period=period,
+            bar=bar,
+            outside_rth=outside_rth,
+            start_time=start_time,
+            raise_on_error=raise_on_error,
+            run_in_parallel=run_in_parallel,
+        )
 
     @ensure_list_arg('conids')
     def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> List[Result]:
@@ -231,7 +309,7 @@ class MarketdataMixin():
             conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
-        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/{conid}/unsubscribe']} for conid in conids}
+        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
         results = execute_in_parallel(self.post, unsubscribe_requests)
 
         for conid, result in results.items():

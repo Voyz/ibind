@@ -37,7 +37,8 @@ for section in spx_contract['sections']:
 if options is None:
     raise RuntimeError(f'No options found in spx_contract: {spx_contract}')
 
-
+options['months'] = options['months'].split(';')
+options['exchange'] = options['exchange'].split(';')
 
 print('\n#### search for strikes ####')
 strikes = client.search_strikes_by_conid(

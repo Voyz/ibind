@@ -50,10 +50,10 @@ pprint(conids)
 """
     The get_conids() method will raise an exception if the filtered stocks response doesn't provide exactly one conid.
     The default_filtering filtered the returned contracts by isUS=True which usually returns only one conid.
-    If multiple conids are found, you must provide additional conditions for the particular stock in order in order to ensure only one conid is returned. 
-    
+    If multiple conids are found, you must provide additional conditions for the particular stock in order in order to ensure only one conid is returned.
+
     Uncomment the following lines to see the exception raised when multiple conids are returned.
 """
 # print('\n#### get_conid with too many conids ####')
-# conids = c.get_conids('AAPL', default_filtering=False).data
+# conids = client.stock_conid_by_symbol('AAPL', default_filtering=False).data
 # pprint(conids)

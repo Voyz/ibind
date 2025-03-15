@@ -28,15 +28,15 @@ Attributes:
 ## make\_order\_request
 
 ```python
-def make_order_request(conid: str,
+def make_order_request(conid: Union[int, str],
                        side: str,
                        quantity: float,
                        order_type: str,
-                       price: float,
-                       coid: str,
                        acct_id: str,
+                       price: float = None,
                        conidex: str = None,
                        sec_type: str = None,
+                       coid: str = None,
                        parent_id: str = None,
                        listing_exchange: str = None,
                        is_single_group: bool = None,
@@ -60,7 +60,7 @@ Create an order request object. Arguments set as None will not be included.
 
 Arguments:
 
-- `conid` _str_ - Identifier of the security to trade.
+- `conid` _int | str_ - Identifier of the security to trade.
 - `side` _str_ - Order side, either 'SELL' or 'BUY'.
 - `quantity` _int_ - Order quantity in number of shares.
 - `order_type` _str_ - Type of the order (e.g., LMT, MKT, STP).

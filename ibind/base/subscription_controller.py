@@ -144,7 +144,7 @@ class SubscriptionController():
 
             # we assume that once the subscription is successful its status will be set to True
 
-            if wait_until(lambda: self.is_subscription_active(subscription.uuid()) == True, timeout=self._subscription_timeout):
+            if wait_until(lambda: self.is_subscription_active(subscription.uuid()), timeout=self._subscription_timeout):
                 _LOGGER.info(f'{self}: Subscribed: {payload}')
                 return True
 
@@ -219,7 +219,7 @@ class SubscriptionController():
                 continue
 
             # we assume that once the unsubscription is successful its status will be set to False
-            if wait_until(lambda: self.is_subscription_active(subscription.uuid()) == False, timeout=self._subscription_timeout):
+            if wait_until(lambda: not self.is_subscription_active(subscription.uuid()), timeout=self._subscription_timeout):
                 _LOGGER.info(f'{self}: Unsubscribed: {payload}')
                 return True
 
@@ -330,7 +330,7 @@ class SubscriptionController():
             active_subscriptions = {}
             inactive_subscriptions = {}
             for uuid, subscription in self._subscriptions.items():
-                if subscription.status == False:
+                if not subscription.status:
                     inactive_subscriptions[uuid] = subscription
                 else:
                     active_subscriptions[uuid] = subscription

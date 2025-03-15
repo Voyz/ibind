@@ -45,7 +45,7 @@ class ScannerMixin():  # pragma: no cover
                 'instrument': instrument,
                 'type': type,
                 'location': location,
-            }, optional={'filter': filter}
+            }, optional={'filter': filter or []}
         )
         return self.post('iserver/scanner/run', params)
 

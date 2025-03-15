@@ -1,9 +1,11 @@
 import copy
 import inspect
 import os
+import sys
 import threading
 import time
 import traceback
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum, EnumMeta
 from functools import wraps
@@ -98,7 +100,7 @@ class VerboseEnum(str, Enum, metaclass=VerboseEnumMeta):  # pragma: no cover
     def __lt__(self, other):
         return self.value < other.value
 
-    def toJSON(self):
+    def to_json(self):
         return f'{self.__class__.__name__}.{str(self)}'
 
     def copy(self):
@@ -325,3 +327,21 @@ def print_table(my_dict, column_order=None):
     formatter = '   '.join(["{{:>{}}}".format(i) for i in column_size])
     for i, item in enumerate(rv):
         print(formatter.format(*item))
+
+def patch_dotenv():
+    try:
+        import dotenv
+        from dotenv import load_dotenv
+
+        # Wrap the original load_dotenv function
+        def warn_if_late_load(*args, **kwargs):
+            if 'ibind.var' in sys.modules:
+                warnings.warn("⚠️ WARNING: `load_dotenv()` was called after `ibind` was imported. Environment variables were already read and changes may not take effect. Call `load_dotenv()` before importing `ibind` to ensure proper behavior.", RuntimeWarning, stacklevel=2)
+            return load_dotenv(*args, **kwargs)
+
+        # Replace the original load_dotenv with the wrapped version
+        dotenv.load_dotenv = warn_if_late_load
+
+    except ImportError:
+        pass  # dotenv is not installed, nothing to patch
+
