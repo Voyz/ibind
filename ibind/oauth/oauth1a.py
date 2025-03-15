@@ -21,9 +21,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-STRING_ENCODING = "utf-8"
-INT_BASE = 16
-KEY_VALUE_SEPARATOR = "="
+_STRING_ENCODING = "utf-8"
+_INT_BASE = 16
+_KEY_VALUE_SEPARATOR = "="
 
 @dataclass
 class OAuth1aConfig(OAuthConfig):
@@ -107,7 +107,6 @@ class OAuth1aConfig(OAuthConfig):
         if missing_filepaths:
             raise ValueError(f"OAuth1aConfig's filepaths don't exist: {', '.join(missing_filepaths)}")
 
-        return
 
 
 def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) -> tuple[str, int, str]:
@@ -295,7 +294,7 @@ def generate_base_string(
     base_string_params.update(request_body or {})
     base_string_params.update(extra_headers or {})
     oauth_params_string = list_separator.join(
-        [f"{k}{KEY_VALUE_SEPARATOR}{v}" for k, v in sorted(base_string_params.items())]
+        [f"{k}{_KEY_VALUE_SEPARATOR}{v}" for k, v in sorted(base_string_params.items())]
     )
     encoded_oauth_params_string = parse.quote_plus(oauth_params_string)
     base_string = list_separator.join(
@@ -331,7 +330,7 @@ def generate_dh_challenge(dh_prime: str, dh_random: str, dh_generator: int = 2) 
     """
 
     # Convert the generator, random value, and prime from their respective formats to integers.
-    dh_challenge = pow(int(dh_generator), int(dh_random, INT_BASE), int(dh_prime, INT_BASE))
+    dh_challenge = pow(int(dh_generator), int(dh_random, _INT_BASE), int(dh_prime, _INT_BASE))
 
     # Convert the result of the calculation to a hexadecimal string, removing the '0x' prefix.
     hex_challenge = hex(dh_challenge)[2:]
@@ -373,7 +372,7 @@ def generate_rsa_sha_256_signature(base_string: str, private_signature_key: RSA.
     This method is used when getting the request, access and live session tokens.
     """
     # Encode the base string to bytes using UTF-8 encoding
-    encoded_base_string = base_string.encode(STRING_ENCODING)
+    encoded_base_string = base_string.encode(_STRING_ENCODING)
 
     # Create a new PKCS1_v1_5_Signature object using the private signature key
     signer = PKCS1_v1_5_Signature.new(private_signature_key)
@@ -387,7 +386,7 @@ def generate_rsa_sha_256_signature(base_string: str, private_signature_key: RSA.
     # Encode the signature to bytes using base64
     encoded_signature = base64.encodebytes(signature)
 
-    return parse.quote_plus(encoded_signature.decode(STRING_ENCODING).replace("\n", ""))
+    return parse.quote_plus(encoded_signature.decode(_STRING_ENCODING).replace("\n", ""))
 
 
 def generate_hmac_sha_256_signature(base_string: str, live_session_token: str) -> str:
@@ -396,7 +395,7 @@ def generate_hmac_sha_256_signature(base_string: str, live_session_token: str) -
     method is HMAC-SHA256.
     """
     # Encode the base string to bytes using UTF-8 encoding
-    encoded_base_string = base_string.encode(STRING_ENCODING)
+    encoded_base_string = base_string.encode(_STRING_ENCODING)
 
     # Create an HMAC (Hash-based Message Authentication Code) using the live session token
     # HMAC is used to verify the integrity and authenticity of a message.
@@ -404,7 +403,7 @@ def generate_hmac_sha_256_signature(base_string: str, live_session_token: str) -
 
     # Update the HMAC with the encoded base string
     hmac.update(encoded_base_string)
-    return parse.quote_plus(base64.b64encode(hmac.digest()).decode(STRING_ENCODING))
+    return parse.quote_plus(base64.b64encode(hmac.digest()).decode(_STRING_ENCODING))
 
 
 def get_access_token_secret_bytes(access_token_secret: str) -> list[int]:
@@ -439,13 +438,13 @@ def calculate_live_session_token(dh_prime: str, dh_random_value: str, dh_respons
     access_token_secret_bytes = get_access_token_secret_bytes(prepend)
 
     # Convert the Diffie-Hellman random value and response from hex to integers
-    dh_random_int = int(dh_random_value, INT_BASE)
-    dh_response_int = int(dh_response, INT_BASE)
+    dh_random_int = int(dh_random_value, _INT_BASE)
+    dh_response_int = int(dh_response, _INT_BASE)
 
     # Calculate the shared secret using the Diffie-Hellman key exchange
     # Diffie-Hellman is a method of securely exchanging cryptographic keys over a public channel.
     # It allows two parties to generate a shared secret that can be used for secure communication.
-    shared_secret = pow(dh_response_int, dh_random_int, int(dh_prime, INT_BASE))
+    shared_secret = pow(dh_response_int, dh_random_int, int(dh_prime, _INT_BASE))
 
     # Create an HMAC (Hash-based Message Authentication Code) using the shared secret
     # HMAC is used to verify the integrity and authenticity of a message.
@@ -455,7 +454,7 @@ def calculate_live_session_token(dh_prime: str, dh_random_value: str, dh_respons
     hmac.update(bytes(access_token_secret_bytes))
 
     # Return the base64-encoded HMAC digest as the live session token
-    return base64.b64encode(hmac.digest()).decode(STRING_ENCODING)
+    return base64.b64encode(hmac.digest()).decode(_STRING_ENCODING)
 
 
 def validate_live_session_token(live_session_token: str, live_session_token_signature: str, consumer_key: str) -> bool:
@@ -466,7 +465,7 @@ def validate_live_session_token(live_session_token: str, live_session_token_sign
     hmac = HMAC.new(bytes(base64.b64decode(live_session_token)), digestmod=SHA1)
 
     # Update the HMAC with the consumer key
-    hmac.update(bytes(consumer_key, STRING_ENCODING))
+    hmac.update(bytes(consumer_key, _STRING_ENCODING))
 
     # Return the hexadecimal representation of the HMAC digest
     return hmac.hexdigest() == live_session_token_signature
@@ -481,7 +480,7 @@ def generate_authorization_header_string(request_data: dict, realm: str) -> str:
     header_key_value_pair_separator = ", "
     authorization_header_keys = header_key_value_pair_separator.join(
         [
-            f'{key}{KEY_VALUE_SEPARATOR}"{value}"'
+            f'{key}{_KEY_VALUE_SEPARATOR}"{value}"'
             for key, value in sorted(request_data.items())
         ]
     )
