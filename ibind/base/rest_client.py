@@ -1,3 +1,5 @@
+import atexit
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -5,6 +7,8 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
@@ -79,7 +83,9 @@ class RestClient:
             cacert: Union[os.PathLike, bool] = False,
             timeout: float = 10,
             max_retries: int = 3,
-            ) -> None:
+            use_session: bool = var.IBIND_USE_SESSION,
+            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+    ) -> None:
         """
         Parameters:
             url (str): The base URL for the REST API.
@@ -87,6 +93,8 @@ class RestClient:
                                                          or False to disable SSL verification. Defaults to False.
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
+            use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
         """
 
         if url is None:
@@ -96,35 +104,79 @@ class RestClient:
             self.base_url += '/'
 
         self.cacert = cacert
-        if not (self.cacert is False or Path(self.cacert).exists()):
-            raise ValueError(f"{self}: cacert must be a valid Path or False")
+        if not (isinstance(self.cacert, bool) or Path(self.cacert).exists()):
+            raise ValueError(f"{self}: cacert must be a valid Path or Boolean")
 
         self._timeout = timeout
         self._max_retries = max_retries
 
-        self.make_logger()
+        self._make_logger()
 
-    def make_logger(self):
+        self.use_session = use_session
+
+        if use_session:
+            self.make_session()
+
+        if auto_register_shutdown:
+            self.register_shutdown_handler()
+
+    def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
+
+    def make_session(self):
+        """Creates a new session, ensuring old one (if exists) is closed properly."""
+        self._session = requests.Session()
 
     @property
     def logger(self):
         try:
             return self._logger
         except AttributeError:  # pragma: no cover
-            self.make_logger()
+            self._make_logger()
             return self._logger
 
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('GET', path, log=log, params=params)
+    def _get_headers(self, request_method: str, request_url: str):
+        return {}
 
-    def post(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('POST', path, log=log, json=params)
+    def get(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True,
+    ) -> Result:
+        return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
-    def delete(self, path: str, params: Optional[Dict[str, Any]] = None, log: bool = True) -> Result:
-        return self.request('DELETE', path, log=log, json=params)
+    def post(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
-    def request(self, method: str, endpoint: str, attempt: int = 0, log: bool = True, **kwargs) -> Result:
+    def delete(
+            self,
+            path: str,
+            params: Optional[Dict[str, Any]] = None,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True
+    ) -> Result:
+        return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
+
+    def request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -135,7 +187,8 @@ class RestClient:
         Parameters:
             method (str): The HTTP method to use ('GET', 'POST', etc.).
             endpoint (str): The API endpoint to which the request is sent.
-            attempt (int, optional): The current attempt number for the request, used in recursive retries. Defaults to 0.
+            base_url (str, optional): The base URL for the REST API. Defaults to the client's base URL.
+            extra_headers (dict, optional): Additional headers to be included in the request. Defaults to None.
             log (bool, optional): Whether to log the request details. Defaults to True.
             **kwargs: Additional keyword arguments passed to the requests.request function.
 
@@ -147,19 +200,42 @@ class RestClient:
             Exception: For any other errors that occur during the request.
 
         """
+        return self._request(method, endpoint, base_url, extra_headers, log, **kwargs)
+
+    def _request(
+            self,
+            method: str,
+            endpoint: str,
+            base_url: str = None,
+            extra_headers: dict = None,
+            log: bool = True,
+            **kwargs
+    ) -> Result:
+        """
+        Wrapper function which allows overriding the default request and error handling logic in the subclass.
+        """
+
+        base_url = base_url if base_url is not None else self.base_url
+
         endpoint = endpoint.lstrip("/")
-        url = f"{self.base_url}{endpoint}"
+        url = f"{base_url}{endpoint}"
+
+        headers = self._get_headers(request_method=method, request_url=url)
+        headers = {**headers, **(extra_headers or {})}
 
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
-        if log:
-            self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
+        # choose which function should be used to make a reqeust based on use_session field
+        request_function = self._session.request if self.use_session else requests.request
 
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
+            if log:
+                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
+
             try:
-                response = requests.request(method, url, verify=self.cacert, timeout=self._timeout, **kwargs)
+                response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
@@ -167,26 +243,89 @@ class RestClient:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
 
-                _LOGGER.info(f'{self}: Timeout for {method} {url}, retrying attempt {attempt + 1}/{self._max_retries}')
+                self.logger.info(f"{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}")
+                _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
 
-            except Exception as e:
-                if log:
-                    self.logger.exception(e)
+            except (ConnectionError, ChunkedEncodingError) as e:
+                self.logger.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                _LOGGER.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                self.close()
+                self.make_session()  # Recreate session automatically
+                continue  # Retry the request with a fresh session
+
+            except ExternalBrokerError:
                 raise
+
+            except Exception as e:
+                self.logger.exception(e)
+                raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
 
     def _process_response(self, response, result: Result) -> Result:
         try:
             response.raise_for_status()
             result.data = response.json()
             return result
+
         except Timeout as e:
             raise ExternalBrokerError(f'{self}: Timeout error ({self._timeout}S)', status_code=response.status_code) from e
-        # TODO: add further network exceptions for graceful handling
-        # TODO: add JSON parse exception handling
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON response: {str(e)}")
+            raise ExternalBrokerError(f'{self}: API returned invalid JSON.') from e
+
         except Exception as e:
             raise ExternalBrokerError(f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+
+    def close(self):
+        """ Closes the session to release resources."""
+        if hasattr(self, 'session'):
+            self._session.close()
+            self._session = None
+
+    def register_shutdown_handler(self):
+        """
+        Registers a signal-based and atexit shutdown handler for graceful session termination.
+
+        This method sets up signal and atexit handlers to ensure the session is closed when the `SIGINT` or `SIGTERM` signals are received, or when the program is terminated.
+
+        When the specified signals are received:
+        - `close()` is called to close the session.
+        - Any previously registered signal handlers for `SIGINT` and `SIGTERM` are preserved and
+          executed after the shutdown process.
+        """
+
+        import signal
+        existing_handler_int = signal.getsignal(signal.SIGINT)
+        existing_handler_term = signal.getsignal(signal.SIGTERM)
+
+        self._closed = False
+
+        def _close_handler():
+            if self._closed:
+                return
+            self._closed = True
+            self.close()
+
+        def _signal_handler(signum, frame):
+            _close_handler()
+
+            if signum == signal.SIGINT and callable(existing_handler_int):
+                existing_handler_int(signum, frame)
+
+            if signum == signal.SIGTERM and callable(existing_handler_term):
+                existing_handler_term(signum, frame)
+
+        try:
+            signal.signal(signal.SIGINT, _signal_handler)
+            signal.signal(signal.SIGTERM, _signal_handler)
+        except ValueError as e:
+            if str(e) == 'signal only works in main thread of the main interpreter':
+                pass # we cannot register signal, we ignore it and continue working as normal
+            else:
+                raise
+        atexit.register(_close_handler)
 
     def __str__(self):
         return f'{self.__class__.__qualname__}'

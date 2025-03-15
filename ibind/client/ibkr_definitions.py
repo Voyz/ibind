@@ -2,6 +2,7 @@
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
 See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
 """
+from typing import Union
 
 snapshot_by_key = {
     # Contract
@@ -12,6 +13,13 @@ snapshot_by_key = {
     'market_data_availability': '6509',  # Market Data Availability. The field may contain three chars. First char defines: R = RealTime, D = Delayed, Z = Frozen, Y = Frozen Delayed, N = Not Subscribed. Second char defines: P = Snapshot, p = Consolidated. Third char defines: B = Book
     'conid_exchange': '7094',  # Conid + Exchange
 
+    ##Regulator snapshot
+    'ask_codes': '7057',  # Returns the series of character codes for the Ask exchange.
+
+    'bid_codes': '7068',  # Returns the series of character codes for the Bid exchange.
+
+    'last_exch_codes': '7058',  # Returns the series of character codes for the Last exchange.
+
     # Price and Volume
     'open': '7295',  # Open - Today's opening price.
     'high': '70',  # High - Current day high price
@@ -20,6 +28,7 @@ snapshot_by_key = {
     'last_price': '31',  # Last Price - The last price at which the contract traded. May contain one of the following prefixes: C - Previous day's closing price. H - Trading has halted.
     'bid_price': '84',  # Bid Price - The highest-priced bid on the contract.
     'ask_price': '86',  # Ask Price - The lowest-priced offer on the contract.
+    'last_size': '7059',  # Last Size - The number of unites traded at the last price. 
     'bid_size': '88',  # Bid Size - The number of contracts or shares bid for at the bid price. For US stocks, the number displayed is divided by 100.
     'ask_size': '85',  # Ask Size - The number of contracts or shares offered at the ask price. For US stocks, the number displayed is divided by 100.
     'prior_close': '7741',  # Prior Close - Yesterday's closing price
@@ -98,6 +107,11 @@ snapshot_by_key = {
     'put_call_interest': '7085',  # Put/Call Interest - Put option open interest/call option open interest for the trading day.
     'put_call_volume': '7086',  # Put/Call Volume - Put option volume/call option volume for the trading day.
     'option_implied_vol_percent': '7283',  # Option Implied Vol. % - A prediction of how volatile an underlying will be in the future. At the market volatility estimated for a maturity thirty calendar days forward of the current trading day, and based on option prices from two consecutive expiration months. To query the Implied Vol. % of a specific strike refer to field 7633.
+    'delta': '7308',  # Delta - The ratio of the change in the price of the option to the corresponding change in the price of the underlying.
+    'gamma': '7309',  # Gamma - The rate of change for the delta with respect to the underlying asset’s price.
+    'theta': '7310',  # Theta - A measure of the rate of decline the value of an option due to the passage of time.
+    'vega': '7311',  # Vega - The amount that the price of an option changes compared to a 1% change in the volatility.
+    'implied_vol_percent': '7633',  # Implied Vol. % - The implied volatility for the specific strike of the option in percentage. To query the Option Implied Vol. % from the underlying refer to field 7283.
 
     # Wall Street Horizon
     'upcoming_event': '7683',  # Upcoming Event - Shows the next major company event. Requires Wall Street Horizon subscription.
@@ -124,11 +138,49 @@ snapshot_by_key = {
 snapshot_by_id = {str(value): key for key, value in snapshot_by_key.items()}
 
 
-def snapshot_ids_to_keys(ids):  # pragma: no cover
-    return [snapshot_by_id[idx] for idx in ids]
+def snapshot_ids_to_keys(ids: [Union[str, int]]):  # pragma: no cover
+    """
+    Converts a list of IBKR market data field IDs to their corresponding human-readable keys.
+
+    Parameters:
+        ids (list[Union[str, int]]): A list of numeric field IDs, as strings or integers.
+
+    Returns:
+        list[str]: A list of human-readable field keys.
+
+    Example:
+        >>> snapshot_ids_to_keys(["55", 6008])
+        ["symbol", "conid"]
+
+    Raises:
+        KeyError: If an invalid field ID is provided.
+
+    See:
+        - `snapshot_by_id`: Dictionary mapping IBKR market data field IDs to human-readable keys.
+    """
+    return [snapshot_by_id[str(idx)] for idx in ids]
 
 
-def snapshot_keys_to_ids(keys):  # pragma: no cover
+def snapshot_keys_to_ids(keys: [str]):  # pragma: no cover
+    """
+    Converts a list of human-readable IBKR market data field keys to their corresponding numeric field IDs.
+
+    Parameters:
+        keys (list[str]): A list of human-readable field keys.
+
+    Returns:
+        list[str]: A list of numeric field IDs.
+
+    Example:
+        >>> snapshot_keys_to_ids(["symbol", "conid"])
+        ["55", "6008"]
+
+    Raises:
+        KeyError: If an invalid field key is provided.
+
+    See:
+        - `snapshot_by_key`: Dictionary mapping human-readable keys to IBKR market data field IDs.
+    """
     return [snapshot_by_key[key] for key in keys]
 
 
@@ -143,5 +195,33 @@ data_availability_by_key = {
 }
 
 
-def decode_data_availability(md_availability: str):
+def decode_data_availability(md_availability: [str]):
+    """
+    Decodes a list of market data availability codes into human-readable descriptions.
+
+    The availability string may contain multiple characters indicating different states:
+    - 'S': Streaming
+    - 'R': Realtime
+    - 'D': Delayed
+    - 'Z': Frozen
+    - 'Y': Frozen Delayed
+    - 'P': Snapshot Available
+    - 'p': Consolidated
+
+    Parameters:
+        md_availability (list[str]): A list of market data availability codes.
+
+    Returns:
+        str: A human-readable description of the market data availability.
+
+    Example:
+        >>> decode_data_availability(["S", "R"])
+        "Streaming, Realtime"
+
+    Raises:
+        KeyError: If an invalid availability code is provided.
+
+    See:
+        - `data_availability_by_key`: Dictionary mapping availability codes to human-readable descriptions.
+    """
     return ", ".join([data_availability_by_key[c] for c in md_availability])

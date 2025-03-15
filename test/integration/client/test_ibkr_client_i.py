@@ -27,6 +27,7 @@ class TestIbkrClientI(TestCase):
             account_id=self.account_id,
             timeout=self.timeout,
             max_retries=self.max_retries,
+            use_session=False,
         )
 
         self.data = {'Test key': 'Test value'}
@@ -57,7 +58,7 @@ class TestIbkrClientI(TestCase):
             StockQuery(symbol='INVALID_SYMBOL')
         ]
 
-        with self.assertLogs(project_logger(), level='INFO') as cm:
+        with self.assertLogs(project_logger(), level='INFO'):
             rv = self.client.stock_conid_by_symbol(queries, default_filtering=False)
 
         for symbol, conid in rv.data.items():
@@ -74,7 +75,7 @@ class TestIbkrClientI(TestCase):
         instruments = filter_stocks(query, Result(data={symbol: ibkr_responses.responses["stocks"][symbol]}), default_filtering=False).data[symbol]
 
         with self.assertRaises(RuntimeError) as cm_err:
-            rv = self.client.stock_conid_by_symbol(query, default_filtering=False)
+            self.client.stock_conid_by_symbol(query, default_filtering=False)
 
         self.maxDiff = None
         self.assertEqual(
@@ -251,7 +252,7 @@ class TestIbkrClientI(TestCase):
             12345: MagicMock(status_code=200),
             67890: MagicMock(status_code=200)
         }
-        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
+        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
         self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}), __name__='client_get_mock')
 
         results = self.client.marketdata_unsubscribe(conids)
@@ -268,7 +269,7 @@ class TestIbkrClientI(TestCase):
             12345: MagicMock(status_code=404),  # Simulate not found error for one conid
             67890: MagicMock(status_code=200)
         }
-        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
+        requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
         self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}) if '67890' in url else ExternalBrokerError(status_code=404), __name__='client_get_mock')
 
         results = self.client.marketdata_unsubscribe(conids)

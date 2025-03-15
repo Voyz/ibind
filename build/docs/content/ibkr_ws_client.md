@@ -182,13 +182,16 @@ def __init__(
         port: str = '5000',
         base_route: str = '/v1/api/ws',
         ibkr_client: IbkrClient = None,
-        SubscriptionProcessorClass: Type[
+        subscription_processor_class: Type[
             SubscriptionProcessor] = IbkrSubscriptionProcessor,
-        QueueControllerClass: Type[QueueController] = QueueController[
+        queue_controller_class: Type[QueueController] = QueueController[
             IbkrWsKey],
         log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
         unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
+        unwrap_market_data: bool = True,
         start: bool = False,
+        use_oauth: bool = var.IBIND_USE_OAUTH,
+        access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
         ping_interval: int = var.IBIND_WS_PING_INTERVAL,
         max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
         timeout: float = var.IBIND_WS_TIMEOUT,
@@ -213,11 +216,13 @@ Arguments:
 - `base_route` _str, optional_ - Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
 - `account_id` _str, optional_ - Account ID for subscription management.
 - `ibkr_client` _IbkrClient, optional_ - An instance of the IbkrClient for related operations.
-- `SubscriptionProcessorClass` _Type[SubscriptionProcessor]_ - The class to process subscription payloads.
-- `QueueControllerClass` _Type[QueueController[IbkrWsKey]], optional_ - The class to manage message queues. Defaults to QueueController[IbkrWsKey].
+- `subscription_processor_class` _Type[SubscriptionProcessor]_ - The class to process subscription payloads.
+- `queue_controller_class` _Type[QueueController[IbkrWsKey]], optional_ - The class to manage message queues. Defaults to QueueController[IbkrWsKey].
 - `unsolicited_channels_to_be_queued` _List[IbkrWsKey], optional_ - List of unsolicited channels to be queued. Defaults to None.
+- `unwrap_market_data` _bool, optional_ - Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
 - `start` _bool, optional_ - Flag to start the client immediately after initialization. Defaults to False.
-  
+- `use_oauth` _bool, optional_ - Whether to use OAuth authentication. Defaults to False.
+- `access_token` _str, optional_ - OAuth access token generated in the self-service portal. Defaults to None.
   
   Inherited parameters from WsClient:
   
@@ -463,6 +468,8 @@ Performs a hard reset of the WebSocket connection.
 
 This method forcefully closes the current WebSocketApp connection and optionally restarts it. It is
 used to handle scenarios where the connection is unresponsive or encounters a critical error.
+
+This method cannot be called from the WsClient thread.
 
 Arguments:
 

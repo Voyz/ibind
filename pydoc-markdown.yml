@@ -6,7 +6,13 @@ processors:
   - type: filter
   - type: google
 
-# Cleanup regex: (\*\*)(Arguments|Notes|Raises|Returns|Attributes)(\*\*)
+#
+# After generating do following:
+# - Cleanup regex:
+#   - (\*\*)(Arguments|Notes|Raises|Returns|Attributes)(\*\*)
+#   - $2
+# - Reduce TOCs by removing the level 0 items
+# - Move SubscriptionController and WsClient entries to the bottom of the IbkrWsClient, and remove these
 renderer:
   type: mkdocs
   mkdocs_config:

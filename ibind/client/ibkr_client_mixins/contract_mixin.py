@@ -14,6 +14,8 @@ class ContractMixin():
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#contract
     """
 
+    default_filtering: bool = True
+
     @ensure_list_arg('conids')
     def security_definition_by_conid(self: 'IbkrClient', conids: OneOrMany[str]) -> Result:  # pragma: no cover
         """
@@ -237,7 +239,7 @@ class ContractMixin():
         return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
 
     @ensure_list_arg('queries')
-    def security_stocks_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True) -> Result:
+    def security_stocks_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = None) -> Result:
         """
         Retrieves and filters stock information based on specified queries.
 
@@ -247,10 +249,12 @@ class ContractMixin():
         these queries to filter and return the relevant stock data.
 
         Parameters:
-           queries (List[StockQuery]): A list of StockQuery objects, each specifying filter conditions
+            queries (List[StockQuery]): A list of StockQuery objects, each specifying filter conditions
                                        for the stocks to be retrieved. The StockQuery can include criteria
                                        like stock symbol, name matching, and specific conditions for
                                        instruments and contracts.
+            default_filtering (bool, optional): Indicates whether to apply override the default filtering of {isUS: True}. Defaults to None, which applies the global default filtering.
+
 
         Returns:
            support.rest_client.Result: The result object containing filtered stock information based on the provided queries,
@@ -263,12 +267,15 @@ class ContractMixin():
 
         stocks_result = self.get('trsrv/stocks', params={"symbols": symbols})
 
+        if default_filtering is None:
+            default_filtering = self.default_filtering
+
         filtered_stocks_result = filter_stocks(queries, stocks_result, default_filtering)
 
         return filtered_stocks_result
 
     @ensure_list_arg('queries')
-    def stock_conid_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = True, return_type: str = 'dict') -> Result:
+    def stock_conid_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = None, return_type: str = 'dict') -> Result:
         """
         Retrieves contract IDs (conids) for given stock queries, ensuring only one conid per query.
 
@@ -279,7 +286,7 @@ class ContractMixin():
 
         Parameters:
             queries (List[StockQuery]): A list of StockQuery objects to specify filtering criteria for stocks.
-            default_filtering (bool, optional): Indicates whether to apply default filtering of {isUS: True}. Defaults to True.
+            default_filtering (bool, optional): Indicates whether to apply override the default filtering of {isUS: True}. Defaults to None, which applies the global default filtering.
             return_type (str, optional): Specifies the return type ('dict' or 'list') of the conids. Defaults to 'dict'.
 
         Returns:

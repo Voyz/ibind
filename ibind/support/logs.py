@@ -49,7 +49,8 @@ def ibind_logs_initialize(
         - To get more verbose logs, set either the `log_level` parameter or the `IBIND_LOG_LEVEL` environment variable to `'DEBUG'`
     """
     global _initialized
-    if _initialized: return
+    if _initialized:
+        return
     _initialized = True
 
     global _log_to_file
@@ -61,18 +62,11 @@ def ibind_logs_initialize(
     logger.setLevel(logging.DEBUG)
 
     if log_to_console:
-        # stdout handler, for INFO and below:
+        # outputting only to a single stream to ensure chronological ordering of all messages
         h1 = logging.StreamHandler(stream=sys.stdout)
         h1.setLevel(getattr(logging, log_level))
-        h1.addFilter(lambda record: record.levelno <= logging.INFO)
         h1.setFormatter(formatter)
         logger.addHandler(h1)
-
-        # stderr handler, for WARNING and above:
-        h2 = logging.StreamHandler(stream=sys.stderr)
-        h2.setLevel(logging.WARNING)
-        h2.setFormatter(formatter)
-        logger.addHandler(h2)
 
     if not _log_to_file:
         logging.getLogger('ibind_fh').addFilter(lambda record: False)

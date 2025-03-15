@@ -14,6 +14,18 @@ class AccountsMixin():  # pragma: no cover
     https://ibkrcampus.com/ibkr-api-page/webapi-doc/#accounts
     """
 
+    def account_summary(self: 'IbkrClient', account_id: str = None) -> Result:
+        """
+        Returns a summary of the account's information.
+
+        Parameters:
+            account_id (str): The account identifier. If not provided, the active account is used.
+        """
+        if account_id is None:
+            account_id = self.account_id
+
+        return self.get(f'/iserver/account/{account_id}/summary')
+        
     def account_profit_and_loss(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Returns an object containing PnL for the selected account and its models (if any).
@@ -67,7 +79,7 @@ class AccountsMixin():  # pragma: no cover
         """
         result = self.post('iserver/account', params={"acctId": account_id})
         self.account_id = account_id
-        self.make_logger()
+        self._make_logger()
         _LOGGER.warning(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
         return result
 

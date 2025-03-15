@@ -1,11 +1,12 @@
 import json
 import ssl
+import threading
 import time
 from pathlib import Path
 from threading import Thread, RLock
 from typing import Optional, Union, Dict, List
 
-from websocket import WebSocketApp
+from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
 
 from ibind.base.subscription_controller import SubscriptionController, SubscriptionProcessor
 from ibind.support.logs import project_logger
@@ -76,6 +77,7 @@ class WsClient(SubscriptionController):
 
         self._connected = False
         self._running = False
+        self._authenticated = True # True by default in case of an WS API that doesn't support authentication messages
         self._connect_lock = RLock()
         self._reconnect_lock = RLock()
         self._wsa: Optional[WebSocketApp] = None
@@ -86,7 +88,7 @@ class WsClient(SubscriptionController):
         if not (cacert is False or Path(cacert).exists()):
             raise ValueError(f"{self}: cacert must be a valid Path or False")
 
-        if cacert is None or cacert == False:
+        if cacert is None or not cacert:
             self._sslopt = {"cert_reqs": ssl.CERT_NONE}
         else:
             self._sslopt = {'ca_certs': cacert}
@@ -119,7 +121,10 @@ class WsClient(SubscriptionController):
         try:
             self._wsa.send(payload)
         except Exception as e:
-            _LOGGER.exception(f'{self}: Sending payload failed: {payload}\n{exception_to_string(e)}')
+            if 'Connection is already closed' in str(e):
+                _LOGGER.error(f'{self}: Connection closed while sending payload: {payload}')
+            else:
+                _LOGGER.exception(f'{self}: Sending payload failed: {payload}\n{exception_to_string(e)}')
             return False
 
         return True
@@ -142,12 +147,12 @@ class WsClient(SubscriptionController):
     def _wrap_callback(self, f):
         def wrapped_f(ws, *args, **kwargs):
             if not (ws is self._wsa):
-                _LOGGER.exception(f'{self}: Invalid ws returned: {ws} | expected: {self._wsa}')
+                _LOGGER.error(f'{self}: Invalid ws returned: {ws} | expected: {self._wsa}')
 
             try:
                 f(ws, *args, **kwargs)
             except Exception as e:
-                _LOGGER.exception(f'{self}: Exception executing callback: \n{f} \nwith\n{args=}\n{kwargs=}\n{exception_to_string(e)}')
+                _LOGGER.error(f'{self}: Exception executing callback: \n{f} \nwith\n{args=}\n{kwargs=}\n{exception_to_string(e)}')
 
         return wrapped_f
 
@@ -173,17 +178,38 @@ class WsClient(SubscriptionController):
         if self._restart_on_close and self._running:
             self._reconnect()
 
+    def _get_cookie(self):
+        return None
+
+    def _get_header(self):
+        return None
+
     def _new_websocket_app(self) -> bool:
         if self._wsa is not None:
             raise RuntimeError(f"{self}: WebSocketApp should be closed before attempting to create a new one")
 
         _LOGGER.debug(f'{self}: Creating new WebSocketApp')
+
+        try:
+            cookie = self._get_cookie()
+        except Exception as e:
+            _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
+            cookie = None
+
+        try:
+            header = self._get_header()
+        except Exception as e:
+            _LOGGER.error(f'{self}: Failed to retrieve header: {exception_to_string(e)}')
+            header = None
+
         wsa = WebSocketApp(
             url=self._url,
             on_open=self._wrap_callback(self._handle_on_open),
             on_message=self._wrap_callback(self._handle_on_message),
             on_close=self._wrap_callback(self._handle_on_close),
             on_error=self._wrap_callback(self._handle_on_error),
+            cookie=cookie,
+            header=header,
         )
 
         self._wsa = wsa
@@ -234,36 +260,47 @@ class WsClient(SubscriptionController):
             _LOGGER.warning(f'{self}: Connection failed after {self._max_connection_attempts} attempts')
             return False
 
-    def on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
+    def set_authenticated(self, authenticated:bool):
+        self._authenticated = authenticated is True
+        if not authenticated:
+            if self._wsa is not None:
+                _LOGGER.warning(f'{self}: Not authenticated, closing WebSocketApp')
+                self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
+
+    def _on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
         pass
 
-    def on_reconnect(self):  # pragma: no cover
+    def _on_reconnect(self):  # pragma: no cover
+        if not wait_until(lambda: self._authenticated, f'{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.', timeout=10):
+            # This may appear in the flow of reestablishing connection after loss of authentication
+            # Returning should be expected and fine, as we should only recreate subscriptions once we're authenticated
+            return
         self.recreate_subscriptions()
 
-    def on_open(self, was: WebSocketApp):  # pragma: no cover
+    def _on_open(self, was: WebSocketApp):  # pragma: no cover
         pass
 
-    def on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
+    def _on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
         self.invalidate_subscriptions()
 
-    def on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
+    def _on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
         pass
 
     def _handle_on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
-        self.on_message(wsa, message)
+        self._on_message(wsa, message)
 
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
         self._connected = True
-        self.on_open(wsa)
+        self._on_open(wsa)
 
     def _handle_on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
         _LOGGER.error(f'{self}: on_error: {error}')
-        self.on_error(wsa, error)
+        self._on_error(wsa, error)
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         _LOGGER.info(f'{self}: on_close')
-        self.on_close(wsa, close_status_code, close_msg)
+        self._on_close(wsa, close_status_code, close_msg)
         # if we're not connected we shouldn't need to do anything
         if not self._connected:
             _LOGGER.info(f'{self}: on_close event while disconnected')
@@ -294,6 +331,8 @@ class WsClient(SubscriptionController):
         This method forcefully closes the current WebSocketApp connection and optionally restarts it. It is
         used to handle scenarios where the connection is unresponsive or encounters a critical error.
 
+        This method cannot be called from the WsClient thread.
+
         Parameters:
             restart (bool, optional): Specifies whether to restart the WebSocketApp connection after resetting.
                                       Defaults to False.
@@ -315,7 +354,11 @@ class WsClient(SubscriptionController):
                 restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
             else:
                 _LOGGER.info(f'{self}: Hard reset is closing the WebSocketApp')
-                self._wsa.close()
+                # check if current thread is the same as _thread
+                if threading.current_thread() == self._thread:
+                    raise RuntimeError(f'{self}: Hard reset called from WsClient thread. Ensure it is started from a separate thread')
+
+                self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
 
         # ensure the websocket is closed and abandoned
         if not wait_until(lambda: self._wsa is None, f'{self}: Hard reset close timeout', timeout=self._timeout):
@@ -323,7 +366,7 @@ class WsClient(SubscriptionController):
             self._wsa = None
             restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
 
-        # in some cases, closing the websocket will cause the restart, therefore closing it only is enough
+        # in some cases, closing the websocket will cause the restart elsewhere, therefore only closing it is enough
         if restart:
             _LOGGER.info(f'{self}: Forced restart')
             self._reconnect()
@@ -335,7 +378,7 @@ class WsClient(SubscriptionController):
                 self._try_connecting()
 
             if self._has_active_connection():
-                self.on_reconnect()
+                self._on_reconnect()
 
     def disconnect(self):  # pragma: no cover
         """
