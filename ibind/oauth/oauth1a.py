@@ -9,10 +9,10 @@ from urllib import parse
 
 # TODO: Remove bandit ignore once we have a new Crypto implementation
 # Check repo wiki for more details on Security consideration
-from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher # nosec
-from Crypto.Hash import SHA256, HMAC, SHA1 # nosec
-from Crypto.PublicKey import RSA # nosec
-from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature # nosec
+from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher  # nosec
+from Crypto.Hash import SHA256, HMAC, SHA1  # nosec
+from Crypto.PublicKey import RSA  # nosec
+from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature  # nosec
 
 from ibind import var
 from ibind.oauth import OAuthConfig
@@ -24,6 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _STRING_ENCODING = "utf-8"
 _INT_BASE = 16
 _KEY_VALUE_SEPARATOR = "="
+
 
 @dataclass
 class OAuth1aConfig(OAuthConfig):
@@ -40,7 +41,7 @@ class OAuth1aConfig(OAuthConfig):
         Returns:
             str: The string `'1.0a'`, indicating the OAuth version.
         """
-        return '1.0a'
+        return "1.0a"
 
     oauth_rest_url: str = var.IBIND_OAUTH1A_REST_URL
     """ IBKR Client Portal OAuth base URL. """
@@ -86,30 +87,41 @@ class OAuth1aConfig(OAuthConfig):
         """
 
         required_params = [
-            'oauth_rest_url',
-            'live_session_token_endpoint',
-            'access_token',
-            'access_token_secret',
-            'consumer_key',
-            'dh_prime',
-            'encryption_key_fp',
-            'signature_key_fp',
+            "oauth_rest_url",
+            "live_session_token_endpoint",
+            "access_token",
+            "access_token_secret",
+            "consumer_key",
+            "dh_prime",
+            "encryption_key_fp",
+            "signature_key_fp",
         ]
-        missing_params = [param for param in required_params if getattr(self, param) is None]
+        missing_params = [
+            param for param in required_params if getattr(self, param) is None
+        ]
         if missing_params:
-            raise ValueError(f"OAuth1aConfig is missing required parameters: {', '.join(missing_params)}")
+            raise ValueError(
+                f"OAuth1aConfig is missing required parameters: {', '.join(missing_params)}"
+            )
 
         required_filepaths = [
-            'encryption_key_fp',
-            'signature_key_fp',
+            "encryption_key_fp",
+            "signature_key_fp",
         ]
-        missing_filepaths = [filepath for filepath in required_filepaths if not Path(getattr(self, filepath)).exists()]
+        missing_filepaths = [
+            filepath
+            for filepath in required_filepaths
+            if not Path(getattr(self, filepath)).exists()
+        ]
         if missing_filepaths:
-            raise ValueError(f"OAuth1aConfig's filepaths don't exist: {', '.join(missing_filepaths)}")
+            raise ValueError(
+                f"OAuth1aConfig's filepaths don't exist: {', '.join(missing_filepaths)}"
+            )
 
 
-
-def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) -> tuple[str, int, str]:
+def req_live_session_token(
+    client: "IbkrClient", oauth_config: OAuth1aConfig
+) -> tuple[str, int, str]:
     """
     Requests a live session token from the IBKR Web API for authenticated API access.
 
@@ -140,10 +152,10 @@ def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) ->
     headers = generate_oauth_headers(
         oauth_config=oauth_config,
         request_method="POST",
-        request_url=f'{client.base_url}{endpoint}',
+        request_url=f"{client.base_url}{endpoint}",
         extra_headers=extra_headers,
         signature_method="RSA-SHA256",
-        prepend=prepend
+        prepend=prepend,
     )
 
     result = client.post(endpoint, extra_headers=headers)
@@ -155,7 +167,7 @@ def req_live_session_token(client: 'IbkrClient', oauth_config: OAuth1aConfig) ->
         dh_prime=oauth_config.dh_prime,
         dh_random_value=dh_random,
         dh_response=dh_response,
-        prepend=prepend
+        prepend=prepend,
     )
 
     return live_session_token, lst_expires, lst_signature
@@ -170,7 +182,9 @@ def prepare_oauth(oauth_config: OAuth1aConfig) -> tuple[str, dict, str]:
     )
     prepend = calculate_live_session_token_prepend(
         access_token_secret=oauth_config.access_token_secret,
-        private_encryption_key=read_private_key(private_key_fp=oauth_config.encryption_key_fp)
+        private_encryption_key=read_private_key(
+            private_key_fp=oauth_config.encryption_key_fp
+        ),
     )
 
     extra_headers = {"diffie_hellman_challenge": dh_challenge}
@@ -179,21 +193,21 @@ def prepare_oauth(oauth_config: OAuth1aConfig) -> tuple[str, dict, str]:
 
 
 def generate_oauth_headers(
-        oauth_config: OAuth1aConfig,
-        request_method: str,
-        request_url: str,
-        live_session_token: Optional[str] = None,
-        extra_headers: Optional[dict[str, str]] = None,
-        request_params: dict = None,
-        signature_method: str = "HMAC-SHA256",
-        prepend: Optional[str] = None,
+    oauth_config: OAuth1aConfig,
+    request_method: str,
+    request_url: str,
+    live_session_token: Optional[str] = None,
+    extra_headers: Optional[dict[str, str]] = None,
+    request_params: dict = None,
+    signature_method: str = "HMAC-SHA256",
+    prepend: Optional[str] = None,
 ):
     headers = {
         "oauth_consumer_key": oauth_config.consumer_key,
         "oauth_nonce": generate_oauth_nonce(),
         "oauth_signature_method": signature_method,
         "oauth_timestamp": generate_request_timestamp(),
-        "oauth_token": oauth_config.access_token
+        "oauth_token": oauth_config.access_token,
     }
 
     if oauth_config.access_token:
@@ -206,23 +220,22 @@ def generate_oauth_headers(
         request_url=request_url,
         request_headers=headers,
         request_params=request_params,
-        prepend=prepend
+        prepend=prepend,
     )
 
     if signature_method == "HMAC-SHA256":
         signature = generate_hmac_sha_256_signature(
-            base_string=base_string,
-            live_session_token=live_session_token)
+            base_string=base_string, live_session_token=live_session_token
+        )
     else:
         private_signature_key = read_private_key(oauth_config.signature_key_fp)
         signature = generate_rsa_sha_256_signature(
-            base_string=base_string,
-            private_signature_key=private_signature_key)
+            base_string=base_string, private_signature_key=private_signature_key
+        )
 
     headers.update({"oauth_signature": signature})
     headers_string = generate_authorization_header_string(
-        request_data=headers,
-        realm=oauth_config.realm
+        request_data=headers, realm=oauth_config.realm
     )
 
     header_oauth = {
@@ -231,7 +244,7 @@ def generate_oauth_headers(
         "Authorization": headers_string,
         "Connection": "keep-alive",
         "Host": "api.ibkr.com",
-        "User-Agent": "ibind"
+        "User-Agent": "ibind",
     }
 
     return header_oauth
@@ -271,14 +284,14 @@ def generate_oauth_nonce() -> str:
 
 
 def generate_base_string(
-        request_method: str,
-        request_url: str,
-        request_headers: dict,
-        request_params: dict = None,
-        request_form_data: dict = None,
-        request_body: dict = None,
-        extra_headers: dict = None,
-        prepend: str = None,
+    request_method: str,
+    request_url: str,
+    request_headers: dict,
+    request_params: dict = None,
+    request_form_data: dict = None,
+    request_body: dict = None,
+    extra_headers: dict = None,
+    prepend: str = None,
 ) -> str:
     """
     A lexicographically sorted list of key/value pairs including the authorization header pairs, query parameters and if the request
@@ -330,7 +343,9 @@ def generate_dh_challenge(dh_prime: str, dh_random: str, dh_generator: int = 2) 
     """
 
     # Convert the generator, random value, and prime from their respective formats to integers.
-    dh_challenge = pow(int(dh_generator), int(dh_random, _INT_BASE), int(dh_prime, _INT_BASE))
+    dh_challenge = pow(
+        int(dh_generator), int(dh_random, _INT_BASE), int(dh_prime, _INT_BASE)
+    )
 
     # Convert the result of the calculation to a hexadecimal string, removing the '0x' prefix.
     hex_challenge = hex(dh_challenge)[2:]
@@ -339,7 +354,9 @@ def generate_dh_challenge(dh_prime: str, dh_random: str, dh_generator: int = 2) 
     return hex_challenge
 
 
-def calculate_live_session_token_prepend(access_token_secret: str, private_encryption_key: RSA.RsaKey) -> str:
+def calculate_live_session_token_prepend(
+    access_token_secret: str, private_encryption_key: RSA.RsaKey
+) -> str:
     """
     Decrypts the access token secret using the private encryption key.
     The result is then converted to a hex value, and returned as the prepend
@@ -361,7 +378,9 @@ def calculate_live_session_token_prepend(access_token_secret: str, private_encry
     return decrypted_access_token_secret_hex
 
 
-def generate_rsa_sha_256_signature(base_string: str, private_signature_key: RSA.RsaKey) -> str:
+def generate_rsa_sha_256_signature(
+    base_string: str, private_signature_key: RSA.RsaKey
+) -> str:
     """
     Generates the signature for the base string using the private signature key.
     The signature is generated using the
@@ -386,7 +405,9 @@ def generate_rsa_sha_256_signature(base_string: str, private_signature_key: RSA.
     # Encode the signature to bytes using base64
     encoded_signature = base64.encodebytes(signature)
 
-    return parse.quote_plus(encoded_signature.decode(_STRING_ENCODING).replace("\n", ""))
+    return parse.quote_plus(
+        encoded_signature.decode(_STRING_ENCODING).replace("\n", "")
+    )
 
 
 def generate_hmac_sha_256_signature(base_string: str, live_session_token: str) -> str:
@@ -425,11 +446,13 @@ def to_byte_array(x: int) -> list[int]:
     if len(bin(x)[2:]) % 8 == 0:
         byte_array.append(0)
     for i in range(0, len(hex_string), 2):
-        byte_array.append(int(hex_string[i: i + 2], 16))
+        byte_array.append(int(hex_string[i : i + 2], 16))
     return byte_array
 
 
-def calculate_live_session_token(dh_prime: str, dh_random_value: str, dh_response: str, prepend: str) -> str:
+def calculate_live_session_token(
+    dh_prime: str, dh_random_value: str, dh_response: str, prepend: str
+) -> str:
     """
     Calculates the live session token using the DH prime, random value, response and prepend.
     The live session token is used to sign requests for protected resources.
@@ -457,7 +480,9 @@ def calculate_live_session_token(dh_prime: str, dh_random_value: str, dh_respons
     return base64.b64encode(hmac.digest()).decode(_STRING_ENCODING)
 
 
-def validate_live_session_token(live_session_token: str, live_session_token_signature: str, consumer_key: str) -> bool:
+def validate_live_session_token(
+    live_session_token: str, live_session_token_signature: str, consumer_key: str
+) -> bool:
     """
     Validate the calculated live session token against the live session token signature.
     """

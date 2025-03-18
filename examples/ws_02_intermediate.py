@@ -14,24 +14,29 @@ import os
 import signal
 import time
 
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind import IbkrWsKey, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
+account_id = os.getenv("IBIND_ACCOUNT_ID", "[YOUR_ACCOUNT_ID]")
+cacert = os.getenv("IBIND_CACERT", False)  # insert your cacert path here
 
 ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 
 ws_client.start()
 
 requests = [
-    {'channel': 'md+265598', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
-    {'channel': 'or'},
-    {'channel': 'tr'},
-    {'channel': f'sd+{account_id}'},
-    {'channel': f'ld+{account_id}'},
-    {'channel': 'pl'},
+    {
+        "channel": "md+265598",
+        "data": {
+            "fields": ["55", "71", "84", "86", "88", "85", "87", "7295", "7296", "70"]
+        },
+    },
+    {"channel": "or"},
+    {"channel": "tr"},
+    {"channel": f"sd+{account_id}"},
+    {"channel": f"ld+{account_id}"},
+    {"channel": "pl"},
 ]
 queue_accessors = [
     ws_client.new_queue_accessor(IbkrWsKey.TRADES),
@@ -65,7 +70,7 @@ while ws_client.running:
 
         time.sleep(1)
     except KeyboardInterrupt:
-        print('KeyboardInterrupt')
+        print("KeyboardInterrupt")
         break
 
 stop(None, None)

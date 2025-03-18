@@ -8,7 +8,10 @@ from typing import Optional, Union, Dict, List
 
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
 
-from ibind.base.subscription_controller import SubscriptionController, SubscriptionProcessor
+from ibind.base.subscription_controller import (
+    SubscriptionController,
+    SubscriptionProcessor,
+)
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string, wait_until, tname
 
@@ -31,18 +34,18 @@ class WsClient(SubscriptionController):
     """
 
     def __init__(
-            self,
-            subscription_processor: SubscriptionProcessor,
-            url: str,
-            timeout: float = _DEFAULT_TIMEOUT,
-            restart_on_close: bool = True,
-            restart_on_critical: bool = True,
-            ping_interval: int = _DEFAULT_PING_INTERVAL,
-            max_ping_interval: int = _DEFAULT_MAX_PING_INTERVAL,
-            max_connection_attempts: int = 10,
-            cacert: Union[str, bool] = False,
-            subscription_retries: int = 5,
-            subscription_timeout: float = 2,
+        self,
+        subscription_processor: SubscriptionProcessor,
+        url: str,
+        timeout: float = _DEFAULT_TIMEOUT,
+        restart_on_close: bool = True,
+        restart_on_critical: bool = True,
+        ping_interval: int = _DEFAULT_PING_INTERVAL,
+        max_ping_interval: int = _DEFAULT_MAX_PING_INTERVAL,
+        max_connection_attempts: int = 10,
+        cacert: Union[str, bool] = False,
+        subscription_retries: int = 5,
+        subscription_timeout: float = 2,
     ):
         """
         Parameters:
@@ -72,12 +75,12 @@ class WsClient(SubscriptionController):
         super().__init__(
             subscription_processor=subscription_processor,
             subscription_retries=subscription_retries,
-            subscription_timeout=subscription_timeout
+            subscription_timeout=subscription_timeout,
         )
 
         self._connected = False
         self._running = False
-        self._authenticated = True # True by default in case of an WS API that doesn't support authentication messages
+        self._authenticated = True  # True by default in case of an WS API that doesn't support authentication messages
         self._connect_lock = RLock()
         self._reconnect_lock = RLock()
         self._wsa: Optional[WebSocketApp] = None
@@ -91,7 +94,7 @@ class WsClient(SubscriptionController):
         if cacert is None or not cacert:
             self._sslopt = {"cert_reqs": ssl.CERT_NONE}
         else:
-            self._sslopt = {'ca_certs': cacert}
+            self._sslopt = {"ca_certs": cacert}
 
     def send(self, payload: str) -> bool:
         """
@@ -110,7 +113,7 @@ class WsClient(SubscriptionController):
             - If the WebSocketApp is not running or if the connection is inactive, the method attempts to connect first.
         """
         if not self._running:
-            _LOGGER.error(f'{self}: Must be started before sending payloads')
+            _LOGGER.error(f"{self}: Must be started before sending payloads")
             return False
 
         if not self._has_active_connection():
@@ -121,10 +124,14 @@ class WsClient(SubscriptionController):
         try:
             self._wsa.send(payload)
         except Exception as e:
-            if 'Connection is already closed' in str(e):
-                _LOGGER.error(f'{self}: Connection closed while sending payload: {payload}')
+            if "Connection is already closed" in str(e):
+                _LOGGER.error(
+                    f"{self}: Connection closed while sending payload: {payload}"
+                )
             else:
-                _LOGGER.exception(f'{self}: Sending payload failed: {payload}\n{exception_to_string(e)}')
+                _LOGGER.exception(
+                    f"{self}: Sending payload failed: {payload}\n{exception_to_string(e)}"
+                )
             return False
 
         return True
@@ -146,33 +153,43 @@ class WsClient(SubscriptionController):
 
     def _wrap_callback(self, f):
         def wrapped_f(ws, *args, **kwargs):
-            if not (ws is self._wsa):
-                _LOGGER.error(f'{self}: Invalid ws returned: {ws} | expected: {self._wsa}')
+            if ws is not self._wsa:
+                _LOGGER.error(
+                    f"{self}: Invalid ws returned: {ws} | expected: {self._wsa}"
+                )
 
             try:
                 f(ws, *args, **kwargs)
             except Exception as e:
-                _LOGGER.error(f'{self}: Exception executing callback: \n{f} \nwith\n{args=}\n{kwargs=}\n{exception_to_string(e)}')
+                _LOGGER.error(
+                    f"{self}: Exception executing callback: \n{f} \nwith\n{args=}\n{kwargs=}\n{exception_to_string(e)}"
+                )
 
         return wrapped_f
 
     def _run_websocket(self, wsa: WebSocketApp):
-        _LOGGER.debug(f'{self}: Thread started ({tname()})')
+        _LOGGER.debug(f"{self}: Thread started ({tname()})")
 
         try:
             # the timeout is set to a little sooner than the interval
-            wsa.run_forever(ping_interval=self._ping_interval, ping_timeout=self._ping_interval * 0.95, sslopt=self._sslopt)
+            wsa.run_forever(
+                ping_interval=self._ping_interval,
+                ping_timeout=self._ping_interval * 0.95,
+                sslopt=self._sslopt,
+            )
 
         except ValueError as e:
-            if 'url is invalid' in str(e):
-                _LOGGER.error(f'{self}: URL is invalid: {self._url}')
+            if "url is invalid" in str(e):
+                _LOGGER.error(f"{self}: URL is invalid: {self._url}")
         except Exception as e:
-            _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
+            _LOGGER.exception(
+                f"{self}: Unexpected error while running WebSocketApp: {e}"
+            )
             if self._restart_on_critical:
                 # if restart_on_close is set, restarting will happen in on_close callback
                 self.hard_reset(restart=not self._restart_on_close)
 
-        _LOGGER.debug(f'{self}: Thread stopped ({tname()})')
+        _LOGGER.debug(f"{self}: Thread stopped ({tname()})")
         self._thread = None
 
         if self._restart_on_close and self._running:
@@ -186,20 +203,26 @@ class WsClient(SubscriptionController):
 
     def _new_websocket_app(self) -> bool:
         if self._wsa is not None:
-            raise RuntimeError(f"{self}: WebSocketApp should be closed before attempting to create a new one")
+            raise RuntimeError(
+                f"{self}: WebSocketApp should be closed before attempting to create a new one"
+            )
 
-        _LOGGER.debug(f'{self}: Creating new WebSocketApp')
+        _LOGGER.debug(f"{self}: Creating new WebSocketApp")
 
         try:
             cookie = self._get_cookie()
         except Exception as e:
-            _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
+            _LOGGER.error(
+                f"{self}: Failed to retrieve cookie: {exception_to_string(e)}"
+            )
             cookie = None
 
         try:
             header = self._get_header()
         except Exception as e:
-            _LOGGER.error(f'{self}: Failed to retrieve header: {exception_to_string(e)}')
+            _LOGGER.error(
+                f"{self}: Failed to retrieve header: {exception_to_string(e)}"
+            )
             header = None
 
         wsa = WebSocketApp(
@@ -214,11 +237,17 @@ class WsClient(SubscriptionController):
 
         self._wsa = wsa
 
-        self._thread = Thread(target=self._run_websocket, args=(self._wsa,), name='ws_client_thread')
+        self._thread = Thread(
+            target=self._run_websocket, args=(self._wsa,), name="ws_client_thread"
+        )
         self._thread.daemon = True
         self._thread.start()
 
-        connection_success = wait_until(lambda: self._connected, f'{self}: New WebSocketApp connection timeout', timeout=self._timeout)
+        connection_success = wait_until(
+            lambda: self._connected,
+            f"{self}: New WebSocketApp connection timeout",
+            timeout=self._timeout,
+        )
 
         # attempt to shut down if connection fails
         if not connection_success:
@@ -237,41 +266,53 @@ class WsClient(SubscriptionController):
                 return True
 
             if self._thread is not None:
-                _LOGGER.warning(f'{self}: Thread already running: {self._thread.name}-{self._thread.ident}')
+                _LOGGER.warning(
+                    f"{self}: Thread already running: {self._thread.name}-{self._thread.ident}"
+                )
                 return False
 
-            _LOGGER.info(f'{self}: Trying to connect')
+            _LOGGER.info(f"{self}: Trying to connect")
             for i in range(self._max_connection_attempts):
                 if not self._running:
                     return False
 
                 if i > 0:
-                    _LOGGER.info(f'{self}: Connect reattempt {i + 1}/{self._max_connection_attempts}')
+                    _LOGGER.info(
+                        f"{self}: Connect reattempt {i + 1}/{self._max_connection_attempts}"
+                    )
 
                 try:
                     connection_success = self._new_websocket_app()
                 except Exception as e:
-                    _LOGGER.exception(f'{self}: Exception creating new WebSocketApp:\n{exception_to_string(e)}')
+                    _LOGGER.exception(
+                        f"{self}: Exception creating new WebSocketApp:\n{exception_to_string(e)}"
+                    )
                     connection_success = False
 
                 if connection_success:
                     return True
 
-            _LOGGER.warning(f'{self}: Connection failed after {self._max_connection_attempts} attempts')
+            _LOGGER.warning(
+                f"{self}: Connection failed after {self._max_connection_attempts} attempts"
+            )
             return False
 
-    def set_authenticated(self, authenticated:bool):
+    def set_authenticated(self, authenticated: bool):
         self._authenticated = authenticated is True
         if not authenticated:
             if self._wsa is not None:
-                _LOGGER.warning(f'{self}: Not authenticated, closing WebSocketApp')
+                _LOGGER.warning(f"{self}: Not authenticated, closing WebSocketApp")
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
 
     def _on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
         pass
 
     def _on_reconnect(self):  # pragma: no cover
-        if not wait_until(lambda: self._authenticated, f'{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.', timeout=10):
+        if not wait_until(
+            lambda: self._authenticated,
+            f"{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.",
+            timeout=10,
+        ):
             # This may appear in the flow of reestablishing connection after loss of authentication
             # Returning should be expected and fine, as we should only recreate subscriptions once we're authenticated
             return
@@ -280,7 +321,9 @@ class WsClient(SubscriptionController):
     def _on_open(self, was: WebSocketApp):  # pragma: no cover
         pass
 
-    def _on_close(self, wsa: WebSocketApp, close_status_code, close_msg):  # pragma: no cover
+    def _on_close(
+        self, wsa: WebSocketApp, close_status_code, close_msg
+    ):  # pragma: no cover
         self.invalidate_subscriptions()
 
     def _on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
@@ -290,38 +333,42 @@ class WsClient(SubscriptionController):
         self._on_message(wsa, message)
 
     def _handle_on_open(self, wsa: WebSocketApp):
-        _LOGGER.info(f'{self}: Connection open')
+        _LOGGER.info(f"{self}: Connection open")
         self._connected = True
         self._on_open(wsa)
 
     def _handle_on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
-        _LOGGER.error(f'{self}: on_error: {error}')
+        _LOGGER.error(f"{self}: on_error: {error}")
         self._on_error(wsa, error)
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
-        _LOGGER.info(f'{self}: on_close')
+        _LOGGER.info(f"{self}: on_close")
         self._on_close(wsa, close_status_code, close_msg)
         # if we're not connected we shouldn't need to do anything
         if not self._connected:
-            _LOGGER.info(f'{self}: on_close event while disconnected')
+            _LOGGER.info(f"{self}: on_close event while disconnected")
             return
 
         self._connected = False
         self._wsa = None
 
-        if close_status_code is not None or close_msg is not None:  # this means an error
+        if (
+            close_status_code is not None or close_msg is not None
+        ):  # this means an error
             try:
                 msg = close_msg.decode("utf-8")
             except AttributeError:
                 msg = close_msg
 
-            _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
+            _LOGGER.error(f"{self}: on_close error: {close_status_code} | {msg}")
 
         else:  # otherwise it's a close success confirmation
-            _LOGGER.info(f'{self}: Connection closed')
+            _LOGGER.info(f"{self}: Connection closed")
 
-        if not self._running:  # if close happened due to shutting down, acknowledge and return
-            _LOGGER.info(f'{self}: Gracefully stopped')
+        if (
+            not self._running
+        ):  # if close happened due to shutting down, acknowledge and return
+            _LOGGER.info(f"{self}: Gracefully stopped")
             return
 
     def hard_reset(self, restart: bool = False) -> None:
@@ -342,7 +389,7 @@ class WsClient(SubscriptionController):
             - If the WebSocketApp is unresponsive or cannot be closed, it will be abandoned and the connection will be reset.
             - If 'restart' is True, the method attempts to re-establish a new WebSocketApp connection after resetting.
         """
-        _LOGGER.info(f'{self}: Hard reset, {restart=}, {self._wsa is None=}')
+        _LOGGER.info(f"{self}: Hard reset, {restart=}, {self._wsa is None=}")
 
         # we want the websocket closed before reconnecting
         if self._wsa is not None:
@@ -353,28 +400,38 @@ class WsClient(SubscriptionController):
                 self._wsa = None
                 restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
             else:
-                _LOGGER.info(f'{self}: Hard reset is closing the WebSocketApp')
+                _LOGGER.info(f"{self}: Hard reset is closing the WebSocketApp")
                 # check if current thread is the same as _thread
                 if threading.current_thread() == self._thread:
-                    raise RuntimeError(f'{self}: Hard reset called from WsClient thread. Ensure it is started from a separate thread')
+                    raise RuntimeError(
+                        f"{self}: Hard reset called from WsClient thread. Ensure it is started from a separate thread"
+                    )
 
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
 
         # ensure the websocket is closed and abandoned
-        if not wait_until(lambda: self._wsa is None, f'{self}: Hard reset close timeout', timeout=self._timeout):
-            _LOGGER.warning(f'{self}: Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
+        if not wait_until(
+            lambda: self._wsa is None,
+            f"{self}: Hard reset close timeout",
+            timeout=self._timeout,
+        ):
+            _LOGGER.warning(
+                f"{self}: Abandoning current WebSocketApp that cannot be closed: {self._wsa}"
+            )
             self._wsa = None
-            restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
+            restart = (
+                True  # since we've abandoned the WebSocketApp, let's ensure we restart
+            )
 
         # in some cases, closing the websocket will cause the restart elsewhere, therefore only closing it is enough
         if restart:
-            _LOGGER.info(f'{self}: Forced restart')
+            _LOGGER.info(f"{self}: Forced restart")
             self._reconnect()
 
     def _reconnect(self):
         with self._reconnect_lock:
             if not self._has_active_connection():
-                _LOGGER.info(f'{self}: Reconnecting')
+                _LOGGER.info(f"{self}: Reconnecting")
                 self._try_connecting()
 
             if self._has_active_connection():
@@ -405,7 +462,7 @@ class WsClient(SubscriptionController):
         Note:
             - The success of the connection is determined by the ability to establish and maintain the WebSocketApp connection.
         """
-        _LOGGER.info(f'{self}: Starting')
+        _LOGGER.info(f"{self}: Starting")
         self._running = True
         success = self._try_connecting()
         return success
@@ -426,7 +483,7 @@ class WsClient(SubscriptionController):
             if not self._connected and self._thread is None:
                 return
 
-            _LOGGER.info(f'{self}: Shutting down')
+            _LOGGER.info(f"{self}: Shutting down")
 
             if self._connected:
                 self.disconnect()
@@ -457,7 +514,9 @@ class WsClient(SubscriptionController):
 
         diff = abs(time.time() - self._wsa.last_ping_tm)
         if diff > self._max_ping_interval:
-            _LOGGER.warning(f'{self}: Last WebSocket ping happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.')
+            _LOGGER.warning(
+                f"{self}: Last WebSocket ping happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting."
+            )
             self.hard_reset(restart=True)
             return False
 
@@ -496,4 +555,4 @@ class WsClient(SubscriptionController):
         return self._running
 
     def __str__(self):
-        return f'{self.__class__.__qualname__}'
+        return f"{self.__class__.__qualname__}"

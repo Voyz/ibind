@@ -2,7 +2,12 @@ from abc import ABC
 from typing import Dict, TYPE_CHECKING, Optional
 
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import wait_until, TimeoutLock, UNDEFINED, exception_to_string
+from ibind.support.py_utils import (
+    wait_until,
+    TimeoutLock,
+    UNDEFINED,
+    exception_to_string,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind.base.ws_client import WsClient
@@ -30,7 +35,7 @@ class SubscriptionProcessor(ABC):  # pragma: no cover
         raise NotImplementedError()
 
 
-class SubscriptionController():
+class SubscriptionController:
     """
     Mixin which manages subscriptions to different channels using the WsClient.
 
@@ -45,12 +50,11 @@ class SubscriptionController():
     """
 
     def __init__(
-            self,
-            subscription_processor: SubscriptionProcessor,
-            subscription_retries: int = 5,
-            subscription_timeout: float = 2,
+        self,
+        subscription_processor: SubscriptionProcessor,
+        subscription_retries: int = 5,
+        subscription_timeout: float = 2,
     ):
-
         self._subscription_processor = subscription_processor
         self._subscription_retries = subscription_retries
         self._subscription_timeout = subscription_timeout
@@ -58,27 +62,31 @@ class SubscriptionController():
         self._subscriptions: Dict[str, dict] = {}
         self._operational_lock = TimeoutLock(60)
 
-    def _send_payload(self: 'WsClient', payload) -> bool:
+    def _send_payload(self: "WsClient", payload) -> bool:
         try:
             success = self.send(payload)
             if not success:
-                _LOGGER.info(f'{self}: Sending payload unsuccessful: {payload}')
+                _LOGGER.info(f"{self}: Sending payload unsuccessful: {payload}")
             return success
         except Exception as e:
-            _LOGGER.exception(f'{self}: Exception sending payload: {payload}\n{exception_to_string(e)}')
+            _LOGGER.exception(
+                f"{self}: Exception sending payload: {payload}\n{exception_to_string(e)}"
+            )
             return False
 
     def _attempt_subscribing_once(self, channel: str, payload: str) -> bool:
         success = self._send_payload(payload)
         if not success:
-            _LOGGER.info(f'{self}: Subscription failed: {payload}')
+            _LOGGER.info(f"{self}: Subscription failed: {payload}")
             return False
 
-        _LOGGER.info(f'{self}: Subscribed: {payload} without confirmation.')
-        self._subscriptions[channel]['status'] = True
+        _LOGGER.info(f"{self}: Subscribed: {payload} without confirmation.")
+        self._subscriptions[channel]["status"] = True
         return True
 
-    def _attempt_subscribing_repeated(self: 'WsClient', channel: str, payload: str) -> bool:
+    def _attempt_subscribing_repeated(
+        self: "WsClient", channel: str, payload: str
+    ) -> bool:
         # attempt to subscribe several times
         for attempt in range(self._subscription_retries):
             # if the client got shut down in the meantime, we just stop trying
@@ -86,26 +94,33 @@ class SubscriptionController():
                 return False
 
             if attempt > 0:
-                _LOGGER.info(f'{self}: Subscribing reattempt ({attempt + 1}/{self._subscription_retries}) {payload}')
+                _LOGGER.info(
+                    f"{self}: Subscribing reattempt ({attempt + 1}/{self._subscription_retries}) {payload}"
+                )
 
             if not self._send_payload(payload):
                 continue
 
             # we assume that once the subscription is successful its status will be set to True
-            if wait_until(lambda: self.is_subscription_active(channel), timeout=self._subscription_timeout):
-                _LOGGER.info(f'{self}: Subscribed: {payload}')
+            if wait_until(
+                lambda: self.is_subscription_active(channel),
+                timeout=self._subscription_timeout,
+            ):
+                _LOGGER.info(f"{self}: Subscribed: {payload}")
                 return True
 
         # if all failed, notify and return
-        _LOGGER.error(f'{self}: Subscribing failed after {self._subscription_retries} attempts: {payload}')
+        _LOGGER.error(
+            f"{self}: Subscribing failed after {self._subscription_retries} attempts: {payload}"
+        )
         return False
 
     def _attempt_subscribing(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = True,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = True,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:
         if subscription_processor is None:
             subscription_processor = self._subscription_processor
@@ -121,11 +136,11 @@ class SubscriptionController():
             return self._attempt_subscribing_repeated(channel, payload)
 
     def subscribe(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = True,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = True,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:
         """
         Subscribes to a specified channel.
@@ -150,25 +165,31 @@ class SubscriptionController():
             - If 'needs_confirmation' is True, the method waits for confirmation in order to mark the subscription as successful.
         """
         with self._operational_lock:
-            if self.is_subscription_active(channel):  # do nothing if subscription is present and active
+            if self.is_subscription_active(
+                channel
+            ):  # do nothing if subscription is present and active
                 return True
 
             # store a new subscription
             self._subscriptions[channel] = {
-                'status': False,
-                'data': data,
-                'needs_confirmation': needs_confirmation,
-                'subscription_processor': subscription_processor
+                "status": False,
+                "data": data,
+                "needs_confirmation": needs_confirmation,
+                "subscription_processor": subscription_processor,
             }
 
-            return self._attempt_subscribing(channel, data, needs_confirmation, subscription_processor)
+            return self._attempt_subscribing(
+                channel, data, needs_confirmation, subscription_processor
+            )
 
     def _attempt_unsubscribing_once(self, channel: str, payload: str) -> bool:
         self._send_payload(payload)
-        _LOGGER.info(f'{self}: Unsubscribed: {payload} without confirmation.')
+        _LOGGER.info(f"{self}: Unsubscribed: {payload} without confirmation.")
         return True
 
-    def _attempt_unsubscribing_repeated(self: 'WsClient', channel: str, payload: str) -> bool:
+    def _attempt_unsubscribing_repeated(
+        self: "WsClient", channel: str, payload: str
+    ) -> bool:
         # attempt to unsubscribe several times
         for attempt in range(self._subscription_retries):
             # if the client got shut down in the meantime, we just stop trying
@@ -176,28 +197,34 @@ class SubscriptionController():
                 return False
 
             if attempt > 0:
-                _LOGGER.info(f'{self}: Unsubscribing reattempt ({attempt + 1}/{self._subscription_retries}) {payload}')
+                _LOGGER.info(
+                    f"{self}: Unsubscribing reattempt ({attempt + 1}/{self._subscription_retries}) {payload}"
+                )
 
             if not self._send_payload(payload):
                 continue
 
             # we assume that once the unsubscription is successful its status will be set to False
-            if wait_until(lambda: not self.is_subscription_active(channel), timeout=self._subscription_timeout):
-                _LOGGER.info(f'{self}: Unsubscribed: {payload}')
+            if wait_until(
+                lambda: not self.is_subscription_active(channel),
+                timeout=self._subscription_timeout,
+            ):
+                _LOGGER.info(f"{self}: Unsubscribed: {payload}")
                 return True
 
         # if all failed, notify and return
-        _LOGGER.error(f'{self}: Unsubscribing failed after {self._subscription_retries} attempts: {payload}')
+        _LOGGER.error(
+            f"{self}: Unsubscribing failed after {self._subscription_retries} attempts: {payload}"
+        )
         return False
 
     def _attempt_unsubscribing(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = True,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = True,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:
-
         if subscription_processor is None:
             subscription_processor = self._subscription_processor
 
@@ -212,11 +239,11 @@ class SubscriptionController():
             return self._attempt_unsubscribing_repeated(channel, payload)
 
     def unsubscribe(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = False,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = False,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:
         """
         Unsubscribes from a specified channel.
@@ -244,7 +271,9 @@ class SubscriptionController():
             # if not self.is_subscription_active(channel):  # do nothing if subscription is not present or not active
             #     return True
 
-            confirmed = self._attempt_unsubscribing(channel, data, needs_confirmation, subscription_processor)
+            confirmed = self._attempt_unsubscribing(
+                channel, data, needs_confirmation, subscription_processor
+            )
 
             if confirmed:  # remove the subscription
                 self._subscriptions.pop(channel, None)
@@ -252,14 +281,13 @@ class SubscriptionController():
             return confirmed
 
     def modify_subscription(
-            self,
-            channel: str,
-            status: bool = UNDEFINED,
-            data: dict = UNDEFINED,
-            needs_confirmation: bool = UNDEFINED,
-            subscription_processor: SubscriptionProcessor = UNDEFINED,
+        self,
+        channel: str,
+        status: bool = UNDEFINED,
+        data: dict = UNDEFINED,
+        needs_confirmation: bool = UNDEFINED,
+        subscription_processor: SubscriptionProcessor = UNDEFINED,
     ):
-
         """
         Modifies an existing subscription.
 
@@ -279,19 +307,23 @@ class SubscriptionController():
         """
         try:
             if status is not UNDEFINED:
-                self._subscriptions[channel]['status'] = status
+                self._subscriptions[channel]["status"] = status
 
             if data is not UNDEFINED:
-                self._subscriptions[channel]['data'] = data
+                self._subscriptions[channel]["data"] = data
 
             if needs_confirmation is not UNDEFINED:
-                self._subscriptions[channel]['needs_confirmation'] = needs_confirmation
+                self._subscriptions[channel]["needs_confirmation"] = needs_confirmation
 
             if subscription_processor is not UNDEFINED:
-                self._subscriptions[channel]['subscription_processor'] = subscription_processor
+                self._subscriptions[channel]["subscription_processor"] = (
+                    subscription_processor
+                )
 
         except KeyError as e:
-            raise KeyError(f'Subscription {channel} does not exist. Current subscriptions: {list(self._subscriptions.keys())}') from e
+            raise KeyError(
+                f"Subscription {channel} does not exist. Current subscriptions: {list(self._subscriptions.keys())}"
+            ) from e
 
     def recreate_subscriptions(self):
         """
@@ -304,7 +336,7 @@ class SubscriptionController():
             active_subscriptions = {}
             inactive_subscriptions = {}
             for channel, subscription in self._subscriptions.items():
-                if not subscription['status']:
+                if not subscription["status"]:
                     inactive_subscriptions[channel] = subscription
                 else:
                     active_subscriptions[channel] = subscription
@@ -312,41 +344,48 @@ class SubscriptionController():
             if len(inactive_subscriptions) == 0:
                 return
 
-            _LOGGER.info(f'{self}: Recreating {len(inactive_subscriptions)}/{len(self._subscriptions)} subscriptions: {inactive_subscriptions}')
+            _LOGGER.info(
+                f"{self}: Recreating {len(inactive_subscriptions)}/{len(self._subscriptions)} subscriptions: {inactive_subscriptions}"
+            )
             self._subscriptions = active_subscriptions
 
             not_resubscribed = {}
 
             for channel, subscription in inactive_subscriptions.items():
-
                 success = self.subscribe(
                     channel,
-                    subscription['data'],
-                    subscription['needs_confirmation'],
-                    subscription.get('subscription_processor'),
+                    subscription["data"],
+                    subscription["needs_confirmation"],
+                    subscription.get("subscription_processor"),
                 )
                 if not success:
                     not_resubscribed[channel] = {
-                        'status': False,
-                        'data': subscription['data'],
-                        'needs_confirmation': subscription['needs_confirmation'],
-                        'subscription_processor': subscription.get('subscription_processor')
+                        "status": False,
+                        "data": subscription["data"],
+                        "needs_confirmation": subscription["needs_confirmation"],
+                        "subscription_processor": subscription.get(
+                            "subscription_processor"
+                        ),
                     }
 
             if not_resubscribed != {}:
-                _LOGGER.error(f'{self}: Failed to re-subscribe {len(not_resubscribed)} channels: {not_resubscribed}')
+                _LOGGER.error(
+                    f"{self}: Failed to re-subscribe {len(not_resubscribed)} channels: {not_resubscribed}"
+                )
 
             # carry over unsuccessful subscriptions
             self._subscriptions = {**self._subscriptions, **not_resubscribed}
 
     def invalidate_subscriptions(self):
         for channel in self._subscriptions:
-            if self._subscriptions[channel].get('status', False):
-                self._subscriptions[channel]['status'] = False
-                _LOGGER.info(f'{self}: Invalidated subscription: {channel}')
+            if self._subscriptions[channel].get("status", False):
+                self._subscriptions[channel]["status"] = False
+                _LOGGER.info(f"{self}: Invalidated subscription: {channel}")
 
-    def is_subscription_active(self, channel: str) -> Optional[bool]:  # pragma: no cover
-        return self._subscriptions.get(channel, {}).get('status', None)
+    def is_subscription_active(
+        self, channel: str
+    ) -> Optional[bool]:  # pragma: no cover
+        return self._subscriptions.get(channel, {}).get("status", None)
 
     def has_active_subscriptions(self) -> bool:  # pragma: no cover
         for channel in self._subscriptions:

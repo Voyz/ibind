@@ -9,7 +9,13 @@ from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
+from ibind.support.py_utils import (
+    UNDEFINED,
+    ensure_list_arg,
+    VerboseEnum,
+    OneOrMany,
+    exception_to_string,
+)
 
 _LOGGER = project_logger(__file__)
 
@@ -18,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 @dataclass
-class StockQuery():
+class StockQuery:
     """
     A class to encapsulate query parameters for filtering stock data.
 
@@ -33,6 +39,7 @@ class StockQuery():
         contract_conditions (Optional[dict], optional): Key-value pairs representing conditions to apply to
             stock contracts. Each condition is matched exactly against the contract's attributes.
     """
+
     symbol: str
     name_match: Optional[str] = field(default=None)
     instrument_conditions: Optional[dict] = field(default=None)
@@ -51,10 +58,10 @@ def _filter(data: dict, conditions: dict) -> bool:
 
 
 def process_instruments(
-        instruments: dict,
-        name_match: str = None,
-        instrument_conditions: dict = None,
-        contract_conditions: dict = None,
+    instruments: dict,
+    name_match: str = None,
+    instrument_conditions: dict = None,
+    contract_conditions: dict = None,
 ) -> [dict]:
     """
     Filters a list of instruments based on specified name matching and conditions.
@@ -76,11 +83,16 @@ def process_instruments(
 
     for instrument in instruments:
         # look for a partial match of the instrument name if provided
-        if name_match is not None and name_match.upper() not in instrument['name'].upper():
+        if (
+            name_match is not None
+            and name_match.upper() not in instrument["name"].upper()
+        ):
             continue
 
         # look for an exact match of instrument properties if provided
-        if instrument_conditions is not None and not _filter(instrument, instrument_conditions):
+        if instrument_conditions is not None and not _filter(
+            instrument, instrument_conditions
+        ):
             continue
 
         # filter contracts by conditions provided
@@ -97,29 +109,32 @@ def process_instruments(
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
-            instrument['contracts'] = filtered_contracts
+            instrument["contracts"] = filtered_contracts
 
         filtered_instruments.append(instrument)
 
     return filtered_instruments
 
 
-@ensure_list_arg('queries')
-def filter_stocks(queries: StockQueries, result: Result, default_filtering: bool = True):
+@ensure_list_arg("queries")
+def filter_stocks(
+    queries: StockQueries, result: Result, default_filtering: bool = True
+):
     stocks = {}
     data = result.data
     for q in queries:
-        symbol, name_match, instrument_conditions, contract_conditions = process_query(q, default_filtering)
+        symbol, name_match, instrument_conditions, contract_conditions = process_query(
+            q, default_filtering
+        )
 
         if symbol not in data or len(data[symbol]) == 0:
-            _LOGGER.error(f'Error getting stocks. Could not find valid instruments {symbol} in result: {result}. Skipping query={q}.')
+            _LOGGER.error(
+                f"Error getting stocks. Could not find valid instruments {symbol} in result: {result}. Skipping query={q}."
+            )
             continue
 
         filtered_instruments = process_instruments(
-            data[symbol],
-            name_match,
-            instrument_conditions,
-            contract_conditions
+            data[symbol], name_match, instrument_conditions, contract_conditions
         )
 
         stocks[symbol] = filtered_instruments
@@ -139,7 +154,7 @@ def process_query(q, default_filtering: bool = True):
     name_match = q.name_match
     instrument_conditions = q.instrument_conditions
     # look for US contracts only by default
-    default_contract_filter = {'isUS': True} if default_filtering else None
+    default_contract_filter = {"isUS": True} if default_filtering else None
     contract_conditions = q.contract_conditions
     if contract_conditions is None:
         contract_conditions = default_contract_filter
@@ -153,10 +168,11 @@ class QuestionType(VerboseEnum):
 
     This enum class represents different types of precautionary messages that may be returned by IBKR's API when placing an order. These warnings often require user confirmation before proceeding.
     """
-    PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
-    ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
-    MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
-    STOP_ORDER_RISKS = 'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
+
+    PRICE_PERCENTAGE_CONSTRAINT = "price exceeds the Percentage constraint of 3%"
+    ORDER_VALUE_LIMIT = "exceeds the Total Value Limit of"
+    MISSING_MARKET_DATA = "You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades."
+    STOP_ORDER_RISKS = "You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one."
 
 
 Answers = Dict[Union[QuestionType, str], bool]
@@ -209,7 +225,9 @@ def find_answer(question: str, answers: Answers):
     raise ValueError(f'No answer found for question: "{question}"')
 
 
-def handle_questions(original_result: Result, answers: Answers, reply_callback: callable) -> Result:
+def handle_questions(
+    original_result: Result, answers: Answers, reply_callback: callable
+) -> Result:
     """
     Handles a series of interactive questions that may arise during a request, especially when submitting orders.
 
@@ -241,45 +259,57 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
     for attempt in range(20):
         data = result.data
 
-        if 'error' in data:
+        if "error" in data:
             order_tag = original_result.request["json"]["orders"][0].get("cOID")
-            error_match = f'Order couldn\'t be submitted: Local order ID={order_tag} is already registered.'
-            if error_match in data['error']:
-                raise ExternalBrokerError(f'Order couldn\'t be submitted. Order with order_tag/cOID {order_tag!r} is already registered.')
+            error_match = f"Order couldn't be submitted: Local order ID={order_tag} is already registered."
+            if error_match in data["error"]:
+                raise ExternalBrokerError(
+                    f"Order couldn't be submitted. Order with order_tag/cOID {order_tag!r} is already registered."
+                )
 
-            raise ExternalBrokerError(f'While handling questions an error was returned: {pprint.pformat(data)}')
+            raise ExternalBrokerError(
+                f"While handling questions an error was returned: {pprint.pformat(data)}"
+            )
 
         if not isinstance(data, list):
-            raise ExternalBrokerError(f'While handling questions unknown data was returned: {data!r}. Request: {result.request}')
+            raise ExternalBrokerError(
+                f"While handling questions unknown data was returned: {data!r}. Request: {result.request}"
+            )
 
         first_data = data[0]  # this assumes submitting only one order at a time
 
         # we interpret messages as questions, absence of which we interpret as the end of questions
-        if 'message' not in first_data:
+        if "message" not in first_data:
             if len(data) == 1:
                 data = data[0]
             return pass_result(data, original_result)
 
         if len(data) != 1:
-            _LOGGER.warning(f'While handling questions multiple orders were returned: {pprint.pformat(data)}')
+            _LOGGER.warning(
+                f"While handling questions multiple orders were returned: {pprint.pformat(data)}"
+            )
 
-        messages = first_data['message']
+        messages = first_data["message"]
 
         if len(messages) != 1:
-            _LOGGER.warning(f'While handling questions multiple messages were returned: {pprint.pformat(messages)}')
+            _LOGGER.warning(
+                f"While handling questions multiple messages were returned: {pprint.pformat(messages)}"
+            )
 
         question = messages[0]
-        question = question.strip().replace('\n', '')  # clean up the question
+        question = question.strip().replace("\n", "")  # clean up the question
         answer = find_answer(question, answers)
-        questions.append({'q': question, 'a': answer})
+        questions.append({"q": question, "a": answer})
 
         if answer:
             # the result to a reply will either contain another question or a confirmation
-            result = reply_callback(first_data['id'], True)
+            result = reply_callback(first_data["id"], True)
         else:
-            raise RuntimeError(f'A question was not given a positive reply. Question: "{question}". Answers: \n{pprint.pformat(answers)}\n. Request: {result.request}')
+            raise RuntimeError(
+                f'A question was not given a positive reply. Question: "{question}". Answers: \n{pprint.pformat(answers)}\n. Request: {result.request}'
+            )
 
-    raise RuntimeError(f'Too many questions: {original_result}: {questions}')
+    raise RuntimeError(f"Too many questions: {original_result}: {questions}")
 
 
 @dataclass
@@ -301,7 +331,7 @@ class OrderRequest:
     outside_rth: Optional[bool] = field(default=None)
     aux_price: Optional[float] = field(default=None)
     ticker: Optional[str] = field(default=None)
-    tif: Optional[str] = field(default='GTC')
+    tif: Optional[str] = field(default="GTC")
     trailing_amt: Optional[float] = field(default=None)
     trailing_type: Optional[str] = field(default=None)
     referrer: Optional[str] = field(default=None)
@@ -317,38 +347,42 @@ class OrderRequest:
     is_close: Optional[bool] = field(default=None)
 
     def to_dict(self) -> dict:
-        """ Convert dataclass to a dictionary, excluding None values. """
-        return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
+        """Convert dataclass to a dictionary, excluding None values."""
+        return {
+            f.name: getattr(self, f.name)
+            for f in fields(self)
+            if getattr(self, f.name) is not None
+        }
 
 
 _ORDER_REQUEST_MAPPING = {
-    'conid': "conid",
-    'side': "side",
-    'quantity': "quantity",
-    'order_type': "orderType",
-    'price': "price",
-    'coid': "cOID",
-    'acct_id': "acctId",
-    'conidex': "conidex",
-    'sec_type': "secType",
-    'parent_id': "parentId",
-    'listing_exchange': "listingExchange",
-    'is_single_group': "isSingleGroup",
-    'outside_rth': "outsideRTH",
-    'aux_price': "auxPrice",
-    'ticker': "ticker",
-    'tif': "tif",
-    'trailing_amt': "trailingAmt",
-    'trailing_type': "trailingType",
-    'referrer': "referrer",
-    'cash_qty': "cashQty",
-    'fx_qty': "fxQty",
-    'use_adaptive': "useAdaptive",
-    'is_ccy_conv': "isCcyConv",
-    'allocation_method': "allocationMethod",
-    'strategy': "strategy",
-    'strategy_parameters': "strategyParameters",
-    'is_close': 'isClose',
+    "conid": "conid",
+    "side": "side",
+    "quantity": "quantity",
+    "order_type": "orderType",
+    "price": "price",
+    "coid": "cOID",
+    "acct_id": "acctId",
+    "conidex": "conidex",
+    "sec_type": "secType",
+    "parent_id": "parentId",
+    "listing_exchange": "listingExchange",
+    "is_single_group": "isSingleGroup",
+    "outside_rth": "outsideRTH",
+    "aux_price": "auxPrice",
+    "ticker": "ticker",
+    "tif": "tif",
+    "trailing_amt": "trailingAmt",
+    "trailing_type": "trailingType",
+    "referrer": "referrer",
+    "cash_qty": "cashQty",
+    "fx_qty": "fxQty",
+    "use_adaptive": "useAdaptive",
+    "is_ccy_conv": "isCcyConv",
+    "allocation_method": "allocationMethod",
+    "strategy": "strategy",
+    "strategy_parameters": "strategyParameters",
+    "is_close": "isClose",
 }
 
 
@@ -357,7 +391,9 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
         mapping = _ORDER_REQUEST_MAPPING
 
     if isinstance(order_request, dict):
-        _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
+        _LOGGER.warning(
+            "Order request supplied as a dict. Use 'OrderRequest' dataclass instead."
+        )
         return order_request
     else:
         return {
@@ -366,35 +402,33 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
 
 
 def make_order_request(
-        conid: Union[int, str],
-        side: str,
-        quantity: float,
-        order_type: str,
-        acct_id: str,
-
-        # optional
-        price: float = None,
-        conidex: str = None,
-        sec_type: str = None,
-        coid: str = None,
-        parent_id: str = None,
-        listing_exchange: str = None,
-        is_single_group: bool = None,
-        outside_rth: bool = None,
-        aux_price: float = None,
-        ticker: str = None,
-        tif: str = 'GTC',
-        trailing_amt: float = None,
-        trailing_type: str = None,
-        referrer: str = None,
-        cash_qty: float = None,
-        fx_qty: float = None,
-        use_adaptive: bool = None,
-        is_ccy_conv: bool = None,
-        allocation_method: str = None,
-        strategy: str = None,
-        strategy_parameters=None,
-
+    conid: Union[int, str],
+    side: str,
+    quantity: float,
+    order_type: str,
+    acct_id: str,
+    # optional
+    price: float = None,
+    conidex: str = None,
+    sec_type: str = None,
+    coid: str = None,
+    parent_id: str = None,
+    listing_exchange: str = None,
+    is_single_group: bool = None,
+    outside_rth: bool = None,
+    aux_price: float = None,
+    ticker: str = None,
+    tif: str = "GTC",
+    trailing_amt: float = None,
+    trailing_type: str = None,
+    referrer: str = None,
+    cash_qty: float = None,
+    fx_qty: float = None,
+    use_adaptive: bool = None,
+    is_ccy_conv: bool = None,
+    allocation_method: str = None,
+    strategy: str = None,
+    strategy_parameters=None,
 ):  # pragma: no cover
     """
      Create an order request object. Arguments set as None will not be included.
@@ -427,8 +461,12 @@ def make_order_request(
         allocation_method (str, Optional): Allocation method for FA account orders.
         strategy (str, Optional): IB Algo algorithm to use for the order.
         strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
-     """
-    warn("'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.", DeprecationWarning, stacklevel=2)
+    """
+    warn(
+        "'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     order_request = {}
 
@@ -517,56 +555,65 @@ def make_order_request(
 
 def date_from_ibkr(d: str) -> datetime.datetime:
     try:
-        return datetime.datetime(int(d[:4]), int(d[4:6]), int(d[6:8]), int(d[8:10]), int(d[10:12]), int(d[12:14]))
+        return datetime.datetime(
+            int(d[:4]),
+            int(d[4:6]),
+            int(d[6:8]),
+            int(d[8:10]),
+            int(d[10:12]),
+            int(d[12:14]),
+        )
     except ValueError:
-        raise ValueError(f'Date seems to be missing fields: year={d[0:4]}, month={d[4:6]}, day={d[6:8]}, hour={d[8:10]}, minute={d[10:12]}, second={d[12:14]}')
+        raise ValueError(
+            f"Date seems to be missing fields: year={d[0:4]}, month={d[4:6]}, day={d[6:8]}, hour={d[8:10]}, minute={d[10:12]}, second={d[12:14]}"
+        )
 
 
 def extract_conid(data):
     # by default conid should be made available as 'smh+<conid>', let's look for it
-    if 'topic' in data and '+' in data['topic']:
-        return data['topic'].split('+')[-1]
+    if "topic" in data and "+" in data["topic"]:
+        return data["topic"].split("+")[-1]
 
     # as a backup we try to include the conid in the payload, IBKR seems to send it back to us
-    elif 'payload' in data and 'conid' in data['payload']:
-        return data['payload']['conid']
+    elif "payload" in data and "conid" in data["payload"]:
+        return data["payload"]["conid"]
 
     return None
 
 
-class Tickler():
+class Tickler:
     """
-       Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
+    Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
 
-       The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
-       the session from expiring. This is essential for keeping the OAuth session active.
-       """
+    The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
+    the session from expiring. This is essential for keeping the OAuth session active.
+    """
 
-    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
+    def __init__(self, client: "IbkrClient", interval: Union[int, float] = 60):
         """
-       Initializes the Tickler instance.
+        Initializes the Tickler instance.
 
-       Parameters:
-           client (IbkrClient): The client instance with a `tickle` method that maintains the session.
-           interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
-       """
+        Parameters:
+            client (IbkrClient): The client instance with a `tickle` method that maintains the session.
+            interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
+        """
         self._client = client
         self._interval = interval
         self._stop_event = threading.Event()
         self._thread = None
 
     def _worker(self):
-        _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
+        _LOGGER.info(f"Tickler starts with interval={self._interval} seconds.")
         while not self._stop_event.wait(self._interval):
             try:
                 self._client.tickle()
             except KeyboardInterrupt:
-                _LOGGER.info('Tickler interrupted')
+                _LOGGER.info("Tickler interrupted")
                 break
             except Exception as e:
-                _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
+                _LOGGER.error(f"Tickler error: {exception_to_string(e)}")
 
-        _LOGGER.info(f'Tickler gracefully stopped.')
+        _LOGGER.info("Tickler gracefully stopped.")
 
     def start(self):
         """
@@ -576,7 +623,9 @@ class Tickler():
         session alive.
         """
         if self._thread is not None:
-            _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
+            _LOGGER.info(
+                "Tickler thread already running. Stop the existing thread first by calling Tickler.stop()"
+            )
             return
 
         self._stop_event.clear()
@@ -602,8 +651,8 @@ class Tickler():
 
 
 def cleanup_market_history_responses(
-        market_history_response: Dict[str, Union[Exception, Result]],
-        raise_on_error: bool = False,
+    market_history_response: Dict[str, Union[Exception, Result]],
+    raise_on_error: bool = False,
 ):
     """
     Processes and cleans up market history responses, converting raw data into structured records.
@@ -659,26 +708,32 @@ def cleanup_market_history_responses(
     for symbol, entry in market_history_response.items():
         if isinstance(entry, Exception):  # pragma: no cover
             if raise_on_error:
-                _LOGGER.error(f'Error fetching market data for {symbol}')
+                _LOGGER.error(f"Error fetching market data for {symbol}")
                 raise entry
             else:
                 results[symbol] = entry
                 continue
 
         # check if entry['mdAvailability'] has 'S' or 'R' in it
-        if 'mdAvailability' in entry.data and not (any((key in entry.data['mdAvailability'].upper()) for key in ['S', 'R'])):
-            _LOGGER.warning(f'Market data for {symbol} is not live: {decode_data_availability(entry.data["mdAvailability"])}')
+        if "mdAvailability" in entry.data and not (
+            any((key in entry.data["mdAvailability"].upper()) for key in ["S", "R"])
+        ):
+            _LOGGER.warning(
+                f"Market data for {symbol} is not live: {decode_data_availability(entry.data['mdAvailability'])}"
+            )
 
-        data = entry.data['data']
+        data = entry.data["data"]
         records = []
         for record in data:
-            records.append({
-                "open": record['o'],
-                "high": record['h'],
-                "low": record['l'],
-                "close": record['c'],
-                "volume": record['v'],
-                "date": datetime.datetime.fromtimestamp(record['t'] / 1000)
-            })
+            records.append(
+                {
+                    "open": record["o"],
+                    "high": record["h"],
+                    "low": record["l"],
+                    "close": record["c"],
+                    "volume": record["v"],
+                    "date": datetime.datetime.fromtimestamp(record["t"] / 1000),
+                }
+            )
         results[symbol] = records
     return results

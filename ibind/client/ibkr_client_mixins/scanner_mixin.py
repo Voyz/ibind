@@ -10,23 +10,23 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class ScannerMixin():  # pragma: no cover
+class ScannerMixin:  # pragma: no cover
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#scanner
     """
 
-    def scanner_parameters(self: 'IbkrClient') -> Result:
+    def scanner_parameters(self: "IbkrClient") -> Result:
         """
         Returns an xml file containing all available parameters to be sent for the Iserver scanner request.
         """
-        return self.get('iserver/scanner/params')
+        return self.get("iserver/scanner/params")
 
     def market_scanner(
-            self: 'IbkrClient',
-            instrument: str,
-            type: str,
-            location: str,
-            filter: List[Dict[str, str]] = None
+        self: "IbkrClient",
+        instrument: str,
+        type: str,
+        location: str,
+        filter: List[Dict[str, str]] = None,
     ) -> Result:
         """
         Searches for contracts according to the filters specified in /iserver/scanner/params endpoint.
@@ -42,27 +42,28 @@ class ScannerMixin():  # pragma: no cover
         """
         params = params_dict(
             {
-                'instrument': instrument,
-                'type': type,
-                'location': location,
-            }, optional={'filter': filter or []}
+                "instrument": instrument,
+                "type": type,
+                "location": location,
+            },
+            optional={"filter": filter or []},
         )
-        return self.post('iserver/scanner/run', params)
+        return self.post("iserver/scanner/run", params)
 
-    def hmds_scanner_parameters(self: 'IbkrClient') -> Result:
+    def hmds_scanner_parameters(self: "IbkrClient") -> Result:
         """
         Query the parameter list for the HMDS market scanner.
         """
-        return self.get('hmds/scanner/params')
+        return self.get("hmds/scanner/params")
 
     def hmds_market_scanner(
-            self: 'IbkrClient',
-            instrument: str,
-            location: str,
-            scan_code: str,
-            sec_type: str,
-            filter: List[Dict[str, str]],
-            max_items: int = None,
+        self: "IbkrClient",
+        instrument: str,
+        location: str,
+        scan_code: str,
+        sec_type: str,
+        filter: List[Dict[str, str]],
+        max_items: int = None,
     ) -> Result:
         """
         Request a market scanner from our HMDS service.
@@ -78,13 +79,11 @@ class ScannerMixin():  # pragma: no cover
         """
         params = params_dict(
             {
-                'instrument': instrument,
-                'location': location,
-                'scanCode': scan_code,
-                'secType': sec_type
-            }, optional={
-                'maxItems': max_items,
-                'filter': filter
-            }
+                "instrument": instrument,
+                "location": location,
+                "scanCode": scan_code,
+                "secType": sec_type,
+            },
+            optional={"maxItems": max_items, "filter": filter},
         )
-        return self.post('hmds/scanner/run', params)
+        return self.post("hmds/scanner/run", params)

@@ -10,31 +10,33 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class PortfolioMixin():  # pragma: no cover
+class PortfolioMixin:  # pragma: no cover
     """
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#portfolio
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
     """
 
-    def portfolio_accounts(self: 'IbkrClient') -> Result:
+    def portfolio_accounts(self: "IbkrClient") -> Result:
         """
         In non-tiered account structures, returns a list of accounts for which the user can view position and account information. This endpoint must be called prior to calling other /portfolio endpoints for those accounts.
         """
-        return self.get('portfolio/accounts')
+        return self.get("portfolio/accounts")
 
-    def portfolio_subaccounts(self: 'IbkrClient') -> Result:
+    def portfolio_subaccounts(self: "IbkrClient") -> Result:
         """
         Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of up to 100 sub-accounts for which the user can view position and account-related information. This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts.
         """
-        return self.get('portfolio/subaccounts')
+        return self.get("portfolio/subaccounts")
 
-    def large_portfolio_subaccounts(self: 'IbkrClient', page: int = 0) -> Result:
+    def large_portfolio_subaccounts(self: "IbkrClient", page: int = 0) -> Result:
         """
         Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information. This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts.
         """
-        return self.get('portfolio/subaccounts2', {'page': page})
+        return self.get("portfolio/subaccounts2", {"page": page})
 
-    def portfolio_account_information(self: 'IbkrClient', account_id: str = None) -> Result:
+    def portfolio_account_information(
+        self: "IbkrClient", account_id: str = None
+    ) -> Result:
         """
         Account information related to account Id. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
 
@@ -43,9 +45,11 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/meta')
+        return self.get(f"portfolio/{account_id}/meta")
 
-    def portfolio_account_allocation(self: 'IbkrClient', account_id: str = None) -> Result:
+    def portfolio_account_allocation(
+        self: "IbkrClient", account_id: str = None
+    ) -> Result:
         """
         Information about the account's portfolio allocation by Asset Class, Industry and Category. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint.
 
@@ -54,27 +58,29 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/allocation')
+        return self.get(f"portfolio/{account_id}/allocation")
 
-    @ensure_list_arg('account_ids')
-    def portfolio_account_allocations(self: 'IbkrClient', account_ids: OneOrMany[str]) -> Result:
+    @ensure_list_arg("account_ids")
+    def portfolio_account_allocations(
+        self: "IbkrClient", account_ids: OneOrMany[str]
+    ) -> Result:
         """
         Similar to /portfolio/{accountId}/allocation but returns a consolidated view of all the accounts returned by /portfolio/accounts.
 
         Parameters:
             account_ids (OneOrMany[str]): Contains all account IDs as strings the user should receive data for.
         """
-        params = params_dict({'acctIds': account_ids})
-        return self.get(f'portfolio/allocation', params=params)
+        params = params_dict({"acctIds": account_ids})
+        return self.get("portfolio/allocation", params=params)
 
     def positions(
-            self: 'IbkrClient',
-            account_id: str = None,
-            page: int = 0,
-            model: str = None,
-            sort: str = None,
-            direction: str = None,
-            period: str = None,
+        self: "IbkrClient",
+        account_id: str = None,
+        page: int = 0,
+        model: str = None,
+        sort: str = None,
+        direction: str = None,
+        period: str = None,
     ) -> Result:
         """
         Returns a list of positions for the given account. The endpoint supports paging, each page will return up to 100 positions.
@@ -93,20 +99,20 @@ class PortfolioMixin():  # pragma: no cover
 
         params = params_dict(
             optional={
-                'model': model,
-                'sort': sort,
-                'direction': direction,
-                'period': period,
+                "model": model,
+                "sort": sort,
+                "direction": direction,
+                "period": period,
             }
         )
-        return self.get(f'portfolio/{account_id}/positions/{page}', params)
+        return self.get(f"portfolio/{account_id}/positions/{page}", params)
 
     def positions2(
-            self: 'IbkrClient',
-            account_id: str = None,
-            model: str = None,
-            sort: str = None,
-            direction: str = None,
+        self: "IbkrClient",
+        account_id: str = None,
+        model: str = None,
+        sort: str = None,
+        direction: str = None,
     ) -> Result:
         """
         Returns a list of positions for the given account.
@@ -125,14 +131,14 @@ class PortfolioMixin():  # pragma: no cover
 
         params = params_dict(
             optional={
-                'model': model,
-                'sort': sort,
-                'direction': direction,
+                "model": model,
+                "sort": sort,
+                "direction": direction,
             }
         )
-        return self.get(f'portfolio2/{account_id}/positions', params)
+        return self.get(f"portfolio2/{account_id}/positions", params)
 
-    def positions_by_conid(self: 'IbkrClient', account_id: str, conid: str) -> Result:
+    def positions_by_conid(self: "IbkrClient", account_id: str, conid: str) -> Result:
         """
         Returns a list containing position details only for the specified conid.
 
@@ -142,9 +148,11 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'/portfolio/{account_id}/position/{conid}')
+        return self.get(f"/portfolio/{account_id}/position/{conid}")
 
-    def invalidate_backend_portfolio_cache(self: 'IbkrClient', account_id: str = None) -> Result:
+    def invalidate_backend_portfolio_cache(
+        self: "IbkrClient", account_id: str = None
+    ) -> Result:
         """
         Invalidates the cached value for your portfolio’s positions and calls the /portfolio/{accountId}/positions/0 endpoint automatically.
 
@@ -153,9 +161,9 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.post(f'portfolio/{account_id}/positions/invalidate')
+        return self.post(f"portfolio/{account_id}/positions/invalidate")
 
-    def portfolio_summary(self: 'IbkrClient', account_id: str = None) -> Result:
+    def portfolio_summary(self: "IbkrClient", account_id: str = None) -> Result:
         """
         Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
@@ -164,9 +172,9 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/summary')
+        return self.get(f"portfolio/{account_id}/summary")
 
-    def get_ledger(self: 'IbkrClient', account_id: str = None) -> Result:
+    def get_ledger(self: "IbkrClient", account_id: str = None) -> Result:
         """
         Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
@@ -175,19 +183,21 @@ class PortfolioMixin():  # pragma: no cover
         """
         if account_id is None:
             account_id = self.account_id
-        return self.get(f'portfolio/{account_id}/ledger')
+        return self.get(f"portfolio/{account_id}/ledger")
 
-    def position_and_contract_info(self: 'IbkrClient', conid: str) -> Result:
+    def position_and_contract_info(self: "IbkrClient", conid: str) -> Result:
         """
         Returns an object containing information about a given position along with its contract details.
 
         Parameters:
             conid (str): The contract ID to receive position information on.
         """
-        return self.get(f'portfolio/positions/{conid}')
+        return self.get(f"portfolio/positions/{conid}")
 
-    @ensure_list_arg('account_ids')
-    def account_performance(self: 'IbkrClient', account_ids: OneOrMany[str], period: str) -> Result:
+    @ensure_list_arg("account_ids")
+    def account_performance(
+        self: "IbkrClient", account_ids: OneOrMany[str], period: str
+    ) -> Result:
         """
         Returns the performance (MTM) for the given accounts, if more than one account is passed, the result is consolidated.
 
@@ -195,15 +205,15 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Include each account ID to receive data for.
             period (str): Specify the period for which the account should be analyzed. Available Values: “1D”, “7D”, “MTD”, “1M”, “YTD”, “1Y”.
         """
-        return self.post(f'pa/performance', {'acctIds': account_ids, 'period': period})
+        return self.post("pa/performance", {"acctIds": account_ids, "period": period})
 
-    @ensure_list_arg('account_ids', 'conids')
+    @ensure_list_arg("account_ids", "conids")
     def transaction_history(
-            self: 'IbkrClient',
-            account_ids: OneOrMany[str],
-            conids: OneOrMany[str],
-            currency: str,
-            days: str = None
+        self: "IbkrClient",
+        account_ids: OneOrMany[str],
+        conids: OneOrMany[str],
+        currency: str,
+        days: str = None,
     ) -> Result:
         """
         Transaction history for a given number of conids and accounts. Types of transactions include dividend payments, buy and sell transactions, transfers.
@@ -216,9 +226,10 @@ class PortfolioMixin():  # pragma: no cover
         """
         params = params_dict(
             {
-                'acctIds': account_ids,
-                'conids': conids,
-                'currency': currency,
-            }, optional={'days': days}
+                "acctIds": account_ids,
+                "conids": conids,
+                "currency": currency,
+            },
+            optional={"days": days},
         )
-        return self.post(f'pa/transactions', params)
+        return self.post("pa/transactions", params)
