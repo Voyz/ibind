@@ -252,7 +252,8 @@ class RestClient:
                 self.logger.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
                 _LOGGER.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
                 self.close()
-                self.make_session()  # Recreate session automatically
+                if self.use_session:
+                    self.make_session()  # Recreate session automatically
                 continue  # Retry the request with a fresh session
 
             except ExternalBrokerError:
