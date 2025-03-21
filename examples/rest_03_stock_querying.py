@@ -18,33 +18,33 @@ from ibind import IbkrClient, StockQuery, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-cacert = os.getenv("IBIND_CACERT", False)  # insert your cacert path here
+cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 client = IbkrClient(cacert=cacert)
 
 
-print("#### get_stocks ####")
-stocks = client.security_stocks_by_symbol("AAPL").data
+print('#### get_stocks ####')
+stocks = client.security_stocks_by_symbol('AAPL').data
 print(stocks)
 
 
-print("\n#### get_conids ####")
-conids = client.stock_conid_by_symbol("AAPL").data
+print('\n#### get_conids ####')
+conids = client.stock_conid_by_symbol('AAPL').data
 print(conids)
 
 
-print("\n#### using StockQuery ####")
+print('\n#### using StockQuery ####')
 conids = client.stock_conid_by_symbol(
-    StockQuery("AAPL", contract_conditions={"exchange": "MEXI"}),
+    StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}),
     default_filtering=False,
 ).data
 pprint(conids)
 
 
-print("\n#### mixed queries ####")
+print('\n#### mixed queries ####')
 stock_queries = [
-    StockQuery("AAPL", contract_conditions={"exchange": "MEXI"}),
-    "HUBS",
-    StockQuery("GOOG", name_match="ALPHABET INC - CDR"),
+    StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}),
+    'HUBS',
+    StockQuery('GOOG', name_match='ALPHABET INC - CDR'),
 ]
 conids = client.stock_conid_by_symbol(stock_queries, default_filtering=False).data
 pprint(conids)

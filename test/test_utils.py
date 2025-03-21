@@ -10,7 +10,7 @@ from unittest._log import _CapturingHandler, _AssertLogsContext
 from ibind.support.py_utils import make_clean_stack
 
 
-def raise_from_context(cm, level="WARNING"):
+def raise_from_context(cm, level='WARNING'):
     for record in cm.records:
         if record.levelno >= getattr(logging, level):
             raise RuntimeError(record.message)
@@ -31,9 +31,7 @@ def verify_log(
                 break
 
     if missing_expected:
-        test_case.fail(
-            "Expected log(s) not found:\n\t{}".format("\n\t".join(missing_expected))
-        )
+        test_case.fail('Expected log(s) not found:\n\t{}'.format('\n\t'.join(missing_expected)))
 
 
 def verify_log_simple(test_self, cm, expected_messages):
@@ -54,8 +52,8 @@ class SafeAssertLogs(_AssertLogsContext):
     """
 
     def __init__(self, *args, logger_level: str = None, **kwargs):
-        if sys.version_info < (3, 10, 0) and "no_logs" in kwargs:
-            del kwargs["no_logs"]
+        if sys.version_info < (3, 10, 0) and 'no_logs' in kwargs:
+            del kwargs['no_logs']
 
         super().__init__(*args, **kwargs)
         self.logger_level = logger_level
@@ -73,9 +71,7 @@ class SafeAssertLogs(_AssertLogsContext):
         self.old_level = logger.level
         self.old_propagate = logger.propagate
         logger.handlers = [handler]
-        handler.setLevel(
-            self.level
-        )  # this one line is different, originally was `logger.setLevel`
+        handler.setLevel(self.level)  # this one line is different, originally was `logger.setLevel`
         logger.propagate = False
         if self.logger_level is not None:
             logger.setLevel(getattr(logging, self.logger_level))
@@ -95,7 +91,7 @@ def get_logger_children(main_logger) -> list[logging.Logger]:
     def _hierlevel(logger):
         if logger is logger.manager.root:
             return 0
-        return 1 + logger.name.count(".")
+        return 1 + logger.name.count('.')
 
     d = main_logger.manager.loggerDict
     # exclude PlaceHolders - the last check is to ensure that lower-level
@@ -104,9 +100,7 @@ def get_logger_children(main_logger) -> list[logging.Logger]:
     return [
         item
         for item in d.values()
-        if isinstance(item, logging.Logger)
-        and item.parent is main_logger
-        and _hierlevel(item) == 1 + _hierlevel(item.parent)
+        if isinstance(item, logging.Logger) and item.parent is main_logger and _hierlevel(item) == 1 + _hierlevel(item.parent)
     ]
 
 
@@ -131,16 +125,16 @@ class RaiseLogsContext:
             Defaults to an exact string match (`lambda x, y: x == y`).
 
     Example Usage:
-        >>> with RaiseLogsContext(self, logger_name="my_logger", level="WARNING", expected_errors=["My expected warning"]):
-        ...     logging.getLogger("my_logger").warning("My expected warning")  # No error
-        ...     logging.getLogger("my_logger").error("Unexpected issue")  # Raises RuntimeError
+        >>> with RaiseLogsContext(self, logger_name='my_logger', level='WARNING', expected_errors=['My expected warning']):
+        ...     logging.getLogger('my_logger').warning('My expected warning')  # No error
+        ...     logging.getLogger('my_logger').error('Unexpected issue')  # Raises RuntimeError
     """
 
     def __init__(
         self,
         test_case: TestCase,
         logger_name=None,
-        level="ERROR",
+        level='ERROR',
         expected_errors: [str] = None,
         comparison: callable = lambda x, y: x == y,
     ):
@@ -159,9 +153,9 @@ class RaiseLogsContext:
         def new_method(msg, *args, **kwargs):
             # Store the manually captured stack trace in the log record
             stack = make_clean_stack()
-            if "extra" not in kwargs:
-                kwargs["extra"] = {}
-            kwargs["extra"]["manual_trace"] = stack
+            if 'extra' not in kwargs:
+                kwargs['extra'] = {}
+            kwargs['extra']['manual_trace'] = stack
 
             # Call the original logging method with the modified arguments
             return original_method(msg, *args, **kwargs)
@@ -183,14 +177,10 @@ class RaiseLogsContext:
         """Restores the original error and warning logging methods after patching."""
         for logger in loggers:
             if self._level_no <= logging.ERROR:
-                logger.error = (
-                    logger.__old_error_method__
-                )  # Restore the original error method
+                logger.error = logger.__old_error_method__  # Restore the original error method
 
             if self._level_no <= logging.WARNING:
-                logger.warning = (
-                    logger.__old_warning_method__
-                )  # Restore the original warning method
+                logger.warning = logger.__old_warning_method__  # Restore the original warning method
 
     def __enter__(self):
         """
@@ -202,14 +192,10 @@ class RaiseLogsContext:
 
         self._logger = logging.getLogger(self._logger_name)
         loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
-        self.monkey_patch_loggers(
-            loggers_to_be_patched
-        )  # Apply monkey-patching to attach stack traces to logged messages
+        self.monkey_patch_loggers(loggers_to_be_patched)  # Apply monkey-patching to attach stack traces to logged messages
 
         # Initialize SafeAssertLogs, a helper to capture and assert log records
-        self._context_manager = SafeAssertLogs(
-            self._test_case, self._logger, level=self._level, no_logs=False
-        )
+        self._context_manager = SafeAssertLogs(self._test_case, self._logger, level=self._level, no_logs=False)
 
         # Enter the SafeAssertLogs context, starting log capture and returning the watcher
         self._watcher = self._context_manager.__enter__(include_original_handlers=True)
@@ -252,20 +238,16 @@ class RaiseLogsContext:
                 continue
 
             # If the log record has a manually stored traceback, raise an error with that traceback
-            if hasattr(record, "manual_trace"):
+            if hasattr(record, 'manual_trace'):
                 raise RuntimeError(
-                    "\n"
-                    + "".join(traceback.format_list(record.manual_trace))
-                    + f"Logger {self._logger} logged an unexpected message:\n{record.msg}"
+                    '\n' + ''.join(traceback.format_list(record.manual_trace)) + f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
                 )
 
             # Otherwise, raise an error using the log record's location
-            raise RuntimeError(
-                f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}'
-            )
+            raise RuntimeError(f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}')
 
 
-def raise_logs(level="ERROR", logger_name=None):
+def raise_logs(level='ERROR', logger_name=None):
     def _wrapper(fn):
         @functools.wraps(fn)
         def wrapper(self, *args, **kwargs):
@@ -277,20 +259,20 @@ def raise_logs(level="ERROR", logger_name=None):
     return _wrapper
 
 
-def decorate_methods(decorator, starts_with=""):
+def decorate_methods(decorator, starts_with=''):
     class DecorateMethods(type):
         """Decorate all methods of the class with the decorator provided"""
 
         def __new__(cls, name, bases, attrs, **kwargs):
-            exclude = kwargs.get("exclude", [])
+            exclude = kwargs.get('exclude', [])
 
             for attr_name, attr_value in attrs.items():
                 if (
                     isinstance(attr_value, types.FunctionType)
                     and attr_name.startswith(starts_with)
                     and attr_name not in exclude
-                    and not hasattr(attr_value, "__exclude_decorator__")
-                    and not attr_name.startswith("__")
+                    and not hasattr(attr_value, '__exclude_decorator__')
+                    and not attr_name.startswith('__')
                 ):
                     attrs[attr_name] = decorator(attr_value)
 
@@ -301,7 +283,7 @@ def decorate_methods(decorator, starts_with=""):
 
 class TestCaseWithRaiseLogs(
     unittest.TestCase,
-    metaclass=decorate_methods(raise_logs(logger_name="ibind"), starts_with="test"),
+    metaclass=decorate_methods(raise_logs(logger_name='ibind'), starts_with='test'),
 ): ...
 
 

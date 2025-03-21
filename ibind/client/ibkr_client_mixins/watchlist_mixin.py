@@ -14,9 +14,7 @@ class WatchlistMixin:  # pragma: no cover
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
     """
 
-    def create_watchlist(
-        self: "IbkrClient", id: str, name: str, rows: List[Dict[str, Union[str, int]]]
-    ) -> Result:
+    def create_watchlist(self: 'IbkrClient', id: str, name: str, rows: List[Dict[str, Union[str, int]]]) -> Result:
         """
         Create a watchlist to monitor a series of contracts.
 
@@ -27,33 +25,31 @@ class WatchlistMixin:  # pragma: no cover
                 - C (int): Provide the conid, or contract identifier, of the conid to add.
                 - H (str): Can be used to add a blank row between contracts in the watchlist.
         """
-        return self.post(
-            "iserver/watchlist", params={"id": id, "name": name, "rows": rows}
-        )
+        return self.post('iserver/watchlist', params={'id': id, 'name': name, 'rows': rows})
 
-    def get_all_watchlists(self: "IbkrClient", sc: str = "USER_WATCHLIST") -> Result:
+    def get_all_watchlists(self: 'IbkrClient', sc: str = 'USER_WATCHLIST') -> Result:
         """
         Retrieve a list of all available watchlists for the account.
 
         Parameters:
             SC (str): Optional. Specify the scope of the request. Valid Values: USER_WATCHLIST.
         """
-        return self.get("iserver/watchlists", params={"SC": sc})
+        return self.get('iserver/watchlists', params={'SC': sc})
 
-    def get_watchlist_information(self: "IbkrClient", id: str) -> Result:
+    def get_watchlist_information(self: 'IbkrClient', id: str) -> Result:
         """
         Request the contracts listed in a particular watchlist.
 
         Parameters:
             id (str): Set equal to the watchlist ID you would like data for.
         """
-        return self.get("iserver/watchlist", params={"id": id})
+        return self.get('iserver/watchlist', params={'id': id})
 
-    def delete_watchlist(self: "IbkrClient", id: str) -> Result:
+    def delete_watchlist(self: 'IbkrClient', id: str) -> Result:
         """
         Permanently delete a specific watchlist for all platforms.
 
         Parameters:
             id (str): Include the watchlist ID you wish to delete.
         """
-        return self.delete("iserver/watchlist", params={"id": id})
+        return self.delete('iserver/watchlist', params={'id': id})

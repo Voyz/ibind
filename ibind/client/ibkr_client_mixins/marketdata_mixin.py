@@ -28,10 +28,8 @@ class MarketdataMixin:
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
     """
 
-    @ensure_list_arg("conids", "fields")
-    def live_marketdata_snapshot(
-        self: "IbkrClient", conids: OneOrMany[str], fields: OneOrMany[str]
-    ) -> Result:  # pragma: no cover
+    @ensure_list_arg('conids', 'fields')
+    def live_marketdata_snapshot(self: 'IbkrClient', conids: OneOrMany[str], fields: OneOrMany[str]) -> Result:  # pragma: no cover
         """
         Get Market Data for the given conid(s).
 
@@ -45,12 +43,10 @@ class MarketdataMixin:
             - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
             - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
         """
-        params = {"conids": ",".join(conids), "fields": ",".join(fields)}
-        return self.get("iserver/marketdata/snapshot", params)
+        params = {'conids': ','.join(conids), 'fields': ','.join(fields)}
+        return self.get('iserver/marketdata/snapshot', params)
 
-    def live_marketdata_snapshot_by_symbol(
-        self: "IbkrClient", queries: StockQueries, fields: OneOrMany[str]
-    ) -> dict:
+    def live_marketdata_snapshot_by_symbol(self: 'IbkrClient', queries: StockQueries, fields: OneOrMany[str]) -> dict:
         """
         Get Market Data for the given symbols(s).
 
@@ -87,22 +83,16 @@ class MarketdataMixin:
                         continue
 
                     result[snapshot_by_id[key]] = value
-                results[entry["conid"]] = result
+                results[entry['conid']] = result
             except Exception as e:  # pragma: no cover
-                _LOGGER.exception(
-                    f"Error post-processing live market data for {entry}: {str(e)}"
-                )
+                _LOGGER.exception(f'Error post-processing live market data for {entry}: {str(e)}')
 
         # reformat the results by symbol instead of conid
-        results_by_symbol = {
-            symbols_by_conids[conid]: result for conid, result in results.items()
-        }
+        results_by_symbol = {symbols_by_conids[conid]: result for conid, result in results.items()}
 
         return results_by_symbol
 
-    def regulatory_snapshot(
-        self: "IbkrClient", conid: str
-    ) -> Result:  # pragma: no cover
+    def regulatory_snapshot(self: 'IbkrClient', conid: str) -> Result:  # pragma: no cover
         """
         Send a request for a regulatory snapshot. This will cost $0.01 USD per request unless you are subscribed to the direct exchange market data already.
 
@@ -115,10 +105,10 @@ class MarketdataMixin:
             - If you are already paying for, or are subscribed to, a specific US Network subscription, your account will not be charged.
             - For stocks, there are individual exchange-specific market data subscriptions necessary to receive streaming quotes.
         """
-        return self.get("md/regsnapshot", {"conid": conid})
+        return self.get('md/regsnapshot', {'conid': conid})
 
     def marketdata_history_by_conid(
-        self: "IbkrClient",
+        self: 'IbkrClient',
         conid: str,
         bar: str,
         exchange: str = None,
@@ -141,20 +131,20 @@ class MarketdataMixin:
             - There's a limit of 5 concurrent requests. Excessive requests will return a 'Too many requests' status 429 response.
         """
         params = params_dict(
-            {"conid": conid, "bar": bar},
+            {'conid': conid, 'bar': bar},
             optional={
-                "exchange": exchange,
-                "period": period,
-                "outsideRth": outside_rth,
-                "startTime": start_time,
+                'exchange': exchange,
+                'period': period,
+                'outsideRth': outside_rth,
+                'startTime': start_time,
             },
-            preprocessors={"startTime": lambda x: x.strftime("%Y%m%d-%H:%M:%S")},
+            preprocessors={'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')},
         )
 
-        return self.get("iserver/marketdata/history", params)
+        return self.get('iserver/marketdata/history', params)
 
     def historical_marketdata_beta(
-        self: "IbkrClient",
+        self: 'IbkrClient',
         conid: str,
         period: str,
         bar: str,
@@ -179,20 +169,20 @@ class MarketdataMixin:
             - The first time a user makes a request to the /hmds/history endpoints will result in a 404 error. This initial request instantiates the historical market data services allowing future requests to return data. Subsequent requests will return data as expected.
         """
         params = params_dict(
-            {"conid": conid, "period": period, "bar": bar},
+            {'conid': conid, 'period': period, 'bar': bar},
             optional={
-                "outsideRth": outside_rth,
-                "startTime": start_time,
-                "direction": direction,
-                "barType": bar_type,
+                'outsideRth': outside_rth,
+                'startTime': start_time,
+                'direction': direction,
+                'barType': bar_type,
             },
-            preprocessors={"startTime": lambda x: x.strftime("%Y%m%d-%H:%M:%S")},
+            preprocessors={'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')},
         )
 
-        return self.get("hmds/history", params)
+        return self.get('hmds/history', params)
 
     def marketdata_history_by_symbol(
-        self: "IbkrClient",
+        self: 'IbkrClient',
         symbol: Union[str, StockQuery],
         bar: str,
         exchange: str = None,
@@ -213,15 +203,13 @@ class MarketdataMixin:
 
         """
         conid = str(self.stock_conid_by_symbol(symbol).data[symbol])
-        return self.marketdata_history_by_conid(
-            conid, bar, exchange, period, outside_rth, start_time
-        )
+        return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
     def marketdata_history_by_conids(
-        self: "IbkrClient",
+        self: 'IbkrClient',
         conids: Union[List[str], Dict[str, str]],
-        period: str = "1min",
-        bar: str = "1min",
+        period: str = '1min',
+        bar: str = '1min',
         outside_rth: bool = True,
         start_time: datetime.datetime = None,
         raise_on_error: bool = False,
@@ -251,40 +239,30 @@ class MarketdataMixin:
             conids = {conid: conid for conid in conids}
 
         static_params = {
-            "period": period,
-            "bar": bar,
-            "outside_rth": outside_rth,
-            "start_time": start_time,
+            'period': period,
+            'bar': bar,
+            'outside_rth': outside_rth,
+            'start_time': start_time,
         }
-        requests = {
-            symbol: {"kwargs": {"conid": conid} | static_params}
-            for symbol, conid in conids.items()
-        }
+        requests = {symbol: {'kwargs': {'conid': conid} | static_params} for symbol, conid in conids.items()}
 
         # when there is only one conid, we avoid running in parallel
         if run_in_parallel and len(conids) > 1:
             # /iserver/marketdata/history accepts 5 concurrent requests in theory, but sometime throttles above 4
-            market_history_responses = execute_in_parallel(
-                self.marketdata_history_by_conid, requests=requests, max_workers=4
-            )
+            market_history_responses = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=4)
         else:
-            market_history_responses = {
-                symbol: self.marketdata_history_by_conid(**request["kwargs"])
-                for symbol, request in requests.items()
-            }
+            market_history_responses = {symbol: self.marketdata_history_by_conid(**request['kwargs']) for symbol, request in requests.items()}
 
-        results = cleanup_market_history_responses(
-            market_history_responses, raise_on_error=raise_on_error
-        )
+        results = cleanup_market_history_responses(market_history_responses, raise_on_error=raise_on_error)
 
         return results
 
-    @ensure_list_arg("queries")
+    @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
-        self: "IbkrClient",
+        self: 'IbkrClient',
         queries: StockQueries,
-        period: str = "1min",
-        bar: str = "1min",
+        period: str = '1min',
+        bar: str = '1min',
         outside_rth: bool = True,
         start_time: datetime.datetime = None,
         raise_on_error: bool = False,
@@ -319,10 +297,8 @@ class MarketdataMixin:
             run_in_parallel=run_in_parallel,
         )
 
-    @ensure_list_arg("conids")
-    def marketdata_unsubscribe(
-        self: "IbkrClient", conids: OneOrMany[str]
-    ) -> List[Result]:
+    @ensure_list_arg('conids')
+    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> List[Result]:
         """
         Cancel market data for given conid(s).
 
@@ -332,8 +308,8 @@ class MarketdataMixin:
         # we unsubscribe from all conids simultaneously
         unsubscribe_requests = {
             conid: {
-                "args": ["iserver/marketdata/unsubscribe"],
-                "kwargs": {"params": {"conid": int(conid)}},
+                'args': ['iserver/marketdata/unsubscribe'],
+                'kwargs': {'params': {'conid': int(conid)}},
             }
             for conid in conids
         }
@@ -342,17 +318,14 @@ class MarketdataMixin:
         for conid, result in results.items():
             if isinstance(result, Exception):
                 # 404 means that no such subscription was found in first place, which we ignore
-                if (
-                    isinstance(result, ExternalBrokerError)
-                    and result.status_code == 404
-                ):
+                if isinstance(result, ExternalBrokerError) and result.status_code == 404:
                     continue
                 raise result
 
         return results
 
-    def marketdata_unsubscribe_all(self: "IbkrClient") -> Result:  # pragma: no cover
+    def marketdata_unsubscribe_all(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
         """
-        return self.get("iserver/marketdata/unsubscribeall")
+        return self.get('iserver/marketdata/unsubscribeall')

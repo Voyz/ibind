@@ -53,16 +53,16 @@ class IbkrClient(
         self,
         account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
         url: str = var.IBIND_REST_URL,
-        host: str = "127.0.0.1",
-        port: str = "5000",
-        base_route: str = "/v1/api/",
+        host: str = '127.0.0.1',
+        port: str = '5000',
+        base_route: str = '/v1/api/',
         cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
         timeout: float = 10,
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         use_oauth: bool = var.IBIND_USE_OAUTH,
-        oauth_config: "OAuthConfig" = None,
+        oauth_config: 'OAuthConfig' = None,
     ) -> None:
         """
         Parameters:
@@ -91,19 +91,11 @@ class IbkrClient(
             from ibind.oauth.oauth1a import OAuth1aConfig
 
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
-            self.oauth_config = (
-                cast(OAuth1aConfig, oauth_config)
-                if oauth_config is not None
-                else OAuth1aConfig()
-            )
-            url = (
-                url
-                if url is not None and self.oauth_config.oauth_rest_url is None
-                else self.oauth_config.oauth_rest_url
-            )
+            self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
+            url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
 
         if url is None:
-            url = f"https://{host}:{port}{base_route}"
+            url = f'https://{host}:{port}{base_route}'
 
         self.account_id = account_id
 
@@ -117,9 +109,9 @@ class IbkrClient(
             auto_register_shutdown=auto_register_shutdown,
         )
 
-        self.logger.info("#################")
+        self.logger.info('#################')
         self.logger.info(
-            f"New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})"
+            f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})'
         )
 
         if self._use_oauth:
@@ -132,9 +124,7 @@ class IbkrClient(
                 )
 
     def _make_logger(self):
-        self._logger = new_daily_rotating_file_handler(
-            "IbkrClient", os.path.join(var.LOGS_DIR, f"ibkr_client_{self.account_id}")
-        )
+        self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
     def _request(
         self,
@@ -148,22 +138,14 @@ class IbkrClient(
         """Handle IBKR-specific errors."""
 
         try:
-            return super()._request(
-                method, endpoint, base_url, extra_headers, log, **kwargs
-            )
+            return super()._request(method, endpoint, base_url, extra_headers, log, **kwargs)
         except ExternalBrokerError as e:
-            if "Bad Request: no bridge" in str(e) and e.status_code == 400:
-                raise ExternalBrokerError(
-                    "IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first."
-                ) from e
+            if 'Bad Request: no bridge' in str(e) and e.status_code == 400:
+                raise ExternalBrokerError('IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
             raise
 
     def _get_headers(self, request_method: str, request_url: str):
-        if (
-            (not self._use_oauth)
-            or request_url
-            == f"{self.base_url}{self.oauth_config.live_session_token_endpoint}"
-        ):
+        if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
 
@@ -226,12 +208,10 @@ class IbkrClient(
             - `start_tickler`: Maintains the session by periodically sending requests.
             - `initialize_brokerage_session`: Establishes a brokerage session post-authentication.
         """
-        _LOGGER.info(f"{self}: Initialising OAuth {self.oauth_config.version()}")
+        _LOGGER.info(f'{self}: Initialising OAuth {self.oauth_config.version()}')
 
-        if importlib.util.find_spec("Crypto") is None:
-            raise ImportError(
-                "Installation lacks OAuth support. Please install by using `pip install ibind[oauth]`"
-            )
+        if importlib.util.find_spec('Crypto') is None:
+            raise ImportError('Installation lacks OAuth support. Please install by using `pip install ibind[oauth]`')
 
         # get live session token for OAuth authentication
         self.generate_live_session_token()
@@ -245,7 +225,7 @@ class IbkrClient(
             consumer_key=self.oauth_config.consumer_key,
         )
         if not success:
-            raise RuntimeError("Live session token validation failed.")
+            raise RuntimeError('Live session token validation failed.')
 
         if maintain_oauth:
             self.start_tickler()
@@ -264,7 +244,7 @@ class IbkrClient(
             - The Tickler should be stopped when the session is no longer needed using `stop_tickler()`.
 
         """
-        _LOGGER.info(f"{self}: Starting Tickler to maintain the connection alive")
+        _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
         self._tickler = Tickler(self)
         self._tickler.start()
 
@@ -275,7 +255,7 @@ class IbkrClient(
         The Tickler is responsible for maintaining an active session by sending periodic requests to
         the IBKR API. This method stops the Tickler process, preventing further requests.
         """
-        if hasattr(self, "_tickler") and self._tickler is not None:
+        if hasattr(self, '_tickler') and self._tickler is not None:
             self._tickler.stop()
 
     def close(self):
@@ -290,6 +270,6 @@ class IbkrClient(
         This method stops the Tickler process, which keeps the session alive, and logs out from
         the IBKR API to ensure a clean session termination.
         """
-        _LOGGER.info(f"{self}: Shutting down OAuth")
+        _LOGGER.info(f'{self}: Shutting down OAuth')
         self.stop_tickler()
         self.logout()

@@ -4,17 +4,17 @@ from setuptools import find_packages
 
 
 setup(
-    name="ibind",
+    name='ibind',
     packages=find_packages(
         exclude=[
-            "*.tests",
-            "*.tests.*",
-            "tests.*",
-            "tests",
-            "examples",
-            "docs",
-            "out",
-            "dist",
+            '*.tests',
+            '*.tests.*',
+            'tests.*',
+            'tests',
+            'examples',
+            'docs',
+            'out',
+            'dist',
         ]
     ),
 )

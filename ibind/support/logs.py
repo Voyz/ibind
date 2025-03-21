@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ibind import var
 
-DEFAULT_FORMAT = "%(asctime)s|%(levelname)-.1s| %(message)s"
+DEFAULT_FORMAT = '%(asctime)s|%(levelname)-.1s| %(message)s'
 
 _initialized = False
 _log_to_file = False
@@ -24,9 +24,7 @@ def project_logger(filepath=None):
     Returns:
         logging.Logger: The project-specific logger instance.
     """
-    return logging.getLogger(
-        "ibind" + (f".{Path(filepath).stem}" if filepath is not None else "")
-    )
+    return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
 
 
 _LOGGER = project_logger()
@@ -60,7 +58,7 @@ def ibind_logs_initialize(
     global _log_to_file
     _log_to_file = log_to_file
 
-    logger = logging.getLogger("ibind")
+    logger = logging.getLogger('ibind')
     formatter = logging.Formatter(log_format)
     logger.setLevel(logging.DEBUG)
 
@@ -72,7 +70,7 @@ def ibind_logs_initialize(
         logger.addHandler(h1)
 
     if not _log_to_file:
-        logging.getLogger("ibind_fh").addFilter(lambda record: False)
+        logging.getLogger('ibind_fh').addFilter(lambda record: False)
 
 
 def new_daily_rotating_file_handler(logger_name, filepath):
@@ -94,15 +92,13 @@ def new_daily_rotating_file_handler(logger_name, filepath):
         - The logger is set to DEBUG level by default.
         - The format of the logs is determined by the DEFAULT_FORMAT global variable.
     """
-    logger = logging.getLogger(f"ibind_fh.{logger_name}")
+    logger = logging.getLogger(f'ibind_fh.{logger_name}')
 
     if _log_to_file:
-        _LOGGER.info(
-            f'New daily rotating file handler for logger "{logger_name}": {filepath}'
-        )
+        _LOGGER.info(f'New daily rotating file handler for logger "{logger_name}": {filepath}')
         if len(logger.handlers) == 0:
-            fh_logger = logging.getLogger("ibind_fh")
-            handler = DailyRotatingFileHandler(filepath, encoding="utf-8")
+            fh_logger = logging.getLogger('ibind_fh')
+            handler = DailyRotatingFileHandler(filepath, encoding='utf-8')
             handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
 
             # if filehandler outputs are disabled, this should bring over the filter that will do this
@@ -118,7 +114,7 @@ def new_daily_rotating_file_handler(logger_name, filepath):
 
 
 class DailyRotatingFileHandler(logging.FileHandler):
-    def __init__(self, *args, date_format="%Y-%m-%d", **kwargs):
+    def __init__(self, *args, date_format='%Y-%m-%d', **kwargs):
         self.timestamp = None
         self.date_format = date_format
         self.stream = None
@@ -129,7 +125,7 @@ class DailyRotatingFileHandler(logging.FileHandler):
         return now.strftime(self.date_format)
 
     def get_filename(self, timestamp):
-        return f"{self.baseFilename}__{timestamp}.txt"
+        return f'{self.baseFilename}__{timestamp}.txt'
 
     def _open(self):
         if self.stream is not None:
@@ -137,7 +133,7 @@ class DailyRotatingFileHandler(logging.FileHandler):
         self.timestamp = self.get_timestamp()
         filename = self.get_filename(self.timestamp)
         Path(filename).parent.mkdir(parents=True, exist_ok=True)
-        return open(filename, self.mode, encoding="utf-8")
+        return open(filename, self.mode, encoding='utf-8')
 
     def emit(self, record):
         if self.get_timestamp() != self.timestamp:

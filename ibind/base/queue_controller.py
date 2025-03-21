@@ -4,7 +4,7 @@ from typing import TypeVar, Generic, Any
 
 from ibind.support.py_utils import ensure_list_arg, OneOrMany
 
-T = TypeVar("T", str, Enum)
+T = TypeVar('T', str, Enum)
 
 
 class QueueAccessor(Generic[T]):  # pragma: no cover
@@ -60,7 +60,7 @@ class QueueAccessor(Generic[T]):  # pragma: no cover
         return self._key
 
     def __str__(self):
-        return f"QueueAccessor(key={self._key}, size={self.__queue__.qsize()})"
+        return f'QueueAccessor(key={self._key}, size={self.__queue__.qsize()})'
 
 
 class QueueController(Generic[T]):
@@ -86,7 +86,7 @@ class QueueController(Generic[T]):
     def __init__(self):
         self._queues = {}
 
-    @ensure_list_arg("keys")
+    @ensure_list_arg('keys')
     def register_queues(self, keys: OneOrMany[T]):
         """
         Registers new queues associated with the given keys.
@@ -131,9 +131,7 @@ class QueueController(Generic[T]):
         try:
             return self._queues[key]
         except KeyError:
-            raise AttributeError(
-                f'Invalid queue key: "{key}", expected: {list(self._queues.keys())}'
-            )
+            raise AttributeError(f'Invalid queue key: "{key}", expected: {list(self._queues.keys())}')
 
     def put_to_queue(self, key: T, data):
         """

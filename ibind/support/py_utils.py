@@ -17,7 +17,7 @@ from ibind.support.logs import project_logger
 UNDEFINED = object()
 _PRECISION_OFFSET = 7
 
-S = TypeVar("S")
+S = TypeVar('S')
 OneOrMany = Union[S, List[S]]
 
 _LOGGER = project_logger(__file__)
@@ -39,9 +39,7 @@ def ensure_list_arg(*arg_names: str) -> callable:  # pragma: no cover
             args_list = list(args)
 
             for arg_name in arg_names:
-                arg_index = (
-                    param_names.index(arg_name) if arg_name in param_names else None
-                )
+                arg_index = param_names.index(arg_name) if arg_name in param_names else None
 
                 # If arg_name was passed as a positional argument
                 if arg_index is not None and arg_index < len(args_list):
@@ -72,9 +70,7 @@ class VerboseEnumMeta(EnumMeta):  # pragma: no cover
             if str(enum) == lookup:
                 return enum
 
-        raise AttributeError(
-            f"Invalid {cls.__name__}: {key!r} ({type(key)}) | expected: {cls.values()}"
-        )
+        raise AttributeError(f'Invalid {cls.__name__}: {key!r} ({type(key)}) | expected: {cls.values()}')
 
     def values(cls):
         return [entry.value for entry in list(cls)]
@@ -96,7 +92,7 @@ class VerboseEnum(str, Enum, metaclass=VerboseEnumMeta):  # pragma: no cover
         return self.value
 
     def __repr__(self):
-        return f"{self.__class__.__name__}.{self.value}"
+        return f'{self.__class__.__name__}.{self.value}'
 
     def __reduce_ex__(self, proto):
         return self.__class__, (self.value,)
@@ -105,7 +101,7 @@ class VerboseEnum(str, Enum, metaclass=VerboseEnumMeta):  # pragma: no cover
         return self.value < other.value
 
     def to_json(self):
-        return f"{self.__class__.__name__}.{str(self)}"
+        return f'{self.__class__.__name__}.{str(self)}'
 
     def copy(self):
         return copy.copy(self)
@@ -153,9 +149,7 @@ def execute_in_parallel(
     start_time = time.time()
     num_requests = 0
 
-    with ThreadPoolExecutor(
-        max_workers=max_workers, thread_name_prefix=func.__name__
-    ) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix=func.__name__) as executor:
         futures = []
         for key, request in _requests.items():
             while num_requests >= max_per_second:
@@ -164,8 +158,8 @@ def execute_in_parallel(
                     num_requests = 0
                     start_time = time.time()
 
-            args = request.get("args", [])
-            kwargs = request.get("kwargs", {})
+            args = request.get('args', [])
+            kwargs = request.get('kwargs', {})
             future = executor.submit(execute_with_key, key, func, *args, **kwargs)
             futures.append(future)
             num_requests += 1
@@ -252,17 +246,15 @@ def exception_to_string(excp) -> str:  # pragma: no cover
     """
     stack = make_clean_stack() + traceback.extract_tb(excp.__traceback__)
     pretty = traceback.format_list(stack)
-    excp_str = "\n" + "".join(pretty) + "\n  {} {}".format(excp.__class__, excp)
+    excp_str = '\n' + ''.join(pretty) + '\n  {} {}'.format(excp.__class__, excp)
 
     # Handling chained exceptions
     cause = excp.__cause__
     while cause:
         cause_stack = traceback.extract_tb(cause.__traceback__)
         pretty_cause = traceback.format_list(cause_stack)
-        excp_str += (
-            "\n\nThe below exception was the direct cause of the above exception:\n\n"
-        )
-        excp_str += "".join(pretty_cause) + "\n  {} {}".format(cause.__class__, cause)
+        excp_str += '\n\nThe below exception was the direct cause of the above exception:\n\n'
+        excp_str += ''.join(pretty_cause) + '\n  {} {}'.format(cause.__class__, cause)
         cause = cause.__cause__
 
     return excp_str
@@ -275,17 +267,15 @@ def make_clean_stack() -> [traceback.FrameSummary]:  # pragma: no cover
         if all(
             substring not in s.filename
             for substring in [
-                "JetBrains",
-                os.path.join("Lib", "unittest"),
-                os.path.join("Lib", "logging"),
+                'JetBrains',
+                os.path.join('Lib', 'unittest'),
+                os.path.join('Lib', 'logging'),
             ]
         )
     ][:-2]
 
 
-def wait_until(
-    condition: callable, timeout_message: str = None, timeout: float = 5
-) -> bool:
+def wait_until(condition: callable, timeout_message: str = None, timeout: float = 5) -> bool:
     """
      Pauses program execution until a specified condition becomes True or a timeout is reached.
 
@@ -317,12 +307,10 @@ def tname():  # pragma: no cover
     Returns:
         str: A string combining the current thread's name and its unique identifier.
     """
-    return f"{threading.current_thread().name}-{threading.get_ident()}"
+    return f'{threading.current_thread().name}-{threading.get_ident()}'
 
 
-def params_dict(
-    required: dict = None, optional: dict = None, preprocessors: dict = None
-):
+def params_dict(required: dict = None, optional: dict = None, preprocessors: dict = None):
     d = required if required is not None else {}
 
     if optional is None:
@@ -346,11 +334,9 @@ def print_table(my_dict, column_order=None):
         column_order = list(my_dict[0].keys() if my_dict else [])
     rv = [column_order]  # 1st row = header
     for item in my_dict:
-        rv.append(
-            [str(item[col] if item[col] is not None else "") for col in column_order]
-        )
+        rv.append([str(item[col] if item[col] is not None else '') for col in column_order])
     column_size = [max(map(len, col)) for col in zip(*rv)]
-    formatter = "   ".join(["{{:>{}}}".format(i) for i in column_size])
+    formatter = '   '.join(['{{:>{}}}'.format(i) for i in column_size])
     for i, item in enumerate(rv):
         print(formatter.format(*item))
 
@@ -362,9 +348,9 @@ def patch_dotenv():
 
         # Wrap the original load_dotenv function
         def warn_if_late_load(*args, **kwargs):
-            if "ibind.var" in sys.modules:
+            if 'ibind.var' in sys.modules:
                 warnings.warn(
-                    "⚠️ WARNING: `load_dotenv()` was called after `ibind` was imported. Environment variables were already read and changes may not take effect. Call `load_dotenv()` before importing `ibind` to ensure proper behavior.",
+                    '⚠️ WARNING: `load_dotenv()` was called after `ibind` was imported. Environment variables were already read and changes may not take effect. Call `load_dotenv()` before importing `ibind` to ensure proper behavior.',
                     RuntimeWarning,
                     stacklevel=2,
                 )

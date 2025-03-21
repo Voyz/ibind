@@ -50,22 +50,22 @@ class IbkrWsKey(Enum):
     """
 
     # subscription-based
-    ACCOUNT_SUMMARY = "ACCOUNT_SUMMARY"
-    ACCOUNT_LEDGER = "ACCOUNT_LEDGER"
-    MARKET_DATA = "MARKET_DATA"
-    MARKET_HISTORY = "MARKET_HISTORY"
-    PRICE_LADDER = "PRICE_LADDER"
-    ORDERS = "ORDERS"
-    PNL = "PNL"
-    TRADES = "TRADES"
+    ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
+    ACCOUNT_LEDGER = 'ACCOUNT_LEDGER'
+    MARKET_DATA = 'MARKET_DATA'
+    MARKET_HISTORY = 'MARKET_HISTORY'
+    PRICE_LADDER = 'PRICE_LADDER'
+    ORDERS = 'ORDERS'
+    PNL = 'PNL'
+    TRADES = 'TRADES'
 
     # unsolicited
-    ACCOUNT_UPDATES = "ACCOUNT_UPDATES"
-    AUTHENTICATION_STATUS = "AUTHENTICATION_STATUS"
-    BULLETINS = "BULLETINS"
-    ERROR = "ERROR"
-    SYSTEM = "SYSTEM"
-    NOTIFICATIONS = "NOTIFICATIONS"
+    ACCOUNT_UPDATES = 'ACCOUNT_UPDATES'
+    AUTHENTICATION_STATUS = 'AUTHENTICATION_STATUS'
+    BULLETINS = 'BULLETINS'
+    ERROR = 'ERROR'
+    SYSTEM = 'SYSTEM'
+    NOTIFICATIONS = 'NOTIFICATIONS'
 
     @classmethod
     def from_channel(cls, channel):
@@ -82,14 +82,14 @@ class IbkrWsKey(Enum):
             ValueError: If no enum member is associated with the provided channel.
         """
         channel_to_key = {
-            "sd": IbkrWsKey.ACCOUNT_SUMMARY,
-            "ld": IbkrWsKey.ACCOUNT_LEDGER,
-            "md": IbkrWsKey.MARKET_DATA,
-            "mh": IbkrWsKey.MARKET_HISTORY,
-            "bd": IbkrWsKey.PRICE_LADDER,
-            "or": IbkrWsKey.ORDERS,
-            "pl": IbkrWsKey.PNL,
-            "tr": IbkrWsKey.TRADES,
+            'sd': IbkrWsKey.ACCOUNT_SUMMARY,
+            'ld': IbkrWsKey.ACCOUNT_LEDGER,
+            'md': IbkrWsKey.MARKET_DATA,
+            'mh': IbkrWsKey.MARKET_HISTORY,
+            'bd': IbkrWsKey.PRICE_LADDER,
+            'or': IbkrWsKey.ORDERS,
+            'pl': IbkrWsKey.PNL,
+            'tr': IbkrWsKey.TRADES,
         }
         if channel in channel_to_key:
             return channel_to_key[channel]
@@ -104,14 +104,14 @@ class IbkrWsKey(Enum):
             str: The channel string corresponding to the enum member.
         """
         return {
-            IbkrWsKey.ACCOUNT_SUMMARY: "sd",
-            IbkrWsKey.ACCOUNT_LEDGER: "ld",
-            IbkrWsKey.MARKET_DATA: "md",
-            IbkrWsKey.MARKET_HISTORY: "mh",
-            IbkrWsKey.PRICE_LADDER: "bd",
-            IbkrWsKey.ORDERS: "or",
-            IbkrWsKey.PNL: "pl",
-            IbkrWsKey.TRADES: "tr",
+            IbkrWsKey.ACCOUNT_SUMMARY: 'sd',
+            IbkrWsKey.ACCOUNT_LEDGER: 'ld',
+            IbkrWsKey.MARKET_DATA: 'md',
+            IbkrWsKey.MARKET_HISTORY: 'mh',
+            IbkrWsKey.PRICE_LADDER: 'bd',
+            IbkrWsKey.ORDERS: 'or',
+            IbkrWsKey.PNL: 'pl',
+            IbkrWsKey.TRADES: 'tr',
         }[self]
 
     @property
@@ -164,10 +164,10 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
             - Without data: make_subscribe_payload('md') returns "smd"
         """
-        payload = f"s{channel}"
+        payload = f's{channel}'
 
         if data is not None or data == {}:
-            payload += f"+{json.dumps(data)}"
+            payload += f'+{json.dumps(data)}'
 
         return payload
 
@@ -190,7 +190,7 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - Without data: make_unsubscribe_payload('md') returns "umd+{}"
         """
         data = {} if data is None else data
-        return f"u{channel}+{json.dumps(data)}"
+        return f'u{channel}+{json.dumps(data)}'
 
 
 class IbkrWsClient(WsClient):
@@ -207,13 +207,11 @@ class IbkrWsClient(WsClient):
         self,
         account_id: str = var.IBIND_ACCOUNT_ID,
         url: str = var.IBIND_WS_URL,
-        host: str = "127.0.0.1",
-        port: str = "5000",
-        base_route: str = "/v1/api/ws",
+        host: str = '127.0.0.1',
+        port: str = '5000',
+        base_route: str = '/v1/api/ws',
         ibkr_client: IbkrClient = None,
-        subscription_processor_class: Type[
-            SubscriptionProcessor
-        ] = IbkrSubscriptionProcessor,
+        subscription_processor_class: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
         queue_controller_class: Type[QueueController] = QueueController[IbkrWsKey],
         log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
         unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
@@ -271,14 +269,14 @@ class IbkrWsClient(WsClient):
         url = var.IBIND_OAUTH1A_WS_URL if url is None and use_oauth else url
 
         if url is None:
-            url = f"wss://{host}:{port}{base_route}"
+            url = f'wss://{host}:{port}{base_route}'
 
         if use_oauth:
             if access_token is None:
                 raise ValueError(
-                    "OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument."
+                    'OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.'
                 )
-            url += f"?oauth_token={access_token}"
+            url += f'?oauth_token={access_token}'
 
         if ibkr_client is None:
             ibkr_client = IbkrClient(
@@ -295,11 +293,7 @@ class IbkrWsClient(WsClient):
         self._subscription_processor = subscription_processor_class()
 
         self._log_raw_messages = log_raw_messages
-        self._unsolicited_channels_to_be_queued = (
-            unsolicited_channels_to_be_queued
-            if unsolicited_channels_to_be_queued is not None
-            else []
-        )
+        self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
         self._unwrap_market_data = unwrap_market_data
         self._use_oauth = use_oauth
 
@@ -332,18 +326,16 @@ class IbkrWsClient(WsClient):
         try:
             status = self._ibkr_client.tickle()
         except ExternalBrokerError:
-            _LOGGER.warning(
-                "Acquiring session cookie failed, connection to the Gateway may be broken."
-            )
+            _LOGGER.warning('Acquiring session cookie failed, connection to the Gateway may be broken.')
             return None
-        session_id = status.data["session"]
+        session_id = status.data['session']
         if self._use_oauth:
-            return f"api={session_id}"
-        payload = {"session": session_id}
-        return f"api={json.dumps(payload)}"
+            return f'api={session_id}'
+        payload = {'session': session_id}
+        return f'api={json.dumps(payload)}'
 
     def _get_header(self):
-        return {"User-Agent": "ClientPortalGW/1"} if self._use_oauth else None
+        return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
 
     def _on_reconnect(self):
         super()._on_reconnect()
@@ -352,30 +344,27 @@ class IbkrWsClient(WsClient):
         """
         API will only return fields that were updated. If you are not receiving certain fields in the response - means that they remain unchanged.
         """
-        if "conid" not in message:  # pragma: no cover
+        if 'conid' not in message:  # pragma: no cover
             # sometimes the ticker message is just an empty update, we ignore it
             return
 
         if not self._unwrap_market_data:
-            return {message["conid"]: message}
+            return {message['conid']: message}
 
         result = {
-            "conid": message["conid"],
-            "_updated": message["_updated"],
-            "topic": message["topic"],
+            'conid': message['conid'],
+            '_updated': message['_updated'],
+            'topic': message['topic'],
         }
         for key, value in message.items():
             if key in ibkr_definitions.snapshot_by_id:
                 result[ibkr_definitions.snapshot_by_id[key]] = value
-        return {message["conid"]: result}
+        return {message['conid']: result}
 
     def _preprocess_market_history_message(self, message: dict):
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
-        if (
-            "serverId" in message
-            and message["serverId"] not in mh_server_id_conid_pairs
-        ):
-            mh_server_id_conid_pairs[message["serverId"]] = extract_conid(message)
+        if 'serverId' in message and message['serverId'] not in mh_server_id_conid_pairs:
+            mh_server_id_conid_pairs[message['serverId']] = extract_conid(message)
 
         return message
 
@@ -401,88 +390,82 @@ class IbkrWsClient(WsClient):
 
     def _handle_account_update(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.ACCOUNT_UPDATES, message)
-        if "accounts" not in data:
-            _LOGGER.error(f"{self}: Unknown account response: {message}")
+        if 'accounts' not in data:
+            _LOGGER.error(f'{self}: Unknown account response: {message}')
             return
 
-        if self._account_id not in data["accounts"]:
-            _LOGGER.error(
-                f"{self}: Account ID mismatch: expected={self._account_id}, received={data['accounts']}"
-            )
+        if self._account_id not in data['accounts']:
+            _LOGGER.error(f'{self}: Account ID mismatch: expected={self._account_id}, received={data["accounts"]}')
 
     def _handle_authentication_status(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
 
-        if "authenticated" in data:
-            if data.get("authenticated") is False:
-                _LOGGER.error(f"{self}: Status unauthenticated: {data}")
-            self.set_authenticated(data.get("authenticated"))
-        elif "competing" in data:
-            if data.get("competing") is False:
+        if 'authenticated' in data:
+            if data.get('authenticated') is False:
+                _LOGGER.error(f'{self}: Status unauthenticated: {data}')
+            self.set_authenticated(data.get('authenticated'))
+        elif 'competing' in data:
+            if data.get('competing') is False:
                 pass
-            _LOGGER.error(f"{self}: Status competing: {data}")
-        elif data == {"message": ""}:
+            _LOGGER.error(f'{self}: Status competing: {data}')
+        elif data == {'message': ''}:
             pass
         else:
-            _LOGGER.info(f"{self}: Unknown status response: {message}")
+            _LOGGER.info(f'{self}: Unknown status response: {message}')
 
     def _handle_bulletin(self, message):  # pragma: no cover
         self._handle_unsolicited_message(IbkrWsKey.BULLETINS, message)
 
     def _handle_error(self, message):
         self._handle_unsolicited_message(IbkrWsKey.ERROR, message)
-        _LOGGER.error(f"{self}: on_message error: {message}")
+        _LOGGER.error(f'{self}: on_message error: {message}')
 
     def _handle_notification(self, data):  # pragma: no cover
         self._handle_unsolicited_message(IbkrWsKey.NOTIFICATIONS, data)
         for notification in data:
-            _LOGGER.info(f"{self}: IBKR notification: {notification}")
+            _LOGGER.info(f'{self}: IBKR notification: {notification}')
 
     def _handle_market_history_unsubscribe(self, data):
-        server_id = data["message"].split("Unsubscribed ")[-1]
+        server_id = data['message'].split('Unsubscribed ')[-1]
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
         if server_id in mh_server_id_conid_pairs:
             conid = mh_server_id_conid_pairs[server_id]
-            _LOGGER.info(
-                f"{self}: Received unsubscribing confirmation for server_id={server_id!r}/conid={conid!r}."
-            )
+            _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}/conid={conid!r}.')
             if conid is None:
-                _LOGGER.warning(
-                    f"{self}: Unknown conid={conid!r}. Cannot mark the subscription as unsubscribed."
-                )
+                _LOGGER.warning(f'{self}: Unknown conid={conid!r}. Cannot mark the subscription as unsubscribed.')
                 return
 
-            self.modify_subscription(f"mh+{conid}", status=False)
+            self.modify_subscription(f'mh+{conid}', status=False)
         else:
             _LOGGER.warning(
-                f"{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}"
+                f'{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}'
             )
 
     def _handle_message_without_topic(self, message: dict):
-        if "message" in message:
-            if "Unsubscribed" in message["message"]:
+        if 'message' in message:
+            if 'Unsubscribed' in message['message']:
                 self._handle_market_history_unsubscribe(message)
                 return
-            elif message["message"] == "waiting for session":
-                _LOGGER.info(f"{self}: Waiting for an active IBKR session.")
+            elif message['message'] == 'waiting for session':
+                _LOGGER.info(f'{self}: Waiting for an active IBKR session.')
                 return
-        elif "result" in message:
-            if message["result"] == "unsubscribed from summary":
-                return self.modify_subscription(f"sd+{self._account_id}", status=False)
-            elif message["result"] == "unsubscribed from ledger":
-                return self.modify_subscription(f"ld+{self._account_id}", status=False)
+        elif 'result' in message:
+            if message['result'] == 'unsubscribed from summary':
+                return self.modify_subscription(f'sd+{self._account_id}', status=False)
+            elif message['result'] == 'unsubscribed from ledger':
+                return self.modify_subscription(f'ld+{self._account_id}', status=False)
 
-        _LOGGER.error(f"{self}: Unrecognised message without a topic: {message}")
+        _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
 
     def _preprocess_raw_message(self, raw_message: str):
         message = json.loads(raw_message)
         # print(message)
-        topic = message.get("topic", UNDEFINED)
+        topic = message.get('topic', UNDEFINED)
 
         if topic is UNDEFINED:
             return message, None, None, None, None
 
-        data = message.get("args", {})
+        data = message.get('args', {})
 
         # subscribed is the indicator of whether it was a subscription or unsubscription, defined by the first letter
         # channel is the actual channel we received the information about
@@ -492,50 +475,44 @@ class IbkrWsClient(WsClient):
 
     def _on_message(self, wsa: WebSocketApp, raw_message: str) -> None:
         if self._log_raw_messages:
-            _LOGGER.debug(f"{self}: Raw message: {raw_message}")
-        message, topic, data, subscribed, channel = self._preprocess_raw_message(
-            raw_message
-        )
+            _LOGGER.debug(f'{self}: Raw message: {raw_message}')
+        message, topic, data, subscribed, channel = self._preprocess_raw_message(raw_message)
 
-        if "error" in message:
+        if 'error' in message:
             self._handle_error(message)
 
         elif topic is None:
             # in general most message should carry a topic, other than for few exceptions
             self._handle_message_without_topic(message)
 
-        elif topic == "system":
-            if "hb" in message:
-                self._last_heartbeat = message["hb"]
+        elif topic == 'system':
+            if 'hb' in message:
+                self._last_heartbeat = message['hb']
 
-        elif topic == "act":
+        elif topic == 'act':
             self._handle_account_update(message, data)
 
-        elif topic == "blt":
+        elif topic == 'blt':
             self._handle_bulletin(message)
 
-        elif topic == "ntf":
+        elif topic == 'ntf':
             self._handle_notification(data)
 
-        elif topic == "sts":
+        elif topic == 'sts':
             self._handle_authentication_status(message, data)
 
-        elif topic == "error":
-            _LOGGER.error(f"{self}: Error message:  {message}")
+        elif topic == 'error':
+            _LOGGER.error(f'{self}: Error message:  {message}')
 
         elif self.has_subscription(channel):
             if not self.is_subscription_active(channel):
                 self.modify_subscription(channel, status=True)
 
             if not self._handle_subscribed_message(channel, message):
-                _LOGGER.error(
-                    f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}'
-                )
+                _LOGGER.error(f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}')
 
         elif self._handle_subscribed_message(channel, message):
-            _LOGGER.warning(
-                f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}'
-            )
+            _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
         else:
             _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
 
@@ -561,7 +538,7 @@ class IbkrWsClient(WsClient):
         diff = abs(time.time() - self._last_heartbeat / 1000)
         if diff > self._max_ping_interval:
             _LOGGER.warning(
-                f"{self}: Last IBKR heartbeat happened {diff:.2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting."
+                f'{self}: Last IBKR heartbeat happened {diff:.2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.'
             )
             self.hard_reset(restart=True)
             return False
@@ -583,9 +560,7 @@ class IbkrWsClient(WsClient):
         """
         return self._server_id_conid_pairs[key]
 
-    def new_queue_accessor(
-        self, key: IbkrWsKey
-    ) -> QueueAccessor[IbkrWsKey]:  # pragma: no cover
+    def new_queue_accessor(self, key: IbkrWsKey) -> QueueAccessor[IbkrWsKey]:  # pragma: no cover
         """
         Creates a new queue accessor for a specified IbkrWsKey.
 
@@ -625,20 +600,16 @@ class IbkrWsClient(WsClient):
         Returns:
             bool: True if the subscription was successful, False otherwise.
         """
-        if channel[:2] == "or":
+        if channel[:2] == 'or':
             if not self._ibkr_client.check_health():
                 return False
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
 
         if needs_confirmation is None:
-            needs_confirmation = IbkrWsKey.from_channel(
-                channel[:2]
-            ).confirms_subscribing
+            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_subscribing
 
-        return super().subscribe(
-            channel, data, needs_confirmation, subscription_processor
-        )
+        return super().subscribe(channel, data, needs_confirmation, subscription_processor)
 
     def unsubscribe(
         self,
@@ -665,13 +636,9 @@ class IbkrWsClient(WsClient):
             bool: True if the unsubscription was successful, False otherwise.
         """
         if needs_confirmation is None:
-            needs_confirmation = IbkrWsKey.from_channel(
-                channel[:2]
-            ).confirms_unsubscribing
+            needs_confirmation = IbkrWsKey.from_channel(channel[:2]).confirms_unsubscribing
 
-        return super().unsubscribe(
-            channel, data, needs_confirmation, subscription_processor
-        )
+        return super().unsubscribe(channel, data, needs_confirmation, subscription_processor)
 
     def _queue_accessor(self, ibkr_ws_key: IbkrWsKey):  # pragma: no cover
         try:
@@ -680,9 +647,7 @@ class IbkrWsClient(WsClient):
             self._queue_accessors[ibkr_ws_key] = self.new_queue_accessor(ibkr_ws_key)
             return self._queue_accessors[ibkr_ws_key]
 
-    def get(
-        self, ibkr_ws_key: IbkrWsKey, block: bool = False, timeout=None
-    ):  # pragma: no cover
+    def get(self, ibkr_ws_key: IbkrWsKey, block: bool = False, timeout=None):  # pragma: no cover
         """
         Facilitates access to data queues by exposing the `get` method of internally-stored QueueAccessor objects.
 
