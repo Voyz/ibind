@@ -8,7 +8,10 @@ from typing import Optional, Union, Dict, List
 
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
 
-from ibind.base.subscription_controller import SubscriptionController, SubscriptionProcessor
+from ibind.base.subscription_controller import (
+    SubscriptionController,
+    SubscriptionProcessor,
+)
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string, wait_until, tname
 
@@ -31,18 +34,18 @@ class WsClient(SubscriptionController):
     """
 
     def __init__(
-            self,
-            subscription_processor: SubscriptionProcessor,
-            url: str,
-            timeout: float = _DEFAULT_TIMEOUT,
-            restart_on_close: bool = True,
-            restart_on_critical: bool = True,
-            ping_interval: int = _DEFAULT_PING_INTERVAL,
-            max_ping_interval: int = _DEFAULT_MAX_PING_INTERVAL,
-            max_connection_attempts: int = 10,
-            cacert: Union[str, bool] = False,
-            subscription_retries: int = 5,
-            subscription_timeout: float = 2,
+        self,
+        subscription_processor: SubscriptionProcessor,
+        url: str,
+        timeout: float = _DEFAULT_TIMEOUT,
+        restart_on_close: bool = True,
+        restart_on_critical: bool = True,
+        ping_interval: int = _DEFAULT_PING_INTERVAL,
+        max_ping_interval: int = _DEFAULT_MAX_PING_INTERVAL,
+        max_connection_attempts: int = 10,
+        cacert: Union[str, bool] = False,
+        subscription_retries: int = 5,
+        subscription_timeout: float = 2,
     ):
         """
         Parameters:
@@ -59,7 +62,7 @@ class WsClient(SubscriptionController):
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
         if url is None:
-            raise ValueError("url must not be None")
+            raise ValueError('url must not be None')
 
         self._url = url
         self._timeout = timeout
@@ -72,12 +75,12 @@ class WsClient(SubscriptionController):
         super().__init__(
             subscription_processor=subscription_processor,
             subscription_retries=subscription_retries,
-            subscription_timeout=subscription_timeout
+            subscription_timeout=subscription_timeout,
         )
 
         self._connected = False
         self._running = False
-        self._authenticated = True # True by default in case of an WS API that doesn't support authentication messages
+        self._authenticated = True  # True by default in case of an WS API that doesn't support authentication messages
         self._connect_lock = RLock()
         self._reconnect_lock = RLock()
         self._wsa: Optional[WebSocketApp] = None
@@ -86,10 +89,10 @@ class WsClient(SubscriptionController):
         self._next_thread_id = 0
 
         if not (cacert is False or Path(cacert).exists()):
-            raise ValueError(f"{self}: cacert must be a valid Path or False")
+            raise ValueError(f'{self}: cacert must be a valid Path or False')
 
         if cacert is None or not cacert:
-            self._sslopt = {"cert_reqs": ssl.CERT_NONE}
+            self._sslopt = {'cert_reqs': ssl.CERT_NONE}
         else:
             self._sslopt = {'ca_certs': cacert}
 
@@ -146,7 +149,7 @@ class WsClient(SubscriptionController):
 
     def _wrap_callback(self, f):
         def wrapped_f(ws, *args, **kwargs):
-            if not (ws is self._wsa):
+            if ws is not self._wsa:
                 _LOGGER.error(f'{self}: Invalid ws returned: {ws} | expected: {self._wsa}')
 
             try:
@@ -161,7 +164,11 @@ class WsClient(SubscriptionController):
 
         try:
             # the timeout is set to a little sooner than the interval
-            wsa.run_forever(ping_interval=self._ping_interval, ping_timeout=self._ping_interval * 0.95, sslopt=self._sslopt)
+            wsa.run_forever(
+                ping_interval=self._ping_interval,
+                ping_timeout=self._ping_interval * 0.95,
+                sslopt=self._sslopt,
+            )
 
         except ValueError as e:
             if 'url is invalid' in str(e):
@@ -186,7 +193,7 @@ class WsClient(SubscriptionController):
 
     def _new_websocket_app(self) -> bool:
         if self._wsa is not None:
-            raise RuntimeError(f"{self}: WebSocketApp should be closed before attempting to create a new one")
+            raise RuntimeError(f'{self}: WebSocketApp should be closed before attempting to create a new one')
 
         _LOGGER.debug(f'{self}: Creating new WebSocketApp')
 
@@ -218,7 +225,11 @@ class WsClient(SubscriptionController):
         self._thread.daemon = True
         self._thread.start()
 
-        connection_success = wait_until(lambda: self._connected, f'{self}: New WebSocketApp connection timeout', timeout=self._timeout)
+        connection_success = wait_until(
+            lambda: self._connected,
+            f'{self}: New WebSocketApp connection timeout',
+            timeout=self._timeout,
+        )
 
         # attempt to shut down if connection fails
         if not connection_success:
@@ -260,7 +271,7 @@ class WsClient(SubscriptionController):
             _LOGGER.warning(f'{self}: Connection failed after {self._max_connection_attempts} attempts')
             return False
 
-    def set_authenticated(self, authenticated:bool):
+    def set_authenticated(self, authenticated: bool):
         self._authenticated = authenticated is True
         if not authenticated:
             if self._wsa is not None:
@@ -271,7 +282,11 @@ class WsClient(SubscriptionController):
         pass
 
     def _on_reconnect(self):  # pragma: no cover
-        if not wait_until(lambda: self._authenticated, f'{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.', timeout=10):
+        if not wait_until(
+            lambda: self._authenticated,
+            f'{self}: Reconnecting and recreating subscriptions stopped due to lack of authentication.',
+            timeout=10,
+        ):
             # This may appear in the flow of reestablishing connection after loss of authentication
             # Returning should be expected and fine, as we should only recreate subscriptions once we're authenticated
             return
@@ -311,7 +326,7 @@ class WsClient(SubscriptionController):
 
         if close_status_code is not None or close_msg is not None:  # this means an error
             try:
-                msg = close_msg.decode("utf-8")
+                msg = close_msg.decode('utf-8')
             except AttributeError:
                 msg = close_msg
 
@@ -361,7 +376,11 @@ class WsClient(SubscriptionController):
                 self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
 
         # ensure the websocket is closed and abandoned
-        if not wait_until(lambda: self._wsa is None, f'{self}: Hard reset close timeout', timeout=self._timeout):
+        if not wait_until(
+            lambda: self._wsa is None,
+            f'{self}: Hard reset close timeout',
+            timeout=self._timeout,
+        ):
             _LOGGER.warning(f'{self}: Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
             self._wsa = None
             restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
@@ -457,7 +476,9 @@ class WsClient(SubscriptionController):
 
         diff = abs(time.time() - self._wsa.last_ping_tm)
         if diff > self._max_ping_interval:
-            _LOGGER.warning(f'{self}: Last WebSocket ping happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.')
+            _LOGGER.warning(
+                f'{self}: Last WebSocket ping happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.'
+            )
             self.hard_reset(restart=True)
             return False
 

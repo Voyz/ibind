@@ -15,7 +15,12 @@ import os
 import signal
 import time
 
-from ibind import IbkrSubscriptionProcessor, IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind import (
+    IbkrSubscriptionProcessor,
+    IbkrWsKey,
+    IbkrWsClient,
+    ibind_logs_initialize,
+)
 
 ibind_logs_initialize(log_to_file=False)
 
@@ -50,7 +55,13 @@ def unsubscribe():
 
 request = {
     'channel': 'mh+265598',
-    'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
+    'data': {
+        'period': '1min',
+        'bar': '1min',
+        'outsideRTH': True,
+        'source': 'trades',
+        'format': '%o/%c/%h/%l',
+    },
 }
 
 ws_client.start()

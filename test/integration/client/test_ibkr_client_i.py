@@ -16,7 +16,6 @@ from test_utils import verify_log, SafeAssertLogs, RaiseLogsContext
 
 @patch('ibind.base.rest_client.requests')
 class TestIbkrClientI(TestCase):
-
     def setUp(self):
         self.url = 'https://localhost:5000'
         self.account_id = 'TEST_ACCOUNT_ID'
@@ -44,18 +43,31 @@ class TestIbkrClientI(TestCase):
         self.response.json.return_value = ibkr_responses.responses['stocks']
 
         queries = [
-            StockQuery(symbol='AAPL', contract_conditions={'isUS': False, 'exchange': 'AEQLIT'}, name_match='APPLE'),
+            StockQuery(
+                symbol='AAPL',
+                contract_conditions={'isUS': False, 'exchange': 'AEQLIT'},
+                name_match='APPLE',
+            ),
             StockQuery(symbol='BBVA', contract_conditions={'exchange': 'NYSE'}),
             StockQuery(symbol='CDN', contract_conditions={'isUS': False}),
             StockQuery(symbol='CFC', contract_conditions={}),
-            StockQuery(symbol='GOOG', contract_conditions={'isUS': False, 'exchange': 'MEXI'}, instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'}),
+            StockQuery(
+                symbol='GOOG',
+                contract_conditions={'isUS': False, 'exchange': 'MEXI'},
+                instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'},
+            ),
             'HUBS',
-            StockQuery(symbol='META', name_match='meta ', contract_conditions={'isUS': False, 'exchange': 'MEXI'}, instrument_conditions={}),
+            StockQuery(
+                symbol='META',
+                name_match='meta ',
+                contract_conditions={'isUS': False, 'exchange': 'MEXI'},
+                instrument_conditions={},
+            ),
             StockQuery(symbol='MSFT', contract_conditions={'exchange': 'NASDAQ'}),
             StockQuery(symbol='SAN', name_match='SANTANDER', contract_conditions={'isUS': True}),
             StockQuery(symbol='SCHW', contract_conditions={'exchange': 'NYSE'}),
             StockQuery(symbol='TEAM', name_match='ATLASSIAN'),
-            StockQuery(symbol='INVALID_SYMBOL')
+            StockQuery(symbol='INVALID_SYMBOL'),
         ]
 
         with self.assertLogs(project_logger(), level='INFO'):
@@ -72,7 +84,11 @@ class TestIbkrClientI(TestCase):
         symbol = 'AAPL'
         query = StockQuery(symbol=symbol, contract_conditions={'isUS': False}, name_match='APPLE')
 
-        instruments = filter_stocks(query, Result(data={symbol: ibkr_responses.responses["stocks"][symbol]}), default_filtering=False).data[symbol]
+        instruments = filter_stocks(
+            query,
+            Result(data={symbol: ibkr_responses.responses['stocks'][symbol]}),
+            default_filtering=False,
+        ).data[symbol]
 
         with self.assertRaises(RuntimeError) as cm_err:
             self.client.stock_conid_by_symbol(query, default_filtering=False)
@@ -80,8 +96,8 @@ class TestIbkrClientI(TestCase):
         self.maxDiff = None
         self.assertEqual(
             f'Filtering stock "{symbol}" returned 2 instruments and 2 contracts using following query: {query}.\nPlease use filters to ensure that only one instrument and one contract per symbol is selected in order to avoid conid ambiguity.\nBe aware that contracts are filtered as {{"isUS": True}} by default. Set default_filtering=False to prevent this default filtering or specify custom filters. See inline documentation for more details.\nInstruments returned:\n{pformat(instruments)}',
-            str(cm_err.exception))
-
+            str(cm_err.exception),
+        )
 
     def test_get_live_orders_no_filters(self, requests_mock):
         self.client.get = MagicMock(return_value=self.result)
@@ -105,7 +121,6 @@ class TestIbkrClientI(TestCase):
             self.client.live_orders(filters=123)  # Non-list, non-string filter
         self.client.get.assert_not_called()
 
-
     def _marketdata_request(self, method, url, *args, **kwargs):
         leaf = url.split('/')[-1]
         if leaf == 'stocks':
@@ -116,17 +131,32 @@ class TestIbkrClientI(TestCase):
 
     def test_marketdata_history_by_symbols(self, requests_mock):
         # Mocking the requests module for external interaction
-        self._history_by_conid = {ibkr_responses.responses['filtered_conids'][key]:value for key, value in ibkr_responses.responses['history'].items()}
+        self._history_by_conid = {
+            ibkr_responses.responses['filtered_conids'][key]: value for key, value in ibkr_responses.responses['history'].items()
+        }
         requests_mock.request.side_effect = self._marketdata_request
 
         queries = [
-            StockQuery(symbol='AAPL', contract_conditions={'isUS': False, 'exchange': 'AEQLIT'}, name_match='APPLE'),
+            StockQuery(
+                symbol='AAPL',
+                contract_conditions={'isUS': False, 'exchange': 'AEQLIT'},
+                name_match='APPLE',
+            ),
             StockQuery(symbol='BBVA', contract_conditions={'exchange': 'NYSE'}),
             StockQuery(symbol='CDN', contract_conditions={'isUS': False}),
             StockQuery(symbol='CFC', contract_conditions={}),
-            StockQuery(symbol='GOOG', contract_conditions={'isUS': False, 'exchange': 'MEXI'}, instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'}),
+            StockQuery(
+                symbol='GOOG',
+                contract_conditions={'isUS': False, 'exchange': 'MEXI'},
+                instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'},
+            ),
             StockQuery(symbol='HUBS'),
-            StockQuery(symbol='META', name_match='meta ', contract_conditions={'isUS': False, 'exchange': 'MEXI'}, instrument_conditions={}),
+            StockQuery(
+                symbol='META',
+                name_match='meta ',
+                contract_conditions={'isUS': False, 'exchange': 'MEXI'},
+                instrument_conditions={},
+            ),
             StockQuery(symbol='MSFT', contract_conditions={'exchange': 'NASDAQ'}),
             StockQuery(symbol='SAN', name_match='SANTANDER', contract_conditions={'isUS': True}),
             StockQuery(symbol='SCHW', contract_conditions={'exchange': 'NYSE'}),
@@ -140,20 +170,23 @@ class TestIbkrClientI(TestCase):
             output = {
                 'conid': ibkr_responses.responses['filtered_conids'][query.symbol],
                 'symbol': query.symbol,
-                "open": data['o'],
-                "high": data['h'],
-                "low": data['l'],
-                "close": data['c'],
-                "volume": data['v'],
-                "date": datetime.datetime.fromtimestamp(data['t'] / 1000)
+                'open': data['o'],
+                'high': data['h'],
+                'low': data['l'],
+                'close': data['c'],
+                'volume': data['v'],
+                'date': datetime.datetime.fromtimestamp(data['t'] / 1000),
             }
             expected_results[query.symbol] = output
 
-        expected_errors = [f'Market data for CDN is not live: Delayed',
-                           'Market data for CFC is not live: Delayed']
+        expected_errors = [
+            'Market data for CDN is not live: Delayed',
+            'Market data for CFC is not live: Delayed',
+        ]
 
-        with SafeAssertLogs(self, 'ibind', level='INFO', logger_level='DEBUG', no_logs=False) as cm, \
-                RaiseLogsContext(self, 'ibind', level='ERROR', expected_errors=expected_errors):
+        with SafeAssertLogs(self, 'ibind', level='INFO', logger_level='DEBUG', no_logs=False) as cm, RaiseLogsContext(
+            self, 'ibind', level='ERROR', expected_errors=expected_errors
+        ):
             results = self.client.marketdata_history_by_symbols(queries)
 
         verify_log(self, cm, expected_errors)
@@ -175,7 +208,7 @@ class TestIbkrClientI(TestCase):
                 'authStatus': {
                     'authenticated': True,
                     'competing': False,
-                    'connected': True
+                    'connected': True,
                 }
             }
         }
@@ -192,7 +225,7 @@ class TestIbkrClientI(TestCase):
                 'authStatus': {
                     'authenticated': False,
                     'competing': False,
-                    'connected': True
+                    'connected': True,
                 }
             }
         }
@@ -208,7 +241,7 @@ class TestIbkrClientI(TestCase):
                 'authStatus': {
                     'authenticated': True,
                     'competing': True,
-                    'connected': True
+                    'connected': True,
                 }
             }
         }
@@ -245,15 +278,17 @@ class TestIbkrClientI(TestCase):
             self.client.check_health()
         self.assertIn('Health check requests returns invalid data', str(cm.exception))
 
-
     def test_marketdata_unsubscribe_success(self, requests_mock):
         conids = [12345, 67890]
         responses = {
             12345: MagicMock(status_code=200),
-            67890: MagicMock(status_code=200)
+            67890: MagicMock(status_code=200),
         }
         requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
-        self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}), __name__='client_get_mock')
+        self.client.get = MagicMock(
+            side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}),
+            __name__='client_get_mock',
+        )
 
         results = self.client.marketdata_unsubscribe(conids)
 
@@ -262,15 +297,19 @@ class TestIbkrClientI(TestCase):
             self.assertIsInstance(result, Result)
             self.assertTrue(result.data['success'])
 
-
     def test_marketdata_unsubscribe_with_error(self, requests_mock):
         conids = [12345, 67890]
         responses = {
             12345: MagicMock(status_code=404),  # Simulate not found error for one conid
-            67890: MagicMock(status_code=200)
+            67890: MagicMock(status_code=200),
         }
         requests_mock.request.side_effect = lambda method, url, **kwargs: responses[kwargs['json']['conid']]
-        self.client.get = MagicMock(side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url}) if '67890' in url else ExternalBrokerError(status_code=404), __name__='client_get_mock')
+        self.client.get = MagicMock(
+            side_effect=lambda url, *args, **kwargs: Result(data={'success': True}, request={'url': url})
+            if '67890' in url
+            else ExternalBrokerError(status_code=404),
+            __name__='client_get_mock',
+        )
 
         results = self.client.marketdata_unsubscribe(conids)
 
@@ -278,15 +317,16 @@ class TestIbkrClientI(TestCase):
         self.assertIn(67890, results)
         self.assertTrue(results[67890].data['success'])
 
-
     def test_marketdata_unsubscribe_raises_exception_on_failure(self, requests_mock):
         conids = [12345]
         responses = {
             12345: MagicMock(status_code=500),  # Simulate server error
         }
         requests_mock.request.side_effect = lambda method, url, **kwargs: responses[int(url.split('/')[-2])]
-        self.client.post = MagicMock(side_effect=lambda url, *args, **kwargs: ExternalBrokerError(status_code=500), __name__='client_get_mock')
+        self.client.post = MagicMock(
+            side_effect=lambda url, *args, **kwargs: ExternalBrokerError(status_code=500),
+            __name__='client_get_mock',
+        )
 
         with self.assertRaises(ExternalBrokerError):
             self.client.marketdata_unsubscribe(conids)
-

@@ -14,7 +14,7 @@ _MAP = {
     'f': False,
     'false': False,
     'off': False,
-    '0': False
+    '0': False,
 }
 
 
@@ -27,6 +27,7 @@ def strtobool(value):
 
 def to_bool(value):
     return bool(strtobool(str(value)))
+
 
 ##### GENERAL #####
 
@@ -136,4 +137,3 @@ IBIND_OAUTH1A_DH_GENERATOR = int(os.getenv('IBIND_OAUTH1A_DH_GENERATOR', 2))
 
 IBIND_OAUTH1A_REALM = os.getenv('IBIND_OAUTH1A_REALM', 'limited_poa')
 """ OAuth 1.0a connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
-

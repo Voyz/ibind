@@ -2,6 +2,7 @@
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
 See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
 """
+
 from typing import Union
 
 snapshot_by_key = {
@@ -12,14 +13,10 @@ snapshot_by_key = {
     'underlying_conid': '6457',  # Underlying Conid. Use /trsrv/secdef to get more information about the security
     'market_data_availability': '6509',  # Market Data Availability. The field may contain three chars. First char defines: R = RealTime, D = Delayed, Z = Frozen, Y = Frozen Delayed, N = Not Subscribed. Second char defines: P = Snapshot, p = Consolidated. Third char defines: B = Book
     'conid_exchange': '7094',  # Conid + Exchange
-
     ##Regulator snapshot
     'ask_codes': '7057',  # Returns the series of character codes for the Ask exchange.
-
     'bid_codes': '7068',  # Returns the series of character codes for the Bid exchange.
-
     'last_exch_codes': '7058',  # Returns the series of character codes for the Last exchange.
-
     # Price and Volume
     'open': '7295',  # Open - Today's opening price.
     'high': '70',  # High - Current day high price
@@ -28,7 +25,7 @@ snapshot_by_key = {
     'last_price': '31',  # Last Price - The last price at which the contract traded. May contain one of the following prefixes: C - Previous day's closing price. H - Trading has halted.
     'bid_price': '84',  # Bid Price - The highest-priced bid on the contract.
     'ask_price': '86',  # Ask Price - The lowest-priced offer on the contract.
-    'last_size': '7059',  # Last Size - The number of unites traded at the last price. 
+    'last_size': '7059',  # Last Size - The number of unites traded at the last price.
     'bid_size': '88',  # Bid Size - The number of contracts or shares bid for at the bid price. For US stocks, the number displayed is divided by 100.
     'ask_size': '85',  # Ask Size - The number of contracts or shares offered at the ask price. For US stocks, the number displayed is divided by 100.
     'prior_close': '7741',  # Prior Close - Yesterday's closing price
@@ -38,13 +35,11 @@ snapshot_by_key = {
     'change': '82',  # Change - The difference between the last price and the close on the previous trading day
     'change_since_open': '7682',  # Change Since Open - The difference between the last price and the open price.
     'change_percent': '83',  # Change % - The difference between the last price and the close on the previous trading day in percentage.
-
     # Volatility
     'implied_vol_hist_vol_percent': '7084',  # Implied Vol./Hist. Vol % - The ratio of the implied volatility over the historical volatility, expressed as a percentage.
     'hist_vol_close_percent': '7088',  # Hist. Vol. Close % - Shows the historical volatility based on previous close price.
     'spx_delta': '7696',  # SPX Delta - Beta Weighted Delta is calculated using the formula; Delta x dollar adjusted beta, where adjusted beta is adjusted by the ratio of the close price.
     'beta': '7718',  # Beta - Beta is against standard index.
-
     # Financial Information
     'hist_vol_percent': '7087',  # Hist. Vol. % - 30-day real-time historical volatility.
     'average_volume_90': '7282',  # Average Volume - The average daily trading volume over 90 days.
@@ -64,7 +59,6 @@ snapshot_by_key = {
     'price_to_ema_100_percent': '7679',  # Price/EMA(100) - Price to Exponential moving average (N=100) ratio -1, displayed in percents.
     'price_to_ema_50_percent': '7680',  # Price/EMA(50) - Price to Exponential moving average (N=50) ratio -1, displayed in percents.
     'price_to_ema_20_percent': '7681',  # Price/EMA(20) - Price to Exponential moving average (N=20) ratio -1, displayed in percents.
-
     # Portfolio
     'market_value': '73',  # Market Value - The current market value of your position in the security. Market Value is calculated with real-time market data (even when not subscribed to market data).
     'avg_price': '74',  # Avg Price - The average price of the position.
@@ -77,7 +71,6 @@ snapshot_by_key = {
     'daily_pnl_raw': '7920',  # Daily PnL Raw - Your profit or loss of the day since prior close. Daily PnL is calculated with real-time market data (even when not subscribed to market data).
     'cost_basis_raw': '7921',  # Cost Basis Raw - Your current position in this security multiplied by the average price and multiplier.
     'cost_basis': '7292',  # Cost Basis - Your current position in this security multiplied by the average price and multiplier.
-
     # Company and Industry Information
     'company_name': '7051',  # Company name
     'exchange': '6004',  # Exchange
@@ -91,7 +84,6 @@ snapshot_by_key = {
     'issue_date': '7715',  # Issue Date
     'organization_type': '7704',  # Organization Type
     'debt_class': '7705',  # Debt Class
-
     # Options and Futures
     'opt_volume': '7089',  # Opt. Volume - Option Volume
     'put_call_ratio': '7285',  # Put/Call Ratio
@@ -112,7 +104,6 @@ snapshot_by_key = {
     'theta': '7310',  # Theta - A measure of the rate of decline the value of an option due to the passage of time.
     'vega': '7311',  # Vega - The amount that the price of an option changes compared to a 1% change in the volatility.
     'implied_vol_percent': '7633',  # Implied Vol. % - The implied volatility for the specific strike of the option in percentage. To query the Option Implied Vol. % from the underlying refer to field 7283.
-
     # Wall Street Horizon
     'upcoming_event': '7683',  # Upcoming Event - Shows the next major company event. Requires Wall Street Horizon subscription.
     'upcoming_event_date': '7684',  # Upcoming Event Date - The date of the next major company event. Requires Wall Street Horizon subscription.
@@ -122,7 +113,6 @@ snapshot_by_key = {
     'recent_analyst_meeting': '7688',  # Recent Analyst Meeting - The date and time of the most recent analyst meeting. Requires Wall Street Horizon subscription.
     'recent_earnings': '7689',  # Recent Earnings - The date and time of the most recent earnings/earning call event. Requires Wall Street Horizon subscription.
     'recent_misc_event': '7690',  # Recent Misc Event - The date and time of the most recent shareholder meeting, presentation, or other event. Requires Wall Street Horizon subscription.
-
     # Miscellaneous
     'shortable': '7644',  # Shortable - Describes the level of difficulty with which the security can be sold short.
     'service_params': '6508',  # Service Params.
@@ -149,7 +139,7 @@ def snapshot_ids_to_keys(ids: [Union[str, int]]):  # pragma: no cover
         list[str]: A list of human-readable field keys.
 
     Example:
-        >>> snapshot_ids_to_keys(["55", 6008])
+        >>> snapshot_ids_to_keys(['55', 6008])
         ["symbol", "conid"]
 
     Raises:
@@ -172,7 +162,7 @@ def snapshot_keys_to_ids(keys: [str]):  # pragma: no cover
         list[str]: A list of numeric field IDs.
 
     Example:
-        >>> snapshot_keys_to_ids(["symbol", "conid"])
+        >>> snapshot_keys_to_ids(['symbol', 'conid'])
         ["55", "6008"]
 
     Raises:
@@ -215,7 +205,7 @@ def decode_data_availability(md_availability: [str]):
         str: A human-readable description of the market data availability.
 
     Example:
-        >>> decode_data_availability(["S", "R"])
+        >>> decode_data_availability(['S', 'R'])
         "Streaming, Realtime"
 
     Raises:
@@ -224,4 +214,4 @@ def decode_data_availability(md_availability: [str]):
     See:
         - `data_availability_by_key`: Dictionary mapping availability codes to human-readable descriptions.
     """
-    return ", ".join([data_availability_by_key[c] for c in md_availability])
+    return ', '.join([data_availability_by_key[c] for c in md_availability])

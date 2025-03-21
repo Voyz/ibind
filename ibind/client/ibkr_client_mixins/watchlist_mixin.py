@@ -9,17 +9,12 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class WatchlistMixin():  # pragma: no cover
+class WatchlistMixin:  # pragma: no cover
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
     """
 
-    def create_watchlist(
-            self: 'IbkrClient',
-            id: str,
-            name: str,
-            rows: List[Dict[str, Union[str, int]]]
-    ) -> Result:
+    def create_watchlist(self: 'IbkrClient', id: str, name: str, rows: List[Dict[str, Union[str, int]]]) -> Result:
         """
         Create a watchlist to monitor a series of contracts.
 

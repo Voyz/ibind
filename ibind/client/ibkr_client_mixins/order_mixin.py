@@ -2,26 +2,32 @@ from threading import Lock
 from typing import TYPE_CHECKING, List
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_utils import Answers, handle_questions, OrderRequest, parse_order_request
+from ibind.client.ibkr_utils import (
+    Answers,
+    handle_questions,
+    OrderRequest,
+    parse_order_request,
+)
 from ibind.support.py_utils import OneOrMany, params_dict, ensure_list_arg
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-class OrderMixin():
+class OrderMixin:
     """
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
     """
+
     order_submission_lock = Lock()
 
     @ensure_list_arg('filters')
     def live_orders(
-            self: 'IbkrClient',
-            filters: OneOrMany[str] = None,
-            force: bool = None,
-            account_id: str = None
+        self: 'IbkrClient',
+        filters: OneOrMany[str] = None,
+        force: bool = None,
+        account_id: str = None,
     ) -> Result:  # pragma: no cover
         """
         Retrieves live orders with optional filtering. The filters, if provided, should be a list of strings. These filters are then converted and sent as a comma-separated string in the request to the API.
@@ -59,14 +65,8 @@ class OrderMixin():
         """
 
         params = params_dict(
-            optional={
-                'filters': filters,
-                'accountId': account_id,
-                'force': force
-            },
-            preprocessors={
-                'filters': ",".join
-            }
+            optional={'filters': filters, 'accountId': account_id, 'force': force},
+            preprocessors={'filters': ','.join},
         )
 
         return self.get('iserver/account/orders', params=params)
@@ -80,11 +80,7 @@ class OrderMixin():
         """
         return self.get(f'iserver/account/order/status/{order_id}')
 
-    def trades(
-            self: 'IbkrClient',
-            days: str = None,
-            account_id: str = None
-    ) -> Result:  # pragma: no cover
+    def trades(self: 'IbkrClient', days: str = None, account_id: str = None) -> Result:  # pragma: no cover
         """
         Returns a list of trades for the currently selected account for current day and six previous days. It is advised to call this endpoint once per session.
 
@@ -101,10 +97,15 @@ class OrderMixin():
                 'accountId': account_id,
             }
         )
-        return self.get(f'iserver/account/trades/', params=params)
+        return self.get('iserver/account/trades/', params=params)
 
     @ensure_list_arg('order_request')
-    def place_order(self: 'IbkrClient', order_request: OneOrMany[OrderRequest], answers: Answers, account_id: str = None) -> Result:
+    def place_order(
+        self: 'IbkrClient',
+        order_request: OneOrMany[OrderRequest],
+        answers: Answers,
+        account_id: str = None,
+    ) -> Result:
         """
         When connected to an IServer Brokerage Session, this endpoint will allow you to submit orders.
 
@@ -132,7 +133,7 @@ class OrderMixin():
         with self.order_submission_lock:
             result = self.post(
                 f'iserver/account/{account_id}/orders',
-                params={"orders": parsed_order_request}
+                params={'orders': parsed_order_request},
             )
 
             return handle_questions(result, answers, self.reply)
@@ -147,7 +148,7 @@ class OrderMixin():
             reply_id (str): Include the id value from the prior order request relating to the particular order's warning confirmation.
             confirmed (bool): Pass your confirmation to the reply to allow or cancel the order to go through. true will agree to the message transmit the order. false will decline the message and discard the order.
         """
-        return self.post(f'iserver/reply/{reply_id}', params={"confirmed": confirmed})
+        return self.post(f'iserver/reply/{reply_id}', params={'confirmed': confirmed})
 
     def whatif_order(self: 'IbkrClient', order_request: OrderRequest, account_id: str) -> Result:  # pragma: no cover
         """
@@ -166,7 +167,10 @@ class OrderMixin():
 
         parsed_order_request = parse_order_request(order_request)
 
-        return self.post(f'iserver/account/{account_id}/orders/whatif', params={"orders": [parsed_order_request]})
+        return self.post(
+            f'iserver/account/{account_id}/orders/whatif',
+            params={'orders': [parsed_order_request]},
+        )
 
     def cancel_order(self: 'IbkrClient', order_id: str, account_id: str = None) -> Result:  # pragma: no cover
         """
@@ -184,7 +188,13 @@ class OrderMixin():
 
         return self.delete(f'iserver/account/{account_id}/order/{order_id}')
 
-    def modify_order(self: 'IbkrClient', order_id: str, order_request: OrderRequest, answers: Answers, account_id: str = None) -> Result:
+    def modify_order(
+        self: 'IbkrClient',
+        order_id: str,
+        order_request: OrderRequest,
+        answers: Answers,
+        account_id: str = None,
+    ) -> Result:
         """
         Modifies an open order.
 
@@ -206,7 +216,10 @@ class OrderMixin():
         parsed_order_request = parse_order_request(order_request)
 
         with self.order_submission_lock:
-            result = self.post(f'iserver/account/{account_id}/order/{order_id}', params=parsed_order_request)
+            result = self.post(
+                f'iserver/account/{account_id}/order/{order_id}',
+                params=parsed_order_request,
+            )
 
             return handle_questions(result, answers, self.reply)
 
@@ -217,10 +230,10 @@ class OrderMixin():
         Parameters:
             message_ids (List[str]): The identifier for each warning message to suppress. The array supports up to 51 messages sent in a single request. Any additional values will result in a system error. The majority of the message IDs are based on the TWS API Error Codes with a “o” prepended to the id.
         """
-        return self.post(f'iserver/questions/suppress', params={"messageIds": message_ids})
+        return self.post('iserver/questions/suppress', params={'messageIds': message_ids})
 
     def reset_suppressed_messages(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Resets all messages disabled by the Suppress Messages endpoint.
         """
-        return self.post(f'/iserver/questions/suppress/reset')
+        return self.post('/iserver/questions/suppress/reset')

@@ -7,7 +7,6 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
-from requests.adapters import HTTPAdapter
 from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
@@ -19,7 +18,7 @@ _LOGGER = project_logger(__file__)
 
 
 @dataclass
-class Result():
+class Result:
     """
     A class to encapsulate the result of an API request.
 
@@ -31,10 +30,15 @@ class Result():
         request (Optional[dict]): Details of the request that resulted in this data.
 
     """
+
     data: Optional[Union[list, dict]] = field(default=None)
     request: Optional[dict] = field(default_factory=dict)
 
-    def copy(self, data: Optional[Union[list, dict]] = UNDEFINED, request: Optional[dict] = UNDEFINED) -> 'Result':
+    def copy(
+        self,
+        data: Optional[Union[list, dict]] = UNDEFINED,
+        request: Optional[dict] = UNDEFINED,
+    ) -> 'Result':
         """
         Creates a copy of the current Result instance with optional modifications to its data or request.
 
@@ -49,7 +53,7 @@ class Result():
         """
         return Result(
             data=data if data is not UNDEFINED else self.data.copy(),
-            request=request if request is not UNDEFINED else self.request.copy()
+            request=request if request is not UNDEFINED else self.request.copy(),
         )
 
 
@@ -78,13 +82,13 @@ class RestClient:
     """
 
     def __init__(
-            self,
-            url: str,
-            cacert: Union[os.PathLike, bool] = False,
-            timeout: float = 10,
-            max_retries: int = 3,
-            use_session: bool = var.IBIND_USE_SESSION,
-            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        self,
+        url: str,
+        cacert: Union[os.PathLike, bool] = False,
+        timeout: float = 10,
+        max_retries: int = 3,
+        use_session: bool = var.IBIND_USE_SESSION,
+        auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
     ) -> None:
         """
         Parameters:
@@ -98,14 +102,14 @@ class RestClient:
         """
 
         if url is None:
-            raise ValueError(f"{self}: url must not be None")
+            raise ValueError(f'{self}: url must not be None')
         self.base_url = url
         if not url.endswith('/'):
             self.base_url += '/'
 
         self.cacert = cacert
         if not (isinstance(self.cacert, bool) or Path(self.cacert).exists()):
-            raise ValueError(f"{self}: cacert must be a valid Path or Boolean")
+            raise ValueError(f'{self}: cacert must be a valid Path or Boolean')
 
         self._timeout = timeout
         self._max_retries = max_retries
@@ -121,7 +125,7 @@ class RestClient:
             self.register_shutdown_handler()
 
     def _make_logger(self):
-        self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
+        self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, 'rest_client'))
 
     def make_session(self):
         """Creates a new session, ensuring old one (if exists) is closed properly."""
@@ -139,43 +143,64 @@ class RestClient:
         return {}
 
     def get(
-            self,
-            path: str,
-            params: Optional[Dict[str, Any]] = None,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True,
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        base_url: str = None,
+        extra_headers: dict = None,
+        log: bool = True,
     ) -> Result:
-        return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
+        return self.request(
+            method='GET',
+            endpoint=path,
+            base_url=base_url,
+            extra_headers=extra_headers,
+            params=params,
+            log=log,
+        )
 
     def post(
-            self,
-            path: str,
-            params: Optional[Dict[str, Any]] = None,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        base_url: str = None,
+        extra_headers: dict = None,
+        log: bool = True,
     ) -> Result:
-        return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
+        return self.request(
+            method='POST',
+            endpoint=path,
+            base_url=base_url,
+            extra_headers=extra_headers,
+            json=params,
+            log=log,
+        )
 
     def delete(
-            self,
-            path: str,
-            params: Optional[Dict[str, Any]] = None,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        base_url: str = None,
+        extra_headers: dict = None,
+        log: bool = True,
     ) -> Result:
-        return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
+        return self.request(
+            'DELETE',
+            path,
+            log=log,
+            base_url=base_url,
+            extra_headers=extra_headers,
+            json=params,
+        )
 
     def request(
-            self,
-            method: str,
-            endpoint: str,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True,
-            **kwargs
+        self,
+        method: str,
+        endpoint: str,
+        base_url: str = None,
+        extra_headers: dict = None,
+        log: bool = True,
+        **kwargs,
     ) -> Result:
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
@@ -203,13 +228,13 @@ class RestClient:
         return self._request(method, endpoint, base_url, extra_headers, log, **kwargs)
 
     def _request(
-            self,
-            method: str,
-            endpoint: str,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True,
-            **kwargs
+        self,
+        method: str,
+        endpoint: str,
+        base_url: str = None,
+        extra_headers: dict = None,
+        log: bool = True,
+        **kwargs,
     ) -> Result:
         """
         Wrapper function which allows overriding the default request and error handling logic in the subclass.
@@ -217,8 +242,8 @@ class RestClient:
 
         base_url = base_url if base_url is not None else self.base_url
 
-        endpoint = endpoint.lstrip("/")
-        url = f"{base_url}{endpoint}"
+        endpoint = endpoint.lstrip('/')
+        url = f'{base_url}{endpoint}'
 
         headers = self._get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
@@ -235,7 +260,14 @@ class RestClient:
                 self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
             try:
-                response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
+                response = request_function(
+                    method,
+                    url,
+                    verify=self.cacert,
+                    headers=headers,
+                    timeout=self._timeout,
+                    **kwargs,
+                )
                 result = Result(request={'url': url, **kwargs})
                 return self._process_response(response, result)
 
@@ -243,14 +275,18 @@ class RestClient:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
 
-                self.logger.info(f"{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}")
+                self.logger.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
                 _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
 
             except (ConnectionError, ChunkedEncodingError) as e:
-                self.logger.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
-                _LOGGER.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                self.logger.warning(
+                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                )
+                _LOGGER.warning(
+                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                )
                 self.close()
                 if self.use_session:
                     self.make_session()  # Recreate session automatically
@@ -270,17 +306,23 @@ class RestClient:
             return result
 
         except Timeout as e:
-            raise ExternalBrokerError(f'{self}: Timeout error ({self._timeout}S)', status_code=response.status_code) from e
+            raise ExternalBrokerError(
+                f'{self}: Timeout error ({self._timeout}S)',
+                status_code=response.status_code,
+            ) from e
 
         except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid JSON response: {str(e)}")
+            self.logger.error(f'Invalid JSON response: {str(e)}')
             raise ExternalBrokerError(f'{self}: API returned invalid JSON.') from e
 
         except Exception as e:
-            raise ExternalBrokerError(f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+            raise ExternalBrokerError(
+                f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}',
+                status_code=response.status_code,
+            ) from e
 
     def close(self):
-        """ Closes the session to release resources."""
+        """Closes the session to release resources."""
         if hasattr(self, 'session'):
             self._session.close()
             self._session = None
@@ -298,6 +340,7 @@ class RestClient:
         """
 
         import signal
+
         existing_handler_int = signal.getsignal(signal.SIGINT)
         existing_handler_term = signal.getsignal(signal.SIGTERM)
 
@@ -323,7 +366,7 @@ class RestClient:
             signal.signal(signal.SIGTERM, _signal_handler)
         except ValueError as e:
             if str(e) == 'signal only works in main thread of the main interpreter':
-                pass # we cannot register signal, we ignore it and continue working as normal
+                pass  # we cannot register signal, we ignore it and continue working as normal
             else:
                 raise
         atexit.register(_close_handler)

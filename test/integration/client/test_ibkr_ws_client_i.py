@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from threading import Thread
 from typing import Optional
 from unittest import TestCase
@@ -10,14 +9,17 @@ import requests
 
 from ibind import Result
 from ibind.client.ibkr_client import IbkrClient
-from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
+from ibind.client.ibkr_ws_client import (
+    IbkrWsClient,
+    IbkrSubscriptionProcessor,
+    IbkrWsKey,
+)
 from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
 from ibind.support.logs import project_logger
 from test_utils import RaiseLogsContext, SafeAssertLogs
 
 
 class TestPreprocessRawMessage(TestCase):
-
     def setUp(self):
         self.url = 'wss://localhost:5000/v1/api/ws'
 
@@ -35,10 +37,9 @@ class TestPreprocessRawMessage(TestCase):
             'actABC',  # topic
             {'key': 'value'},  # data
             'a',  # subscribed
-            'ctABC'  # channel
+            'ctABC',  # channel
         )
         self.assertEqual(self.ws_client._preprocess_raw_message(raw_message), expected_result)
-
 
     def test_preprocess_with_unsubscribed_message(self):
         raw_message = json.dumps({'message': 'Unsubscribed'})
@@ -60,12 +61,14 @@ class TestIbkrWsClient(TestCase):
         self.timeout = 8
         self.max_retries = 4
         self.subscription_retries = 3
-        self.client = MagicMock(spec=IbkrClient(
-            url=self.url_rest,
-            account_id=self.account_id,
-            timeout=self.timeout,
-            max_retries=self.max_retries,
-        ))
+        self.client = MagicMock(
+            spec=IbkrClient(
+                url=self.url_rest,
+                account_id=self.account_id,
+                timeout=self.timeout,
+                max_retries=self.max_retries,
+            )
+        )
 
         self.client.tickle.return_value.data = {'session': 'TEST_COOKIE'}
 
@@ -82,7 +85,7 @@ class TestIbkrWsClient(TestCase):
             cacert=False,
             timeout=0.01,
             max_connection_attempts=self.max_reconnect_attempts,
-            max_ping_interval=self.max_ping_interval
+            max_ping_interval=self.max_ping_interval,
         )
 
         self.wsa_mock = create_wsa_mock()
@@ -93,11 +96,12 @@ class TestIbkrWsClient(TestCase):
         self.update_time = 5678765456
 
     def run_in_test_context(self, fn, expected_errors: list[str] = None, expect_logs: bool = True):
-        with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
-                patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
-                SafeAssertLogs(self, 'ibind', level='DEBUG', logger_level='DEBUG', no_logs=not expect_logs) as cm, \
-                RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors):
-
+        with patch(
+            'ibind.base.ws_client.WebSocketApp',
+            side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs),
+        ), patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, SafeAssertLogs(
+            self, 'ibind', level='DEBUG', logger_level='DEBUG', no_logs=not expect_logs
+        ) as cm, RaiseLogsContext(self, 'ibind', level='WARNING', expected_errors=expected_errors):
             ws_client_logger = project_logger('ws_client')
             old_level = ws_client_logger.getEffectiveLevel()
             ws_client_logger.setLevel(logging.WARNING)
@@ -122,7 +126,13 @@ class TestIbkrWsClient(TestCase):
 
         return self.run_in_test_context(run, expected_errors=expected_errors, expect_logs=expect_logs)
 
-    def _subscribe(self, request: dict, response: Optional[dict], expected_errors: list[str] = None, expect_logs: bool = True):
+    def _subscribe(
+        self,
+        request: dict,
+        response: Optional[dict],
+        expected_errors: list[str] = None,
+        expect_logs: bool = True,
+    ):
         def run():
             def override_on_message(wsa_mock: MagicMock, message: str):
                 if response is None:
@@ -132,8 +142,20 @@ class TestIbkrWsClient(TestCase):
 
             self.ws_client.start()
             self.wsa_mock._on_message.side_effect = override_on_message
-            rv = self.ws_client.subscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation':request.get('needs_confirmation')})
-            self.ws_client.unsubscribe(**{'channel': request.get('channel'), 'data': request.get('data'), 'needs_confirmation': request.get('confirms_unsubscription')})
+            rv = self.ws_client.subscribe(
+                **{
+                    'channel': request.get('channel'),
+                    'data': request.get('data'),
+                    'needs_confirmation': request.get('needs_confirmation'),
+                }
+            )
+            self.ws_client.unsubscribe(
+                **{
+                    'channel': request.get('channel'),
+                    'data': request.get('data'),
+                    'needs_confirmation': request.get('confirms_unsubscription'),
+                }
+            )
             self.ws_client.shutdown()
             return rv
 
@@ -147,9 +169,7 @@ class TestIbkrWsClient(TestCase):
 
     def test_on_message_act_account_mismatch(self):
         message_data = {'topic': 'act', 'args': {'accounts': ['OTHER_ACCOUNT_ID']}}
-        expected_errors = [
-            "IbkrWsClient: Account ID mismatch: expected=TEST_ACCOUNT_ID, received=['OTHER_ACCOUNT_ID']"
-        ]
+        expected_errors = ["IbkrWsClient: Account ID mismatch: expected=TEST_ACCOUNT_ID, received=['OTHER_ACCOUNT_ID']"]
 
         cm, success = self._send_payload(message_data, expected_errors=expected_errors)
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
@@ -167,12 +187,15 @@ class TestIbkrWsClient(TestCase):
 
         expected_errors = [
             "IbkrWsClient: Status unauthenticated: {'authenticated': False}",
-            'IbkrWsClient: Not authenticated, closing WebSocketApp'
+            'IbkrWsClient: Not authenticated, closing WebSocketApp',
         ]
 
         response_mock = MagicMock(spec=requests.Response)
         response_mock.status_code = 200
-        response_mock.json.return_value = {'session': session_id, 'data_to_be_ignored': '1234'}
+        response_mock.json.return_value = {
+            'session': session_id,
+            'data_to_be_ignored': '1234',
+        }
 
         self.client.tickle.return_value = Result(data=response_mock.json.return_value)
 
@@ -189,38 +212,82 @@ class TestIbkrWsClient(TestCase):
 
     def test_on_message_error(self):
         message_data = {'topic': 'error', 'args': {'error_key': 'error_details'}}
-        expected_errors = [f"IbkrWsClient: Error message:  {message_data}"]
+        expected_errors = [f'IbkrWsClient: Error message:  {message_data}']
 
         cm, success = self._send_payload(message_data, expected_errors=expected_errors)
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
 
     def test_on_message_no_topic_handler(self):
-        message_data = {'topic': 'unrecognized_topic', 'args': {'some_key': 'some_value'}}
-        expected_errors = [f"IbkrWsClient: Topic \"{message_data['topic']}\" unrecognised. Message: {message_data}"]
+        message_data = {
+            'topic': 'unrecognized_topic',
+            'args': {'some_key': 'some_value'},
+        }
+        expected_errors = [f'IbkrWsClient: Topic "{message_data["topic"]}" unrecognised. Message: {message_data}']
 
         cm, success = self._send_payload(message_data, expected_errors=expected_errors)
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
 
     def test_on_message_handled_without_subscription(self):
-        message_data = {'topic': 'some_topic', 'args': {'channel': 'XYZ', 'data': 'info'}}
-        expected_errors = [f"IbkrWsClient: Handled a channel \"{message_data['topic'][1:]}\" message that is missing a subscription. Message: {message_data}"]
+        message_data = {
+            'topic': 'some_topic',
+            'args': {'channel': 'XYZ', 'data': 'info'},
+        }
+        expected_errors = [
+            f'IbkrWsClient: Handled a channel "{message_data["topic"][1:]}" message that is missing a subscription. Message: {message_data}'
+        ]
 
         with patch.object(self.ws_client, '_handle_subscribed_message', return_value=True):
             cm, success = self._send_payload(message_data, expected_errors=expected_errors)
 
         self.assertEqual(expected_errors, [r.msg for r in cm.records])
 
-    def _logs_subscriptions(self, full_channel, data=None, needs_confirmation_sub: bool = False, needs_confirmation_unsub: bool = True):
+    def _logs_subscriptions(
+        self,
+        full_channel,
+        data=None,
+        needs_confirmation_sub: bool = False,
+        needs_confirmation_unsub: bool = True,
+    ):
         return [
             f'IbkrWsClient: Subscribed: s{full_channel}{"" if data is None else f"+{json.dumps(data)}"}{"" if not needs_confirmation_sub else " without confirmation."}',
-            f'IbkrWsClient: Unsubscribed: u{full_channel}+{json.dumps(data if data is not None else {})}{"" if not needs_confirmation_unsub else " without confirmation."}'
+            f'IbkrWsClient: Unsubscribed: u{full_channel}+{json.dumps(data if data is not None else {})}{"" if not needs_confirmation_unsub else " without confirmation."}',
         ]
 
     def test_on_message_market_data_channel_handling(self):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_DATA)
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}}
-        response = {'topic': f's{full_channel}', 'conid': self.conid, '_updated': self.update_time, 55: 'AAPL', 70: '195.34', 71: '193.67', 87: '24.2M', 7295: '194.10', 84: '195.25', 86: '195.26', 88: '3,500', 85: '500', 6508: '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109'}
+        request = {
+            'channel': f'{full_channel}',
+            'data': {
+                'fields': [
+                    '55',
+                    '71',
+                    '84',
+                    '86',
+                    '88',
+                    '85',
+                    '87',
+                    '7295',
+                    '7296',
+                    '70',
+                ]
+            },
+        }
+        response = {
+            'topic': f's{full_channel}',
+            'conid': self.conid,
+            '_updated': self.update_time,
+            55: 'AAPL',
+            70: '195.34',
+            71: '193.67',
+            87: '24.2M',
+            7295: '194.10',
+            84: '195.25',
+            86: '195.26',
+            88: '3,500',
+            85: '500',
+            6508: '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109',
+        }
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
@@ -228,16 +295,54 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel, request["data"]), [r.msg for r in cm.records])
+        self.assertEqual(
+            self._logs_subscriptions(full_channel, request['data']),
+            [r.msg for r in cm.records],
+        )
 
-        self.assertEqual({self.conid: {'_updated': self.update_time, 'conid': self.conid, 'topic': f'smd+{self.conid}', 'ask_price': '195.26', 'ask_size': '500', 'bid_price': '195.25', 'bid_size': '3,500', 'high': '195.34', 'low': '193.67', 'open': '194.10', 'service_params': '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109', 'symbol': 'AAPL', 'volume': '24.2M'}}, queue.get())
+        self.assertEqual(
+            {
+                self.conid: {
+                    '_updated': self.update_time,
+                    'conid': self.conid,
+                    'topic': f'smd+{self.conid}',
+                    'ask_price': '195.26',
+                    'ask_size': '500',
+                    'bid_price': '195.25',
+                    'bid_size': '3,500',
+                    'high': '195.34',
+                    'low': '193.67',
+                    'open': '194.10',
+                    'service_params': '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109',
+                    'symbol': 'AAPL',
+                    'volume': '24.2M',
+                }
+            },
+            queue.get(),
+        )
 
     def test_on_message_market_history_channel_handling(self):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.MARKET_HISTORY)
         server_id = 87567
         full_channel = f'{queue.key.channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'data': {"period": '1min', "bar": "1min", "outsideRTH": True, "source": "trades", "format": "%o/%c/%h/%l"}, 'confirms_unsubscription':False}
-        response = {'topic': f's{full_channel}', 'serverId': server_id, '_updated': self.update_time, 'conid': self.conid, 'foo': 'bar'}
+        request = {
+            'channel': f'{full_channel}',
+            'data': {
+                'period': '1min',
+                'bar': '1min',
+                'outsideRTH': True,
+                'source': 'trades',
+                'format': '%o/%c/%h/%l',
+            },
+            'confirms_unsubscription': False,
+        }
+        response = {
+            'topic': f's{full_channel}',
+            'serverId': server_id,
+            '_updated': self.update_time,
+            'conid': self.conid,
+            'foo': 'bar',
+        }
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
@@ -245,7 +350,10 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel, request["data"]), [r.msg for r in cm.records])
+        self.assertEqual(
+            self._logs_subscriptions(full_channel, request['data']),
+            [r.msg for r in cm.records],
+        )
 
         self.assertEqual(response, queue.get())
         self.assertIn(server_id, self.ws_client.server_ids(IbkrWsKey.MARKET_HISTORY))
@@ -254,7 +362,12 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}'}
-        response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
+        response = {
+            'topic': f's{full_channel}',
+            '_updated': self.update_time,
+            'conid': self.conid,
+            'args': [{'foo': 'bar'}],
+        }
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
@@ -270,7 +383,12 @@ class TestIbkrWsClient(TestCase):
 
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}'}
-        response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
+        response = {
+            'topic': f's{full_channel}',
+            '_updated': self.update_time,
+            'conid': self.conid,
+            'args': [{'foo': 'bar'}],
+        }
 
         self.assertTrue(queue.empty(), 'Queue should be empty')
 
@@ -278,25 +396,35 @@ class TestIbkrWsClient(TestCase):
             cm, success = self._subscribe(request, response)
             self.assertTrue(success)
 
-        self.assertEqual(self._logs_subscriptions(full_channel, None, True, True), [r.msg for r in cm.records])
+        self.assertEqual(
+            self._logs_subscriptions(full_channel, None, True, True),
+            [r.msg for r in cm.records],
+        )
         self.assertEqual(response, queue.get())
 
     def test_subscription_without_confirmation(self):
         channel = 'fake'
         full_channel = f'{channel}+{self.conid}'
-        request = {'channel': f'{full_channel}', 'needs_confirmation': False, 'confirms_unsubscription':False}
+        request = {
+            'channel': f'{full_channel}',
+            'needs_confirmation': False,
+            'confirms_unsubscription': False,
+        }
         response = None
 
-        expected_errors = [
-            f'IbkrWsClient: Channel subscription timeout: s{full_channel} after {self.subscription_retries} attempts.'
-        ]
+        expected_errors = [f'IbkrWsClient: Channel subscription timeout: s{full_channel} after {self.subscription_retries} attempts.']
 
         with patch.object(self.ws_client, 'has_subscription', return_value=True):
             cm, success = self._subscribe(request, response, expected_errors=expected_errors)
             self.assertTrue(success)
 
-        self.assertEqual([f'IbkrWsClient: Subscribed: s{full_channel} without confirmation.',
-                          f'IbkrWsClient: Unsubscribed: u{full_channel}+{{}} without confirmation.'], [r.msg for r in cm.records])
+        self.assertEqual(
+            [
+                f'IbkrWsClient: Subscribed: s{full_channel} without confirmation.',
+                f'IbkrWsClient: Unsubscribed: u{full_channel}+{{}} without confirmation.',
+            ],
+            [r.msg for r in cm.records],
+        )
 
     def test_check_health(self):
         start_time = [100]
@@ -318,7 +446,12 @@ class TestIbkrWsClient(TestCase):
         queue = self.ws_client.new_queue_accessor(IbkrWsKey.TRADES)
         full_channel = f'{queue.key.channel}+{self.conid}'
         request = {'channel': f'{full_channel}', 'data': {'foo': 'bar'}}
-        response = {'topic': f's{full_channel}', '_updated': self.update_time, 'conid': self.conid, 'args': [{'foo': 'bar'}]}
+        response = {
+            'topic': f's{full_channel}',
+            '_updated': self.update_time,
+            'conid': self.conid,
+            'args': [{'foo': 'bar'}],
+        }
 
         def run():
             # ensures each time WebSocketApp's mock is created, we override its on_message method
@@ -338,10 +471,14 @@ class TestIbkrWsClient(TestCase):
             # self.wsa_mock.on_close.side_effect = lambda x, y, z: None
 
             # override time.time, ignore check_ping and take control of has_active_connection
-            with patch('ibind.client.ibkr_ws_client.time') as time_mock, \
-                    patch.object(self.ws_client, 'check_ping', return_value=True), \
-                    patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: override_init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
-                    patch.object(self.ws_client, '_has_active_connection', side_effect=has_active_connection) as has_active_connection_mock:
+            with patch('ibind.client.ibkr_ws_client.time') as time_mock, patch.object(self.ws_client, 'check_ping', return_value=True), patch(
+                'ibind.base.ws_client.WebSocketApp',
+                side_effect=lambda *args, **kwargs: override_init_wsa_mock(self.wsa_mock, *args, **kwargs),
+            ), patch.object(
+                self.ws_client,
+                '_has_active_connection',
+                side_effect=has_active_connection,
+            ) as has_active_connection_mock:
                 time_mock.time.side_effect = fake_time
                 self.ws_client._last_heartbeat = self.max_ping_interval * 1000
 
@@ -361,14 +498,16 @@ class TestIbkrWsClient(TestCase):
 
         cm, success = self.run_in_test_context(run, expected_errors=expected_errors)
 
-        channel_subscribed_log = f"IbkrWsClient: Subscribed: s{full_channel}+{json.dumps(request['data'])}"
+        channel_subscribed_log = f'IbkrWsClient: Subscribed: s{full_channel}+{json.dumps(request["data"])}'
 
         self.assertEqual(
-            [channel_subscribed_log] +
-            expected_errors +
-            [
+            [channel_subscribed_log]
+            + expected_errors
+            + [
                 f'IbkrWsClient: Invalidated subscription: {full_channel}',
                 f"IbkrWsClient: Recreating 1/1 subscriptions: {{'{full_channel}': {{'status': False, 'data': {request['data']}, 'needs_confirmation': True, 'subscription_processor': None}}}}",
                 channel_subscribed_log,
                 f'IbkrWsClient: Invalidated subscription: {full_channel}',
-            ], [r.msg for r in cm.records])
+            ],
+            [r.msg for r in cm.records],
+        )
