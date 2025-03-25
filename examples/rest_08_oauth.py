@@ -9,7 +9,7 @@ Using IbkrClient with OAuth 1.0a support will automatically handle generating th
 
 Importantly, in order to use OAuth 1.0a you're required to set up the following environment variables:
 
-- IBIND_OAUTH1A_USE_OAUTH: Set to True.
+- IBIND_USE_OAUTH: Set to True.
 - IBIND_OAUTH1A_ACCESS_TOKEN: OAuth access token generated in the self-service portal.
 - IBIND_OAUTH1A_ACCESS_TOKEN_SECRET: OAuth access token secret generated in the self-service portal.
 - IBIND_OAUTH1A_CONSUMER_KEY: The consumer key configured during the onboarding process. This uniquely identifies the project in the IBKR ecosystem.
