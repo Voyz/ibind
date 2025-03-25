@@ -231,7 +231,7 @@ class RaiseLogsContext:
             # If the log record has a manually stored traceback, raise an error with that traceback
             if hasattr(record, 'manual_trace'):
                 raise RuntimeError(
-                    f'\n' + ''.join(traceback.format_list(record.manual_trace)) +
+                    '\n' + ''.join(traceback.format_list(record.manual_trace)) +
                     f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
                 )
 

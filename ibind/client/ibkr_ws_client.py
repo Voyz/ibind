@@ -320,7 +320,7 @@ class IbkrWsClient(WsClient):
         try:
             status = self._ibkr_client.tickle()
         except ExternalBrokerError:
-            _LOGGER.warning(f'Acquiring session cookie failed, connection to the Gateway may be broken.')
+            _LOGGER.warning('Acquiring session cookie failed, connection to the Gateway may be broken.')
             return None
         session_id = status.data['session']
         if self._use_oauth:
@@ -499,11 +499,10 @@ class IbkrWsClient(WsClient):
             if not self._handle_subscribed_message(channel, message):
                 _LOGGER.error(f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}')
 
+        elif self._handle_subscribed_message(channel, message):
+            _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
         else:
-            if self._handle_subscribed_message(channel, message):
-                _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
-            else:
-                _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
+            _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
 
     def check_health(self) -> bool:
         """

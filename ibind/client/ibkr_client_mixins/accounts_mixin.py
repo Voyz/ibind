@@ -25,7 +25,7 @@ class AccountsMixin():  # pragma: no cover
             account_id = self.account_id
 
         return self.get(f'/iserver/account/{account_id}/summary')
-        
+
     def account_profit_and_loss(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Returns an object containing PnL for the selected account and its models (if any).
@@ -54,7 +54,7 @@ class AccountsMixin():  # pragma: no cover
         Note:
             - If the account does not have the DYNACCT property, a 503 error message is returned.
         """
-        return self.post(f'/iserver/dynaccount', params={"acctId": account_id})
+        return self.post('/iserver/dynaccount', params={"acctId": account_id})
 
     def signatures_and_owners(self: 'IbkrClient', account_id: str = None) -> Result:  # pragma: no cover
         """

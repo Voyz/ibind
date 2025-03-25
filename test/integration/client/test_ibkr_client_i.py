@@ -149,7 +149,7 @@ class TestIbkrClientI(TestCase):
             }
             expected_results[query.symbol] = output
 
-        expected_errors = [f'Market data for CDN is not live: Delayed',
+        expected_errors = ['Market data for CDN is not live: Delayed',
                            'Market data for CFC is not live: Delayed']
 
         with SafeAssertLogs(self, 'ibind', level='INFO', logger_level='DEBUG', no_logs=False) as cm, \

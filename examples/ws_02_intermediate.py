@@ -14,7 +14,7 @@ import os
 import signal
 import time
 
-from ibind import IbkrWsKey, IbkrClient, IbkrWsClient, ibind_logs_initialize
+from ibind import IbkrWsKey, IbkrWsClient, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 

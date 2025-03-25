@@ -255,7 +255,7 @@ class TestHandleQuestionsI(TestCase):
         with self.assertLogs(project_logger(), level='INFO') as cm:
             handle_questions(self.original_result, self.answers, self.reply_callback)
 
-        verify_log(self, cm, [f"While handling questions multiple orders were returned: " + pformat(self.original_result.data)])
+        verify_log(self, cm, ["While handling questions multiple orders were returned: " + pformat(self.original_result.data)])
 
     def test_multiple_messages_returned(self):
         # Simulate a single order with multiple messages

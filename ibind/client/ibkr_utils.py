@@ -357,7 +357,7 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
         mapping = _ORDER_REQUEST_MAPPING
 
     if isinstance(order_request, dict):
-        _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
+        _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         return order_request
     else:
         return {
@@ -566,7 +566,7 @@ class Tickler():
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
 
-        _LOGGER.info(f'Tickler gracefully stopped.')
+        _LOGGER.info('Tickler gracefully stopped.')
 
     def start(self):
         """

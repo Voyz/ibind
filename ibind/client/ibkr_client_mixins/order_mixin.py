@@ -101,7 +101,7 @@ class OrderMixin():
                 'accountId': account_id,
             }
         )
-        return self.get(f'iserver/account/trades/', params=params)
+        return self.get('iserver/account/trades/', params=params)
 
     @ensure_list_arg('order_request')
     def place_order(self: 'IbkrClient', order_request: OneOrMany[OrderRequest], answers: Answers, account_id: str = None) -> Result:
@@ -217,10 +217,10 @@ class OrderMixin():
         Parameters:
             message_ids (List[str]): The identifier for each warning message to suppress. The array supports up to 51 messages sent in a single request. Any additional values will result in a system error. The majority of the message IDs are based on the TWS API Error Codes with a “o” prepended to the id.
         """
-        return self.post(f'iserver/questions/suppress', params={"messageIds": message_ids})
+        return self.post('iserver/questions/suppress', params={"messageIds": message_ids})
 
     def reset_suppressed_messages(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
         Resets all messages disabled by the Suppress Messages endpoint.
         """
-        return self.post(f'/iserver/questions/suppress/reset')
+        return self.post('/iserver/questions/suppress/reset')
