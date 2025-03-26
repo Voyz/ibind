@@ -65,7 +65,7 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Contains all account IDs as strings the user should receive data for.
         """
         params = params_dict({'acctIds': account_ids})
-        return self.get(f'portfolio/allocation', params=params)
+        return self.get('portfolio/allocation', params=params)
 
     def positions(
             self: 'IbkrClient',
@@ -195,7 +195,7 @@ class PortfolioMixin():  # pragma: no cover
             account_ids (OneOrMany[str]): Include each account ID to receive data for.
             period (str): Specify the period for which the account should be analyzed. Available Values: “1D”, “7D”, “MTD”, “1M”, “YTD”, “1Y”.
         """
-        return self.post(f'pa/performance', {'acctIds': account_ids, 'period': period})
+        return self.post('pa/performance', {'acctIds': account_ids, 'period': period})
 
     @ensure_list_arg('account_ids', 'conids')
     def transaction_history(
@@ -221,4 +221,4 @@ class PortfolioMixin():  # pragma: no cover
                 'currency': currency,
             }, optional={'days': days}
         )
-        return self.post(f'pa/transactions', params)
+        return self.post('pa/transactions', params)

@@ -53,7 +53,7 @@ class ContractMixin():
         Parameters:
             currency (str): Specify the target currency you would like to receive official pairs of. Valid Structure: “USD”.
         """
-        return self.get(f'iserver/currency/pairs', {'currency': currency})
+        return self.get('iserver/currency/pairs', {'currency': currency})
 
     def currency_exchange_rate(self: 'IbkrClient', source: str, target: str) -> Result:  # pragma: no cover
         """
@@ -63,7 +63,7 @@ class ContractMixin():
             source (str): Specify the base currency to request data for. Valid Structure: “AUD”
             target (str): Specify the quote currency to request data for. Valid Structure: “USD”
         """
-        return self.get(f'iserver/exchangerate', {'source': source, 'target': target})
+        return self.get('iserver/exchangerate', {'source': source, 'target': target})
 
     def info_and_rules_by_conid(self: 'IbkrClient', conid: str, is_buy: bool) -> Result:  # pragma: no cover
         """
@@ -109,7 +109,7 @@ class ContractMixin():
             symbol (str): This should always be set to “BOND”
             issuer_id (str): Specifies the issuerId value used to designate the bond issuer type.
         """
-        return self.get(f'iserver/secdef/bond-filters', {'symbol': symbol, 'issuerId': issuer_id})
+        return self.get('iserver/secdef/bond-filters', {'symbol': symbol, 'issuerId': issuer_id})
 
     def search_contract_by_symbol(
             self: 'IbkrClient',
@@ -130,7 +130,7 @@ class ContractMixin():
             optional={'name': name, 'secType': sec_type}
         )
 
-        return self.get(f'iserver/secdef/search', params)
+        return self.get('iserver/secdef/search', params)
 
     def search_contract_rules(
             self: 'IbkrClient',
@@ -160,7 +160,7 @@ class ContractMixin():
             }
         )
 
-        return self.post(f'iserver/contract/rules', params)
+        return self.post('iserver/contract/rules', params)
 
     def search_secdef_info_by_conid(
             self: 'IbkrClient',
@@ -199,7 +199,7 @@ class ContractMixin():
             }
         )
 
-        return self.get(f'iserver/secdef/info', params)
+        return self.get('iserver/secdef/info', params)
 
     def search_strikes_by_conid(
             self: 'IbkrClient',
@@ -226,7 +226,7 @@ class ContractMixin():
             optional={'exchange': exchange}
         )
 
-        return self.get(f'iserver/secdef/strikes', params)
+        return self.get('iserver/secdef/strikes', params)
 
     @ensure_list_arg('symbols')
     def security_future_by_symbol(self: 'IbkrClient', symbols: OneOrMany[str]) -> Result:  # pragma: no cover
@@ -236,7 +236,7 @@ class ContractMixin():
         Parameters:
             symbols (str): Indicate the symbol(s) of the underlier you are trying to retrieve futures on. Accepts list of string of symbols.
         """
-        return self.get(f'trsrv/futures', {'symbols': ','.join(symbols)})
+        return self.get('trsrv/futures', {'symbols': ','.join(symbols)})
 
     @ensure_list_arg('queries')
     def security_stocks_by_symbol(self: 'IbkrClient', queries: StockQueries, default_filtering: bool = None) -> Result:
@@ -339,4 +339,4 @@ class ContractMixin():
             optional={'exchange': exchange, 'exchangeFilter': exchange_filter}
         )
 
-        return self.get(f'trsrv/secdef/schedule', params)
+        return self.get('trsrv/secdef/schedule', params)

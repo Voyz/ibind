@@ -163,7 +163,7 @@ Answers = Dict[Union[QuestionType, str], bool]
 """
 A mapping of order warnings to user responses.
 
-This dictionary type is used to associate specific warning messages from the IBKR API (either predefined in `QuestionType` or as raw strings) with a boolean response 
+This dictionary type is used to associate specific warning messages from the IBKR API (either predefined in `QuestionType` or as raw strings) with a boolean response
 indicating whether the user accepts or rejects the warning.
 
 Key:
@@ -171,7 +171,7 @@ Key:
     - `str`: A raw string warning message (if not covered by `QuestionType`).
 
 Value:
-    - `bool`: 
+    - `bool`:
         - `True` if the user acknowledges and accepts the warning.
         - `False` if the user rejects it, potentially preventing the order submission.
 
@@ -357,7 +357,7 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
         mapping = _ORDER_REQUEST_MAPPING
 
     if isinstance(order_request, dict):
-        _LOGGER.warning(f"Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
+        _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         return order_request
     else:
         return {
@@ -566,7 +566,7 @@ class Tickler():
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
 
-        _LOGGER.info(f'Tickler gracefully stopped.')
+        _LOGGER.info('Tickler gracefully stopped.')
 
     def start(self):
         """

@@ -81,9 +81,9 @@ class SessionMixin():
             result = self.tickle()
         except Exception as e:
             if isinstance(e, ExternalBrokerError) and e.status_code == 401:
-                _LOGGER.info(f'Gateway session is not authenticated.')
+                _LOGGER.info('Gateway session is not authenticated.')
             elif isinstance(e, ConnectTimeout):
-                _LOGGER.error(f'ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.')
+                _LOGGER.error('ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.')
             else:
                 _LOGGER.error(f'Tickle request failed: {e}')
             return False

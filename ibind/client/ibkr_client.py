@@ -129,7 +129,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             return super()._request(method, endpoint, base_url, extra_headers, log, **kwargs)
         except ExternalBrokerError as e:
             if 'Bad Request: no bridge' in str(e) and e.status_code == 400:
-                raise ExternalBrokerError(f'IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
+                raise ExternalBrokerError('IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
             raise
 
     def _get_headers(self, request_method: str, request_url: str):

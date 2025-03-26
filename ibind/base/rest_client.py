@@ -7,7 +7,6 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
-from requests.adapters import HTTPAdapter
 from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
@@ -121,7 +120,7 @@ class RestClient:
             self.register_shutdown_handler()
 
     def _make_logger(self):
-        self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, f'rest_client'))
+        self._logger = new_daily_rotating_file_handler('RestClient', os.path.join(var.LOGS_DIR, 'rest_client'))
 
     def make_session(self):
         """Creates a new session, ensuring old one (if exists) is closed properly."""

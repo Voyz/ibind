@@ -28,7 +28,7 @@ snapshot_by_key = {
     'last_price': '31',  # Last Price - The last price at which the contract traded. May contain one of the following prefixes: C - Previous day's closing price. H - Trading has halted.
     'bid_price': '84',  # Bid Price - The highest-priced bid on the contract.
     'ask_price': '86',  # Ask Price - The lowest-priced offer on the contract.
-    'last_size': '7059',  # Last Size - The number of unites traded at the last price. 
+    'last_size': '7059',  # Last Size - The number of unites traded at the last price.
     'bid_size': '88',  # Bid Size - The number of contracts or shares bid for at the bid price. For US stocks, the number displayed is divided by 100.
     'ask_size': '85',  # Ask Size - The number of contracts or shares offered at the ask price. For US stocks, the number displayed is divided by 100.
     'prior_close': '7741',  # Prior Close - Yesterday's closing price

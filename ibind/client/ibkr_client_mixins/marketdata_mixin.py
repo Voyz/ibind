@@ -38,7 +38,7 @@ class MarketdataMixin():
             'conids': ','.join(conids),
             'fields': ','.join(fields)
         }
-        return self.get(f'iserver/marketdata/snapshot', params)
+        return self.get('iserver/marketdata/snapshot', params)
 
     def live_marketdata_snapshot_by_symbol(self: 'IbkrClient', queries: StockQueries, fields: OneOrMany[str]) -> dict:
         """
@@ -99,7 +99,7 @@ class MarketdataMixin():
             - If you are already paying for, or are subscribed to, a specific US Network subscription, your account will not be charged.
             - For stocks, there are individual exchange-specific market data subscriptions necessary to receive streaming quotes.
         """
-        return self.get(f'md/regsnapshot', {'conid': conid})
+        return self.get('md/regsnapshot', {'conid': conid})
 
     def marketdata_history_by_conid(
             self: 'IbkrClient',
@@ -309,7 +309,7 @@ class MarketdataMixin():
             conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
-        unsubscribe_requests = {conid: {'args': [f'iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
+        unsubscribe_requests = {conid: {'args': ['iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
         results = execute_in_parallel(self.post, unsubscribe_requests)
 
         for conid, result in results.items():
@@ -325,4 +325,4 @@ class MarketdataMixin():
         """
         Cancel all market data request(s). To cancel market data for a specific conid, see /iserver/marketdata/{conid}/unsubscribe.
         """
-        return self.get(f'iserver/marketdata/unsubscribeall')
+        return self.get('iserver/marketdata/unsubscribeall')

@@ -26,7 +26,6 @@ If you prefer setting these variables inline, you can pass an instance of OAuth1
 import os
 
 from ibind import IbkrClient, ibind_logs_initialize
-from ibind.oauth.oauth1a import OAuth1aConfig
 
 ibind_logs_initialize()
 

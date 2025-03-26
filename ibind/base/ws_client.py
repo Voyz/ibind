@@ -146,7 +146,7 @@ class WsClient(SubscriptionController):
 
     def _wrap_callback(self, f):
         def wrapped_f(ws, *args, **kwargs):
-            if not (ws is self._wsa):
+            if ws is not self._wsa:
                 _LOGGER.error(f'{self}: Invalid ws returned: {ws} | expected: {self._wsa}')
 
             try:
