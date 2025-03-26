@@ -23,6 +23,7 @@ Optionally, you can also set:
 
 If you prefer setting these variables inline, you can pass an instance of OAuth1aConfig class as an optional 'oauth_config' parameter to the IbkrClient constructor. Any variables not specified will be taken from the environment variables.
 """
+
 import os
 
 from ibind import IbkrClient, ibind_logs_initialize
@@ -34,7 +35,6 @@ cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 client = IbkrClient(
     cacert=cacert,
     use_oauth=True,
-
     # Optionally, specify OAuth variables dynamically by passing an OAuth1aConfig instance
     # oauth_config=OAuth1aConfig(access_token='my_access_token', access_token_secret='my_access_token_secret')
 )

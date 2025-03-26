@@ -40,20 +40,19 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     """
 
     def __init__(
-            self,
-            account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
-            url: str = var.IBIND_REST_URL,
-            host: str = '127.0.0.1',
-            port: str = '5000',
-            base_route: str = '/v1/api/',
-            cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
-            timeout: float = 10,
-            max_retries: int = 3,
-            use_session: bool = var.IBIND_USE_SESSION,
-            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
-            use_oauth: bool = var.IBIND_USE_OAUTH,
-            oauth_config: 'OAuthConfig' = None,
-
+        self,
+        account_id: Optional[str] = var.IBIND_ACCOUNT_ID,
+        url: str = var.IBIND_REST_URL,
+        host: str = '127.0.0.1',
+        port: str = '5000',
+        base_route: str = '/v1/api/',
+        cacert: Union[str, os.PathLike, bool] = var.IBIND_CACERT,
+        timeout: float = 10,
+        max_retries: int = 3,
+        use_session: bool = var.IBIND_USE_SESSION,
+        auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        use_oauth: bool = var.IBIND_USE_OAUTH,
+        oauth_config: 'OAuthConfig' = None,
     ) -> None:
         """
         Parameters:
@@ -80,6 +79,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if self._use_oauth:
             from ibind.oauth.oauth1a import OAuth1aConfig
+
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
             url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
@@ -100,7 +100,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         )
 
         self.logger.info('#################')
-        self.logger.info(f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})')
+        self.logger.info(
+            f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})'
+        )
 
         if self._use_oauth:
             self.oauth_config.verify_config()
@@ -114,16 +116,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     def _make_logger(self):
         self._logger = new_daily_rotating_file_handler('IbkrClient', os.path.join(var.LOGS_DIR, f'ibkr_client_{self.account_id}'))
 
-    def _request(
-            self,
-            method: str,
-            endpoint: str,
-            base_url: str = None,
-            extra_headers: dict = None,
-            log: bool = True,
-            **kwargs
-    ) -> Result:
-        """ Handle IBKR-specific errors."""
+    def _request(self, method: str, endpoint: str, base_url: str = None, extra_headers: dict = None, log: bool = True, **kwargs) -> Result:
+        """Handle IBKR-specific errors."""
 
         try:
             return super()._request(method, endpoint, base_url, extra_headers, log, **kwargs)
@@ -139,11 +133,9 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         # get headers for endpoints other than live session token request
         from ibind.oauth.oauth1a import generate_oauth_headers
+
         headers = generate_oauth_headers(
-            oauth_config=self.oauth_config,
-            request_method=request_method,
-            request_url=request_url,
-            live_session_token=self.live_session_token
+            oauth_config=self.oauth_config, request_method=request_method, request_url=request_url, live_session_token=self.live_session_token
         )
 
         return headers
@@ -161,14 +153,12 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             ExternalBrokerError: If the token request fails.
         """
         from ibind.oauth.oauth1a import req_live_session_token
-        self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature \
-            = req_live_session_token(self, self.oauth_config)
 
-    def oauth_init(
-            self,
-            maintain_oauth: bool,
-            init_brokerage_session: bool
-    ):
+        self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(
+            self, self.oauth_config
+        )
+
+    def oauth_init(self, maintain_oauth: bool, init_brokerage_session: bool):
         """
         Initializes the OAuth authentication flow for the IBKR API.
 
@@ -205,13 +195,14 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         # validate the live session token once
         from ibind.oauth.oauth1a import validate_live_session_token
+
         success = validate_live_session_token(
             live_session_token=self.live_session_token,
             live_session_token_signature=self.live_session_token_signature,
-            consumer_key=self.oauth_config.consumer_key
+            consumer_key=self.oauth_config.consumer_key,
         )
         if not success:
-            raise RuntimeError("Live session token validation failed.")
+            raise RuntimeError('Live session token validation failed.')
 
         if maintain_oauth:
             self.start_tickler()

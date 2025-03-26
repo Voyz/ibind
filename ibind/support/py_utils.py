@@ -114,7 +114,9 @@ def execute_with_key(key, func, *args, **kwargs):  # pragma: no cover
         return key, e
 
 
-def execute_in_parallel(func: callable, requests: Union[List[dict], Dict[str, dict]], max_workers: int = None, max_per_second: int = 20) -> Union[dict, list]:
+def execute_in_parallel(
+    func: callable, requests: Union[List[dict], Dict[str, dict]], max_workers: int = None, max_per_second: int = 20
+) -> Union[dict, list]:
     """
     Executes a function in parallel using multiple sets of arguments with rate limiting.
 
@@ -194,7 +196,7 @@ def filter_none(d):  # pragma: no cover
         return d
 
 
-class TimeoutLock():  # pragma: no cover
+class TimeoutLock:  # pragma: no cover
     """
     A lock with a timeout mechanism, extending the standard threading.RLock.
 
@@ -241,7 +243,7 @@ def exception_to_string(excp) -> str:  # pragma: no cover
     """
     stack = make_clean_stack() + traceback.extract_tb(excp.__traceback__)
     pretty = traceback.format_list(stack)
-    excp_str = '\n'+''.join(pretty) + '\n  {} {}'.format(excp.__class__, excp)
+    excp_str = '\n' + ''.join(pretty) + '\n  {} {}'.format(excp.__class__, excp)
 
     # Handling chained exceptions
     cause = excp.__cause__
@@ -256,24 +258,24 @@ def exception_to_string(excp) -> str:  # pragma: no cover
 
 
 def make_clean_stack() -> [traceback.FrameSummary]:  # pragma: no cover
-    return [s for s in traceback.extract_stack() if all(substring not in s.filename for substring in [
-        'JetBrains',
-        os.path.join('Lib', 'unittest'),
-        os.path.join('Lib', 'logging')])
-            ][:-2]
+    return [
+        s
+        for s in traceback.extract_stack()
+        if all(substring not in s.filename for substring in ['JetBrains', os.path.join('Lib', 'unittest'), os.path.join('Lib', 'logging')])
+    ][:-2]
 
 
 def wait_until(condition: callable, timeout_message: str = None, timeout: float = 5) -> bool:
     """
-    Pauses program execution until a specified condition becomes True or a timeout is reached.
+     Pauses program execution until a specified condition becomes True or a timeout is reached.
 
-   Parameters:
-        condition (callable): A callable that returns a boolean value. The function waits until this callable returns True.
-        timeout_message (str, optional): A message to log as an error if the timeout is reached. If None, no message is logged. Defaults to None.
-        timeout (float, optional): The maximum time to wait for the condition to become True, in seconds. Defaults to 5 seconds.
+    Parameters:
+         condition (callable): A callable that returns a boolean value. The function waits until this callable returns True.
+         timeout_message (str, optional): A message to log as an error if the timeout is reached. If None, no message is logged. Defaults to None.
+         timeout (float, optional): The maximum time to wait for the condition to become True, in seconds. Defaults to 5 seconds.
 
-    Returns:
-        bool: True if the condition becomes True within the timeout period, False otherwise.
+     Returns:
+         bool: True if the condition becomes True within the timeout period, False otherwise.
     """
 
     deadline = time.time() + timeout
@@ -288,7 +290,6 @@ def wait_until(condition: callable, timeout_message: str = None, timeout: float 
     return False
 
 
-
 def tname():  # pragma: no cover
     """
     Generates a unique name for the current thread.
@@ -297,7 +298,6 @@ def tname():  # pragma: no cover
         str: A string combining the current thread's name and its unique identifier.
     """
     return f'{threading.current_thread().name}-{threading.get_ident()}'
-
 
 
 def params_dict(required: dict = None, optional: dict = None, preprocessors: dict = None):
@@ -318,16 +318,18 @@ def params_dict(required: dict = None, optional: dict = None, preprocessors: dic
 
     return d
 
+
 def print_table(my_dict, column_order=None):
     if not column_order:
         column_order = list(my_dict[0].keys() if my_dict else [])
-    rv = [column_order] # 1st row = header
+    rv = [column_order]  # 1st row = header
     for item in my_dict:
         rv.append([str(item[col] if item[col] is not None else '') for col in column_order])
-    column_size = [max(map(len,col)) for col in zip(*rv)]
-    formatter = '   '.join(["{{:>{}}}".format(i) for i in column_size])
+    column_size = [max(map(len, col)) for col in zip(*rv)]
+    formatter = '   '.join(['{{:>{}}}'.format(i) for i in column_size])
     for i, item in enumerate(rv):
         print(formatter.format(*item))
+
 
 def patch_dotenv():
     try:
@@ -337,7 +339,11 @@ def patch_dotenv():
         # Wrap the original load_dotenv function
         def warn_if_late_load(*args, **kwargs):
             if 'ibind.var' in sys.modules:
-                warnings.warn("⚠️ WARNING: `load_dotenv()` was called after `ibind` was imported. Environment variables were already read and changes may not take effect. Call `load_dotenv()` before importing `ibind` to ensure proper behavior.", RuntimeWarning, stacklevel=2)
+                warnings.warn(
+                    '⚠️ WARNING: `load_dotenv()` was called after `ibind` was imported. Environment variables were already read and changes may not take effect. Call `load_dotenv()` before importing `ibind` to ensure proper behavior.',
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
             return load_dotenv(*args, **kwargs)
 
         # Replace the original load_dotenv with the wrapped version
@@ -345,4 +351,3 @@ def patch_dotenv():
 
     except ImportError:
         pass  # dotenv is not installed, nothing to patch
-

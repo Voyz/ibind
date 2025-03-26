@@ -16,7 +16,7 @@ def raise_from_context(cm, level='WARNING'):
             raise RuntimeError(record.message)
 
 
-def verify_log(test_case:TestCase, cm, expected_messages, comparison:callable= lambda x, y: x == y):
+def verify_log(test_case: TestCase, cm, expected_messages, comparison: callable = lambda x, y: x == y):
     messages = [record.msg for record in cm.records]
     missing_expected = expected_messages.copy()
     for i, expected_msg in enumerate(expected_messages):
@@ -26,12 +26,13 @@ def verify_log(test_case:TestCase, cm, expected_messages, comparison:callable= l
                 break
 
     if missing_expected:
-        test_case.fail("Expected log(s) not found:\n\t{}".format('\n\t'.join(missing_expected)))
+        test_case.fail('Expected log(s) not found:\n\t{}'.format('\n\t'.join(missing_expected)))
 
 
 def verify_log_simple(test_self, cm, expected_messages):
     for i, msg in enumerate(expected_messages):
         test_self.assertEqual(msg, cm.records[i].msg)
+
 
 def exact_log(test_case, cm, expected_messages):
     test_case.assertEqual(expected_messages, [record.msg for record in cm.records])
@@ -44,14 +45,15 @@ class SafeAssertLogs(_AssertLogsContext):
     Original docstring:
     A context manager used to implement TestCase.assertLogs().
     """
-    def __init__(self, *args, logger_level:str=None, **kwargs):
+
+    def __init__(self, *args, logger_level: str = None, **kwargs):
         if sys.version_info < (3, 10, 0) and 'no_logs' in kwargs:
             del kwargs['no_logs']
 
         super().__init__(*args, **kwargs)
         self.logger_level = logger_level
 
-    def __enter__(self, include_original_handlers:bool=False):
+    def __enter__(self, include_original_handlers: bool = False):
         if isinstance(self.logger_name, logging.Logger):
             logger = self.logger = self.logger_name
         else:
@@ -74,6 +76,7 @@ class SafeAssertLogs(_AssertLogsContext):
             logger.propagate = True
         return handler.watcher
 
+
 def get_logger_children(main_logger) -> list[logging.Logger]:
     """
     Gets child loggers. Added as a support compat for Python version 3.11 and below.
@@ -89,9 +92,11 @@ def get_logger_children(main_logger) -> list[logging.Logger]:
     # exclude PlaceHolders - the last check is to ensure that lower-level
     # descendants aren't returned - if there are placeholders, a logger's
     # parent field might point to a grandparent or ancestor thereof.
-    return [item for item in d.values()
-            if isinstance(item, logging.Logger) and item.parent is main_logger and
-            _hierlevel(item) == 1 + _hierlevel(item.parent)]
+    return [
+        item
+        for item in d.values()
+        if isinstance(item, logging.Logger) and item.parent is main_logger and _hierlevel(item) == 1 + _hierlevel(item.parent)
+    ]
 
 
 class RaiseLogsContext:
@@ -115,18 +120,19 @@ class RaiseLogsContext:
             Defaults to an exact string match (`lambda x, y: x == y`).
 
     Example Usage:
-        >>> with RaiseLogsContext(self, logger_name="my_logger", level="WARNING", expected_errors=["My expected warning"]):
-        ...     logging.getLogger("my_logger").warning("My expected warning")  # No error
-        ...     logging.getLogger("my_logger").error("Unexpected issue")  # Raises RuntimeError
+        >>> with RaiseLogsContext(self, logger_name='my_logger', level='WARNING', expected_errors=['My expected warning']):
+        ...     logging.getLogger('my_logger').warning('My expected warning')  # No error
+        ...     logging.getLogger('my_logger').error('Unexpected issue')  # Raises RuntimeError
     """
 
-    def __init__(self,
-                 test_case:TestCase,
-                 logger_name=None,
-                 level='ERROR',
-                 expected_errors:[str]=None,
-                 comparison: callable = lambda x, y: x == y,
-                 ):
+    def __init__(
+        self,
+        test_case: TestCase,
+        logger_name=None,
+        level='ERROR',
+        expected_errors: [str] = None,
+        comparison: callable = lambda x, y: x == y,
+    ):
         self._test_case = test_case
         self._logger_name = logger_name
         self._level = level
@@ -181,12 +187,10 @@ class RaiseLogsContext:
 
         self._logger = logging.getLogger(self._logger_name)
         loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
-        self.monkey_patch_loggers(loggers_to_be_patched) # Apply monkey-patching to attach stack traces to logged messages
+        self.monkey_patch_loggers(loggers_to_be_patched)  # Apply monkey-patching to attach stack traces to logged messages
 
         # Initialize SafeAssertLogs, a helper to capture and assert log records
-        self._context_manager = SafeAssertLogs(
-            self._test_case, self._logger, level=self._level, no_logs=False
-        )
+        self._context_manager = SafeAssertLogs(self._test_case, self._logger, level=self._level, no_logs=False)
 
         # Enter the SafeAssertLogs context, starting log capture and returning the watcher
         self._watcher = self._context_manager.__enter__(include_original_handlers=True)
@@ -231,14 +235,11 @@ class RaiseLogsContext:
             # If the log record has a manually stored traceback, raise an error with that traceback
             if hasattr(record, 'manual_trace'):
                 raise RuntimeError(
-                    '\n' + ''.join(traceback.format_list(record.manual_trace)) +
-                    f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
+                    '\n' + ''.join(traceback.format_list(record.manual_trace)) + f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
                 )
 
             # Otherwise, raise an error using the log record's location
-            raise RuntimeError(
-                f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}'
-            )
+            raise RuntimeError(f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}')
 
 
 def raise_logs(level='ERROR', logger_name=None):
@@ -253,20 +254,21 @@ def raise_logs(level='ERROR', logger_name=None):
     return _wrapper
 
 
-def decorate_methods(decorator, starts_with=""):
+def decorate_methods(decorator, starts_with=''):
     class DecorateMethods(type):
-        """ Decorate all methods of the class with the decorator provided """
+        """Decorate all methods of the class with the decorator provided"""
 
         def __new__(cls, name, bases, attrs, **kwargs):
             exclude = kwargs.get('exclude', [])
 
             for attr_name, attr_value in attrs.items():
-
-                if isinstance(attr_value, types.FunctionType) and \
-                        attr_name.startswith(starts_with) and \
-                        attr_name not in exclude and \
-                        not hasattr(attr_value, '__exclude_decorator__') and \
-                        not attr_name.startswith('__'):
+                if (
+                    isinstance(attr_value, types.FunctionType)
+                    and attr_name.startswith(starts_with)
+                    and attr_name not in exclude
+                    and not hasattr(attr_value, '__exclude_decorator__')
+                    and not attr_name.startswith('__')
+                ):
                     attrs[attr_name] = decorator(attr_value)
 
             return super(DecorateMethods, cls).__new__(cls, name, bases, attrs)
@@ -274,8 +276,7 @@ def decorate_methods(decorator, starts_with=""):
     return DecorateMethods
 
 
-class TestCaseWithRaiseLogs(unittest.TestCase, metaclass=decorate_methods(raise_logs(logger_name='ibind'), starts_with='test')):
-    ...
+class TestCaseWithRaiseLogs(unittest.TestCase, metaclass=decorate_methods(raise_logs(logger_name='ibind'), starts_with='test')): ...
 
 
 def exclude_decorator(fn):

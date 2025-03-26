@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class MarketdataMixin():
+class MarketdataMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
     """
@@ -34,10 +34,7 @@ class MarketdataMixin():
             - The endpoint /iserver/accounts must be called prior to /iserver/marketdata/snapshot.
             - For derivative contracts, the endpoint /iserver/secdef/search must be called first.
         """
-        params = {
-            'conids': ','.join(conids),
-            'fields': ','.join(fields)
-        }
+        params = {'conids': ','.join(conids), 'fields': ','.join(fields)}
         return self.get('iserver/marketdata/snapshot', params)
 
     def live_marketdata_snapshot_by_symbol(self: 'IbkrClient', queries: StockQueries, fields: OneOrMany[str]) -> dict:
@@ -102,13 +99,13 @@ class MarketdataMixin():
         return self.get('md/regsnapshot', {'conid': conid})
 
     def marketdata_history_by_conid(
-            self: 'IbkrClient',
-            conid: str,
-            bar: str,
-            exchange: str = None,
-            period: str = None,
-            outside_rth: bool = None,
-            start_time: datetime.datetime = None
+        self: 'IbkrClient',
+        conid: str,
+        bar: str,
+        exchange: str = None,
+        period: str = None,
+        outside_rth: bool = None,
+        start_time: datetime.datetime = None,
     ) -> Result:  # pragma: no cover
         """
         Get historical market Data for given conid, length of data is controlled by 'period' and 'bar'.
@@ -125,32 +122,22 @@ class MarketdataMixin():
             - There's a limit of 5 concurrent requests. Excessive requests will return a 'Too many requests' status 429 response.
         """
         params = params_dict(
-            {
-                'conid': conid,
-                'bar': bar
-            },
-            optional={
-                'exchange': exchange,
-                'period': period,
-                'outsideRth': outside_rth,
-                'startTime': start_time
-            },
-            preprocessors={
-                'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')
-            }
+            {'conid': conid, 'bar': bar},
+            optional={'exchange': exchange, 'period': period, 'outsideRth': outside_rth, 'startTime': start_time},
+            preprocessors={'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')},
         )
 
         return self.get('iserver/marketdata/history', params)
 
     def historical_marketdata_beta(
-            self: 'IbkrClient',
-            conid: str,
-            period: str,
-            bar: str,
-            outside_rth: bool = None,
-            start_time: datetime.datetime = None,
-            direction: str = None,
-            bar_type: str = None,
+        self: 'IbkrClient',
+        conid: str,
+        period: str,
+        bar: str,
+        outside_rth: bool = None,
+        start_time: datetime.datetime = None,
+        direction: str = None,
+        bar_type: str = None,
     ) -> Result:  # pragma: no cover
         """
         Using a direct connection to the market data farm, will provide a list of historical market data for given conid.
@@ -168,32 +155,26 @@ class MarketdataMixin():
             - The first time a user makes a request to the /hmds/history endpoints will result in a 404 error. This initial request instantiates the historical market data services allowing future requests to return data. Subsequent requests will return data as expected.
         """
         params = params_dict(
-            {
-                'conid': conid,
-                'period': period,
-                'bar': bar
-            },
+            {'conid': conid, 'period': period, 'bar': bar},
             optional={
                 'outsideRth': outside_rth,
                 'startTime': start_time,
                 'direction': direction,
                 'barType': bar_type,
             },
-            preprocessors={
-                'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')
-            }
+            preprocessors={'startTime': lambda x: x.strftime('%Y%m%d-%H:%M:%S')},
         )
 
         return self.get('hmds/history', params)
 
     def marketdata_history_by_symbol(
-            self: 'IbkrClient',
-            symbol: Union[str, StockQuery],
-            bar: str,
-            exchange: str = None,
-            period: str = None,
-            outside_rth: bool = None,
-            start_time: datetime.datetime = None,
+        self: 'IbkrClient',
+        symbol: Union[str, StockQuery],
+        bar: str,
+        exchange: str = None,
+        period: str = None,
+        outside_rth: bool = None,
+        start_time: datetime.datetime = None,
     ) -> Result:  # pragma: no cover
         """
         Get historical market Data for given symbol, length of data is controlled by 'period' and 'bar'.
@@ -211,14 +192,14 @@ class MarketdataMixin():
         return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
     def marketdata_history_by_conids(
-            self: 'IbkrClient',
-            conids: Union[List[str], Dict[str, str]],
-            period: str = "1min",
-            bar: str = "1min",
-            outside_rth: bool = True,
-            start_time: datetime.datetime = None,
-            raise_on_error: bool = False,
-            run_in_parallel: bool = True,
+        self: 'IbkrClient',
+        conids: Union[List[str], Dict[str, str]],
+        period: str = '1min',
+        bar: str = '1min',
+        outside_rth: bool = True,
+        start_time: datetime.datetime = None,
+        raise_on_error: bool = False,
+        run_in_parallel: bool = True,
     ) -> dict:
         """
         An extended version of the marketdata_history_by_conid method.
@@ -243,18 +224,15 @@ class MarketdataMixin():
             # In case conids aren't a symbol->conid dict, generate a dummy conid->conid dict in order to preserve the functionality. In such case, the 'symbol' variable actually is a 'conid'.
             conids = {conid: conid for conid in conids}
 
-        static_params = {"period": period, "bar": bar, "outside_rth": outside_rth, 'start_time': start_time}
-        requests = {symbol: {"kwargs": {'conid': conid} | static_params} for symbol, conid in conids.items()}
+        static_params = {'period': period, 'bar': bar, 'outside_rth': outside_rth, 'start_time': start_time}
+        requests = {symbol: {'kwargs': {'conid': conid} | static_params} for symbol, conid in conids.items()}
 
         # when there is only one conid, we avoid running in parallel
         if run_in_parallel and len(conids) > 1:
             # /iserver/marketdata/history accepts 5 concurrent requests in theory, but sometime throttles above 4
             market_history_responses = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=4)
         else:
-            market_history_responses = {
-                symbol: self.marketdata_history_by_conid(**request['kwargs'])
-                for symbol, request in requests.items()
-            }
+            market_history_responses = {symbol: self.marketdata_history_by_conid(**request['kwargs']) for symbol, request in requests.items()}
 
         results = cleanup_market_history_responses(market_history_responses, raise_on_error=raise_on_error)
 
@@ -262,14 +240,14 @@ class MarketdataMixin():
 
     @ensure_list_arg('queries')
     def marketdata_history_by_symbols(
-            self: 'IbkrClient',
-            queries: StockQueries,
-            period: str = "1min",
-            bar: str = "1min",
-            outside_rth: bool = True,
-            start_time: datetime.datetime = None,
-            raise_on_error: bool = False,
-            run_in_parallel: bool = True,
+        self: 'IbkrClient',
+        queries: StockQueries,
+        period: str = '1min',
+        bar: str = '1min',
+        outside_rth: bool = True,
+        start_time: datetime.datetime = None,
+        raise_on_error: bool = False,
+        run_in_parallel: bool = True,
     ) -> dict:
         """
         An extended version of the marketdata_history_by_conids method.

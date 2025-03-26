@@ -26,13 +26,15 @@ def project_logger(filepath=None):
     """
     return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
 
+
 _LOGGER = project_logger()
 
+
 def ibind_logs_initialize(
-        log_to_console: bool = var.LOG_TO_CONSOLE,
-        log_to_file: bool = var.LOG_TO_FILE,
-        log_level: str = var.LOG_LEVEL,
-        log_format: str = var.LOG_FORMAT,
+    log_to_console: bool = var.LOG_TO_CONSOLE,
+    log_to_file: bool = var.LOG_TO_FILE,
+    log_level: str = var.LOG_LEVEL,
+    log_format: str = var.LOG_FORMAT,
 ):
     """
     Initialises the logging system.
@@ -55,7 +57,6 @@ def ibind_logs_initialize(
 
     global _log_to_file
     _log_to_file = log_to_file
-
 
     logger = logging.getLogger('ibind')
     formatter = logging.Formatter(log_format)
@@ -113,7 +114,6 @@ def new_daily_rotating_file_handler(logger_name, filepath):
 
 
 class DailyRotatingFileHandler(logging.FileHandler):
-
     def __init__(self, *args, date_format='%Y-%m-%d', **kwargs):
         self.timestamp = None
         self.date_format = date_format
@@ -141,4 +141,3 @@ class DailyRotatingFileHandler(logging.FileHandler):
             self.stream = self._open()
 
         super().emit(record)
-

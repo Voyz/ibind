@@ -54,13 +54,12 @@ class TestRestClientI(TestCase):
     def test_request_retries(self, requests_mock):
         requests_mock.request.side_effect = ReadTimeout()
 
-        with self.assertLogs(project_logger(), level='INFO') as cm, \
-                self.assertRaises(TimeoutError) as cm_err:
+        with self.assertLogs(project_logger(), level='INFO') as cm, self.assertRaises(TimeoutError) as cm_err:
             self.client.get(self.default_path)
 
         for i, record in enumerate(cm.records):
             self.assertEqual(f'RestClient: Timeout for GET {self.default_url} {{}}, retrying attempt {i + 1}/{self.max_retries}', record.msg)
-        self.assertEqual(f"RestClient: Reached max retries ({self.max_retries}) for GET {self.default_url} {{}}", str(cm_err.exception))
+        self.assertEqual(f'RestClient: Reached max retries ({self.max_retries}) for GET {self.default_url} {{}}', str(cm_err.exception))
 
     def test_response_raise_timeout(self, requests_mock):
         requests_mock.request.return_value = self.response
@@ -69,7 +68,7 @@ class TestRestClientI(TestCase):
         with self.assertRaises(ExternalBrokerError) as cm_err:
             self.client.get(self.default_path)
 
-        self.assertEqual(f"RestClient: Timeout error ({self.timeout}S)", str(cm_err.exception))
+        self.assertEqual(f'RestClient: Timeout error ({self.timeout}S)', str(cm_err.exception))
 
     def test_response_raise_generic(self, requests_mock):
         requests_mock.request.return_value = self.response
@@ -82,17 +81,21 @@ class TestRestClientI(TestCase):
         with self.assertRaises(ExternalBrokerError) as cm_err:
             self.client.get(self.default_path)
 
-        self.assertEqual(f"RestClient: response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}", str(cm_err.exception))
+        self.assertEqual(
+            f'RestClient: response error {self.result.copy(data=None)} :: {self.response.status_code} :: {self.response.reason} :: {self.response.text}',
+            str(cm_err.exception),
+        )
+
 
 class TestRestClientInThread(TestCase):
-    def _worker(self, results:[]):
+    def _worker(self, results: []):
         try:
             IbkrClient()
         except Exception as e:
             results.append(e)
 
     def test_in_thread(self):
-        """ Run in thread ensuring client still is constructed without an exception."""
+        """Run in thread ensuring client still is constructed without an exception."""
         results = []
         t = threading.Thread(target=self._worker, args=(results,))
         t.daemon = True
@@ -102,9 +105,8 @@ class TestRestClientInThread(TestCase):
             if isinstance(result, Exception):
                 raise result
 
-
     def test_without_thread(self):
-        """ Run without a thread to ensure it still works as expected."""
+        """Run without a thread to ensure it still works as expected."""
         results = []
         self._worker(results)
         for result in results:

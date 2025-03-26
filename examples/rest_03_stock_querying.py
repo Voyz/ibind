@@ -18,7 +18,7 @@ from ibind import IbkrClient, StockQuery, ibind_logs_initialize
 
 ibind_logs_initialize(log_to_file=False)
 
-cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
+cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 client = IbkrClient(cacert=cacert)
 
 
@@ -38,11 +38,7 @@ pprint(conids)
 
 
 print('\n#### mixed queries ####')
-stock_queries = [
-    StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}),
-    'HUBS',
-    StockQuery('GOOG', name_match='ALPHABET INC - CDR')
-]
+stock_queries = [StockQuery('AAPL', contract_conditions={'exchange': 'MEXI'}), 'HUBS', StockQuery('GOOG', name_match='ALPHABET INC - CDR')]
 conids = client.stock_conid_by_symbol(stock_queries, default_filtering=False).data
 pprint(conids)
 

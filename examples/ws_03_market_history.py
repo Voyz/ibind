@@ -48,10 +48,7 @@ def unsubscribe():
         print(f'Unsubscribing channel {channel!r} from server {server_id!r}: {"unconfirmed" if not confirmed else "confirmed"}.')
 
 
-request = {
-    'channel': 'mh+265598',
-    'data': {"period": '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', "format": "%o/%c/%h/%l"}
-}
+request = {'channel': 'mh+265598', 'data': {'period': '1min', 'bar': '1min', 'outsideRTH': True, 'source': 'trades', 'format': '%o/%c/%h/%l'}}
 
 ws_client.start()
 

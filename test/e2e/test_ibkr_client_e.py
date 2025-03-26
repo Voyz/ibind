@@ -8,9 +8,8 @@ from test.integration.client import ibkr_responses
 
 
 class TestIbkrClientE(TestCase):
-
     def setUp(self):
-        warnings.filterwarnings("ignore", message="Unverified HTTPS request is being made to host 'localhost'")
+        warnings.filterwarnings('ignore', message="Unverified HTTPS request is being made to host 'localhost'")
 
         self.url = 'https://localhost:5000/v1/api/'
         # self.account_id = os.getenv('TEST_IBKR_ACCOUNT_ID')
@@ -24,10 +23,22 @@ class TestIbkrClientE(TestCase):
             max_retries=self.max_retries,
         )
 
-        self.query = [StockQuery(symbol='CDN', contract_conditions={}), StockQuery(symbol='CFC', contract_conditions={}), 'SCHW', 'GOOG', 'TEAM', 'SAN', 'BBVA', 'MSFT', 'AAPL', 'META', 'HUBS']
+        self.query = [
+            StockQuery(symbol='CDN', contract_conditions={}),
+            StockQuery(symbol='CFC', contract_conditions={}),
+            'SCHW',
+            'GOOG',
+            'TEAM',
+            'SAN',
+            'BBVA',
+            'MSFT',
+            'AAPL',
+            'META',
+            'HUBS',
+        ]
 
     def tearDown(self):
-        warnings.filterwarnings("default", message="Unverified HTTPS request is being made to host 'localhost'")
+        warnings.filterwarnings('default', message="Unverified HTTPS request is being made to host 'localhost'")
 
     def test_get_conids(self):
         result = self.client.stock_conid_by_symbol(self.query)
@@ -64,7 +75,6 @@ class TestIbkrClientE(TestCase):
         if 'orders' not in result.data or not result.data['orders']:
             print('No orders to cancel')
             return
-
 
         for order in result.data['orders']:
             try:

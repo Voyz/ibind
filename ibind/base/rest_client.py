@@ -18,7 +18,7 @@ _LOGGER = project_logger(__file__)
 
 
 @dataclass
-class Result():
+class Result:
     """
     A class to encapsulate the result of an API request.
 
@@ -30,6 +30,7 @@ class Result():
         request (Optional[dict]): Details of the request that resulted in this data.
 
     """
+
     data: Optional[Union[list, dict]] = field(default=None)
     request: Optional[dict] = field(default_factory=dict)
 
@@ -46,10 +47,7 @@ class Result():
         Returns:
             Result: A new Result instance with the specified modifications.
         """
-        return Result(
-            data=data if data is not UNDEFINED else self.data.copy(),
-            request=request if request is not UNDEFINED else self.request.copy()
-        )
+        return Result(data=data if data is not UNDEFINED else self.data.copy(), request=request if request is not UNDEFINED else self.request.copy())
 
 
 def pass_result(data: dict, old_result: Result) -> Result:
@@ -77,13 +75,13 @@ class RestClient:
     """
 
     def __init__(
-            self,
-            url: str,
-            cacert: Union[os.PathLike, bool] = False,
-            timeout: float = 10,
-            max_retries: int = 3,
-            use_session: bool = var.IBIND_USE_SESSION,
-            auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        self,
+        url: str,
+        cacert: Union[os.PathLike, bool] = False,
+        timeout: float = 10,
+        max_retries: int = 3,
+        use_session: bool = var.IBIND_USE_SESSION,
+        auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
     ) -> None:
         """
         Parameters:
@@ -97,14 +95,14 @@ class RestClient:
         """
 
         if url is None:
-            raise ValueError(f"{self}: url must not be None")
+            raise ValueError(f'{self}: url must not be None')
         self.base_url = url
         if not url.endswith('/'):
             self.base_url += '/'
 
         self.cacert = cacert
         if not (isinstance(self.cacert, bool) or Path(self.cacert).exists()):
-            raise ValueError(f"{self}: cacert must be a valid Path or Boolean")
+            raise ValueError(f'{self}: cacert must be a valid Path or Boolean')
 
         self._timeout = timeout
         self._max_retries = max_retries
@@ -144,7 +142,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True,
-    ) -> Result:
+    ) -> Result:  # fmt: off
         return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
     def post(
@@ -154,7 +152,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True
-    ) -> Result:
+    ) -> Result:  # fmt: off
         return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
     def delete(
@@ -164,7 +162,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True
-    ) -> Result:
+    ) -> Result:  # fmt: off
         return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
 
     def request(
@@ -175,7 +173,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True,
             **kwargs
-    ) -> Result:
+    ) -> Result:  # fmt: off
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -209,15 +207,15 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True,
             **kwargs
-    ) -> Result:
+    ) -> Result:  # fmt: off
         """
         Wrapper function which allows overriding the default request and error handling logic in the subclass.
         """
 
         base_url = base_url if base_url is not None else self.base_url
 
-        endpoint = endpoint.lstrip("/")
-        url = f"{base_url}{endpoint}"
+        endpoint = endpoint.lstrip('/')
+        url = f'{base_url}{endpoint}'
 
         headers = self._get_headers(request_method=method, request_url=url)
         headers = {**headers, **(extra_headers or {})}
@@ -242,14 +240,18 @@ class RestClient:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
 
-                self.logger.info(f"{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}")
+                self.logger.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
                 _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
 
                 continue  # Continue to the next iteration for a retry
 
             except (ConnectionError, ChunkedEncodingError) as e:
-                self.logger.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
-                _LOGGER.warning(f"{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}")
+                self.logger.warning(
+                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                )
+                _LOGGER.warning(
+                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                )
                 self.close()
                 if self.use_session:
                     self.make_session()  # Recreate session automatically
@@ -272,14 +274,16 @@ class RestClient:
             raise ExternalBrokerError(f'{self}: Timeout error ({self._timeout}S)', status_code=response.status_code) from e
 
         except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid JSON response: {str(e)}")
+            self.logger.error(f'Invalid JSON response: {str(e)}')
             raise ExternalBrokerError(f'{self}: API returned invalid JSON.') from e
 
         except Exception as e:
-            raise ExternalBrokerError(f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code) from e
+            raise ExternalBrokerError(
+                f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code
+            ) from e
 
     def close(self):
-        """ Closes the session to release resources."""
+        """Closes the session to release resources."""
         if hasattr(self, 'session'):
             self._session.close()
             self._session = None
@@ -297,6 +301,7 @@ class RestClient:
         """
 
         import signal
+
         existing_handler_int = signal.getsignal(signal.SIGINT)
         existing_handler_term = signal.getsignal(signal.SIGTERM)
 
@@ -322,7 +327,7 @@ class RestClient:
             signal.signal(signal.SIGTERM, _signal_handler)
         except ValueError as e:
             if str(e) == 'signal only works in main thread of the main interpreter':
-                pass # we cannot register signal, we ignore it and continue working as normal
+                pass  # we cannot register signal, we ignore it and continue working as normal
             else:
                 raise
         atexit.register(_close_handler)

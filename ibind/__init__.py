@@ -19,7 +19,7 @@ __all__ = [
     'IbkrSubscriptionProcessor',
     'SubscriptionProcessor',
     'StockQuery',
-    'make_order_request', # deprecated, remove after v0.1.14
+    'make_order_request',  # deprecated, remove after v0.1.14
     'OrderRequest',
     'QuestionType',
     'Answers',

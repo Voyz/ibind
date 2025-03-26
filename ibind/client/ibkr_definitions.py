@@ -2,6 +2,7 @@
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
 See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
 """
+
 from typing import Union
 
 snapshot_by_key = {
@@ -133,7 +134,7 @@ snapshot_by_key = {
     'server_id': 'string',
     'conid_str': 'integer_str',
     '_updated_str': 'integer_str',
-}
+}  # fmt: skip
 
 snapshot_by_id = {str(value): key for key, value in snapshot_by_key.items()}
 
@@ -149,7 +150,7 @@ def snapshot_ids_to_keys(ids: [Union[str, int]]):  # pragma: no cover
         list[str]: A list of human-readable field keys.
 
     Example:
-        >>> snapshot_ids_to_keys(["55", 6008])
+        >>> snapshot_ids_to_keys(['55', 6008])
         ["symbol", "conid"]
 
     Raises:
@@ -172,7 +173,7 @@ def snapshot_keys_to_ids(keys: [str]):  # pragma: no cover
         list[str]: A list of numeric field IDs.
 
     Example:
-        >>> snapshot_keys_to_ids(["symbol", "conid"])
+        >>> snapshot_keys_to_ids(['symbol', 'conid'])
         ["55", "6008"]
 
     Raises:
@@ -215,7 +216,7 @@ def decode_data_availability(md_availability: [str]):
         str: A human-readable description of the market data availability.
 
     Example:
-        >>> decode_data_availability(["S", "R"])
+        >>> decode_data_availability(['S', 'R'])
         "Streaming, Realtime"
 
     Raises:
@@ -224,4 +225,4 @@ def decode_data_availability(md_availability: [str]):
     See:
         - `data_availability_by_key`: Dictionary mapping availability codes to human-readable descriptions.
     """
-    return ", ".join([data_availability_by_key[c] for c in md_availability])
+    return ', '.join([data_availability_by_key[c] for c in md_availability])

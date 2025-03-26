@@ -10,6 +10,7 @@ In this example we:
 
 Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
+
 from ibind import IbkrWsKey, IbkrWsClient
 
 # Construct the client. Assumes IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
@@ -25,4 +26,3 @@ ws_client.subscribe(channel=ibkr_ws_key.channel)
 while True:
     while not ws_client.empty(ibkr_ws_key):
         print(ws_client.get(ibkr_ws_key))
-
