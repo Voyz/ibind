@@ -142,7 +142,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True,
-    ) -> Result:  # fmt: off
+    ) -> Result:  # fmt: skip
         return self.request(method='GET', endpoint=path, base_url=base_url, extra_headers=extra_headers, params=params, log=log)
 
     def post(
@@ -152,7 +152,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True
-    ) -> Result:  # fmt: off
+    ) -> Result:  # fmt: skip
         return self.request(method='POST', endpoint=path, base_url=base_url, extra_headers=extra_headers, json=params, log=log)
 
     def delete(
@@ -162,7 +162,7 @@ class RestClient:
             base_url: str = None,
             extra_headers: dict = None,
             log: bool = True
-    ) -> Result:  # fmt: off
+    ) -> Result:  # fmt: skip
         return self.request('DELETE', path, log=log, base_url=base_url, extra_headers=extra_headers, json=params)
 
     def request(
@@ -173,7 +173,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True,
             **kwargs
-    ) -> Result:  # fmt: off
+    ) -> Result:  # fmt: skip
         """
         Sends an HTTP request to the specified endpoint using the given method, with retries on timeouts.
 
@@ -207,7 +207,7 @@ class RestClient:
             extra_headers: dict = None,
             log: bool = True,
             **kwargs
-    ) -> Result:  # fmt: off
+    ) -> Result:  # fmt: skip
         """
         Wrapper function which allows overriding the default request and error handling logic in the subclass.
         """
