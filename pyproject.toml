@@ -54,6 +54,12 @@ ignore = [
     "PLW0603" # Global vars # TODO: Remove this once we have refactored the code
 ]
 
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
 
 [build-system]
 requires = [
