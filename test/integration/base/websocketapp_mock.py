@@ -1,15 +1,16 @@
 from typing import Callable, Optional
 from unittest.mock import MagicMock
 
+
 def init_wsa_mock(
-        wsa_mock: MagicMock,
-        url: str,
-        on_open: Callable = None,
-        on_message: Callable = None,
-        on_error: Callable = None,
-        on_close: Callable = None,
-        cookie:str=None,
-        header:dict=None,
+    wsa_mock: MagicMock,
+    url: str,
+    on_open: Callable = None,
+    on_message: Callable = None,
+    on_error: Callable = None,
+    on_close: Callable = None,
+    cookie: str = None,
+    header: dict = None,
 ):
     wsa_mock.url = url
     wsa_mock.cookie = cookie
@@ -35,7 +36,7 @@ def send(wsa_mock: MagicMock, message: str):
     wsa_mock._on_message(wsa_mock, message)
 
 
-def close(wsa_mock: MagicMock, status:str=None):
+def close(wsa_mock: MagicMock, status: str = None):
     wsa_mock.keep_running = False
     wsa_mock._on_close(wsa_mock, None, None)
 
@@ -43,6 +44,7 @@ def close(wsa_mock: MagicMock, status:str=None):
 def run_forever(wsa_mock: MagicMock, sslopt: dict = None, ping_interval: float = 0, ping_timeout: Optional[float] = None):
     wsa_mock.keep_running = True
     wsa_mock._on_open(wsa_mock)
+
 
 def create_wsa_mock():
     wsa_mock = MagicMock()

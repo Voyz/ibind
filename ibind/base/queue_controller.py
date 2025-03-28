@@ -4,7 +4,7 @@ from typing import TypeVar, Generic, Any
 
 from ibind.support.py_utils import ensure_list_arg, OneOrMany
 
-T = TypeVar("T", str, Enum)
+T = TypeVar('T', str, Enum)
 
 
 class QueueAccessor(Generic[T]):  # pragma: no cover
@@ -48,11 +48,11 @@ class QueueAccessor(Generic[T]):  # pragma: no cover
 
     def empty(self) -> bool:
         """
-         Checks if the queue is empty.
+        Checks if the queue is empty.
 
-         Returns:
-             bool: True if the queue is empty, False otherwise.
-         """
+        Returns:
+            bool: True if the queue is empty, False otherwise.
+        """
         return self.__queue__.empty()
 
     @property

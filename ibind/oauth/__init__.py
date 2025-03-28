@@ -56,4 +56,3 @@ class OAuthConfig(ABC):
                 raise AttributeError(f'OAuthConfig does not have attribute "{kwarg}"')
             setattr(copied, kwarg, value)
         return copied
-

@@ -48,6 +48,7 @@ class IbkrWsKey(Enum):
 
     (S) marker indicates that the channel confirms its subscription, while (U) marker indicates that it confirms its unsubscription.
     """
+
     # subscription-based
     ACCOUNT_SUMMARY = 'ACCOUNT_SUMMARY'
     ACCOUNT_LEDGER = 'ACCOUNT_LEDGER'
@@ -69,17 +70,17 @@ class IbkrWsKey(Enum):
     @classmethod
     def from_channel(cls, channel):
         """
-         Converts a solicited channel string to its corresponding IbkrWsKey enum member.
+        Converts a solicited channel string to its corresponding IbkrWsKey enum member.
 
-         Parameters:
-             channel (str): The channel string to be converted.
+        Parameters:
+            channel (str): The channel string to be converted.
 
-         Returns:
-             IbkrWsKey: The corresponding IbkrWsKey enum member.
+        Returns:
+            IbkrWsKey: The corresponding IbkrWsKey enum member.
 
-         Raises:
-             ValueError: If no enum member is associated with the provided channel.
-         """
+        Raises:
+            ValueError: If no enum member is associated with the provided channel.
+        """
         channel_to_key = {
             'sd': IbkrWsKey.ACCOUNT_SUMMARY,
             'ld': IbkrWsKey.ACCOUNT_LEDGER,
@@ -163,10 +164,10 @@ class IbkrSubscriptionProcessor(SubscriptionProcessor):
             - With data: make_subscribe_payload('md', {'foo': 'bar'}) returns "smd+{"foo": "bar"}"
             - Without data: make_subscribe_payload('md') returns "smd"
         """
-        payload = f"s{channel}"
+        payload = f's{channel}'
 
         if data is not None or data == {}:
-            payload += f"+{json.dumps(data)}"
+            payload += f'+{json.dumps(data)}'
 
         return payload
 
@@ -203,34 +204,32 @@ class IbkrWsClient(WsClient):
     """
 
     def __init__(
-            self,
-            account_id: str = var.IBIND_ACCOUNT_ID,
-            url: str = var.IBIND_WS_URL,
-            host: str = '127.0.0.1',
-            port: str = '5000',
-            base_route: str = '/v1/api/ws',
-            ibkr_client: IbkrClient = None,
-            subscription_processor_class: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
-            queue_controller_class: Type[QueueController] = QueueController[IbkrWsKey],
-            log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
-            unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
-            unwrap_market_data: bool = True,
-            start: bool = False,
-            use_oauth: bool = var.IBIND_USE_OAUTH,
-            access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
-
-            # inherited
-            ping_interval: int = var.IBIND_WS_PING_INTERVAL,
-            max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
-            timeout: float = var.IBIND_WS_TIMEOUT,
-            restart_on_close: bool = True,
-            restart_on_critical: bool = True,
-            max_connection_attempts: int = 10,
-            cacert: Union[str, bool] = var.IBIND_CACERT,
-
-            # subscription controller
-            subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
-            subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
+        self,
+        account_id: str = var.IBIND_ACCOUNT_ID,
+        url: str = var.IBIND_WS_URL,
+        host: str = '127.0.0.1',
+        port: str = '5000',
+        base_route: str = '/v1/api/ws',
+        ibkr_client: IbkrClient = None,
+        subscription_processor_class: Type[SubscriptionProcessor] = IbkrSubscriptionProcessor,
+        queue_controller_class: Type[QueueController] = QueueController[IbkrWsKey],
+        log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
+        unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
+        unwrap_market_data: bool = True,
+        start: bool = False,
+        use_oauth: bool = var.IBIND_USE_OAUTH,
+        access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
+        # inherited
+        ping_interval: int = var.IBIND_WS_PING_INTERVAL,
+        max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
+        timeout: float = var.IBIND_WS_TIMEOUT,
+        restart_on_close: bool = True,
+        restart_on_critical: bool = True,
+        max_connection_attempts: int = 10,
+        cacert: Union[str, bool] = var.IBIND_CACERT,
+        # subscription controller
+        subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
+        subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
     ) -> None:
         """
         Initializes the IbkrWsClient, an IBKR WebSocket client.
@@ -274,7 +273,9 @@ class IbkrWsClient(WsClient):
 
         if use_oauth:
             if access_token is None:
-                raise ValueError('OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.')
+                raise ValueError(
+                    'OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.'
+                )
             url += f'?oauth_token={access_token}'
 
         if ibkr_client is None:
@@ -289,7 +290,6 @@ class IbkrWsClient(WsClient):
         self._unsolicited_channels_to_be_queued = unsolicited_channels_to_be_queued if unsolicited_channels_to_be_queued is not None else []
         self._unwrap_market_data = unwrap_market_data
         self._use_oauth = use_oauth
-
 
         super().__init__(
             subscription_processor=self._subscription_processor,
@@ -427,7 +427,9 @@ class IbkrWsClient(WsClient):
 
             self.modify_subscription(f'mh+{conid}', status=False)
         else:
-            _LOGGER.warning(f'{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}')
+            _LOGGER.warning(
+                f'{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}'
+            )
 
     def _handle_message_without_topic(self, message: dict):
         if 'message' in message:
@@ -525,7 +527,9 @@ class IbkrWsClient(WsClient):
 
         diff = abs(time.time() - self._last_heartbeat / 1000)
         if diff > self._max_ping_interval:
-            _LOGGER.warning(f'{self}: Last IBKR heartbeat happened {diff:.2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.')
+            _LOGGER.warning(
+                f'{self}: Last IBKR heartbeat happened {diff:.2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.'
+            )
             self.hard_reset(restart=True)
             return False
 
@@ -562,11 +566,11 @@ class IbkrWsClient(WsClient):
         return self._queue_controller.new_queue_accessor(key)
 
     def subscribe(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = None,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = None,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
         Subscribes to a specific channel in the IBKR WebSocket.
@@ -598,11 +602,11 @@ class IbkrWsClient(WsClient):
         return super().subscribe(channel, data, needs_confirmation, subscription_processor)
 
     def unsubscribe(
-            self,
-            channel: str,
-            data: dict = None,
-            needs_confirmation: bool = None,
-            subscription_processor: SubscriptionProcessor = None,
+        self,
+        channel: str,
+        data: dict = None,
+        needs_confirmation: bool = None,
+        subscription_processor: SubscriptionProcessor = None,
     ) -> bool:  # pragma: no cover
         """
         Unsubscribes from a specified channel.

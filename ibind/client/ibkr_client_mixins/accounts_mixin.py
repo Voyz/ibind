@@ -9,7 +9,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class AccountsMixin():  # pragma: no cover
+class AccountsMixin:  # pragma: no cover
     """
     https://ibkrcampus.com/ibkr-api-page/webapi-doc/#accounts
     """
@@ -54,7 +54,7 @@ class AccountsMixin():  # pragma: no cover
         Note:
             - If the account does not have the DYNACCT property, a 503 error message is returned.
         """
-        return self.post('/iserver/dynaccount', params={"acctId": account_id})
+        return self.post('/iserver/dynaccount', params={'acctId': account_id})
 
     def signatures_and_owners(self: 'IbkrClient', account_id: str = None) -> Result:  # pragma: no cover
         """
@@ -77,7 +77,7 @@ class AccountsMixin():  # pragma: no cover
         Parameters:
             acctId (str): Identifier for the unique account to retrieve information from. Value Format: “DU1234567”.
         """
-        result = self.post('iserver/account', params={"acctId": account_id})
+        result = self.post('iserver/account', params={'acctId': account_id})
         self.account_id = account_id
         self._make_logger()
         _LOGGER.warning(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')

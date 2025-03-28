@@ -3,10 +3,10 @@ from typing import Optional
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
-from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
 from ibind.base.ws_client import WsClient
-from test_utils import RaiseLogsContext, exact_log
 from ibind.support.py_utils import tname
+from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
+from test_utils import RaiseLogsContext, exact_log
 
 
 class TestWsClient(TestCase):
@@ -34,7 +34,7 @@ class TestWsClient(TestCase):
         with patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: init_wsa_mock(self.wsa_mock, *args, **kwargs)), \
                 patch('ibind.base.ws_client.Thread', return_value=self.thread_mock) as new_thread_mock, \
                 self.assertLogs('ibind', level='DEBUG') as cm, \
-                RaiseLogsContext(self, 'ibind', level='ERROR', expected_errors=expected_errors):
+                RaiseLogsContext(self, 'ibind', level='ERROR', expected_errors=expected_errors):  # fmt: skip
             self.new_thread_mock = new_thread_mock
             rv = fn()
 
@@ -72,10 +72,10 @@ class TestWsClient(TestCase):
 
     def _logs_shutdown_success(self):
         return [
-            "WsClient: Shutting down",
-            "WsClient: on_close",
-            "WsClient: Connection closed",
-            "WsClient: Gracefully stopped",
+            'WsClient: Shutting down',
+            'WsClient: on_close',
+            'WsClient: Connection closed',
+            'WsClient: Gracefully stopped',
         ]
 
     def _logs_exception_starting(self, error_message, thread_mock):
@@ -86,7 +86,7 @@ class TestWsClient(TestCase):
             'WsClient: Hard reset, restart=False, self._wsa is None=False',
             'WsClient: Forced restart',
             'WsClient: Reconnecting',
-            f"WsClient: Thread already running: {thread_mock.name}-{thread_mock.ident}",
+            f'WsClient: Thread already running: {thread_mock.name}-{thread_mock.ident}',
             f'WsClient: Thread stopped ({tname()})',
             'WsClient: Reconnecting',
             'WsClient: Trying to connect',
@@ -109,7 +109,9 @@ class TestWsClient(TestCase):
         ]
 
     def _verify_started(self):
-        self.wsa_mock.run_forever.assert_called_with(sslopt=self.ws_client._sslopt, ping_interval=self.ws_client._ping_interval, ping_timeout=0.95 * self.ws_client._ping_interval)
+        self.wsa_mock.run_forever.assert_called_with(
+            sslopt=self.ws_client._sslopt, ping_interval=self.ws_client._ping_interval, ping_timeout=0.95 * self.ws_client._ping_interval
+        )
         self.wsa_mock._on_open.assert_called_with(self.wsa_mock)
 
     def _verify_failed_starting(self):
@@ -122,8 +124,7 @@ class TestWsClient(TestCase):
 
         self.assertTrue(success, 'Starting should succeed')
         self._verify_started()
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() + self._logs_start_success_end())
+        exact_log(self, cm, self._logs_start_success_beginning() + self._logs_start_success_end())
 
     def test_start_success_on_second_attempt(self):
         counter = [0]
@@ -142,20 +143,14 @@ class TestWsClient(TestCase):
 
         self._verify_started()
 
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() +
-                  self._logs_failed_attempt(2) +
-                  self._logs_start_success_end()
-                  )
+        exact_log(self, cm, self._logs_start_success_beginning() + self._logs_failed_attempt(2) + self._logs_start_success_end())
         self.thread_mock.join.assert_called_with(60)
         # print("\n".join([r.msg for r in cm.records]))
 
     def test_start_reattempt_failure(self):
         self.thread_mock.start.side_effect = lambda: None
 
-        expected_errors = [
-            'WsClient: New WebSocketApp connection timeout'
-        ]
+        expected_errors = ['WsClient: New WebSocketApp connection timeout']
 
         cm, success = self.run_in_test_context(self.start, expected_errors=expected_errors)
 
@@ -188,17 +183,18 @@ class TestWsClient(TestCase):
 
         self.wsa_mock.run_forever.side_effect = lambda *args, **kwargs: run_forever_exception(self.wsa_mock, *args, **kwargs)
 
-        expected_errors = [
-            f'WsClient: Unexpected error while running WebSocketApp: {self.error_message}'
-        ]
+        expected_errors = [f'WsClient: Unexpected error while running WebSocketApp: {self.error_message}']
 
         cm, success = self.run_in_test_context(run, expected_errors=expected_errors)
 
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() +
-                  self._logs_exception_starting(self.error_message, self.thread_mock) +
-                  self._logs_start_success_end() +
-                  self._logs_shutdown_success())
+        exact_log(
+            self,
+            cm,
+            self._logs_start_success_beginning()
+            + self._logs_exception_starting(self.error_message, self.thread_mock)
+            + self._logs_start_success_end()
+            + self._logs_shutdown_success(),
+        )
 
     def test_open_and_close(self):
         def run():
@@ -208,10 +204,7 @@ class TestWsClient(TestCase):
 
         cm, success = self.run_in_test_context(run)
 
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() +
-                  self._logs_start_success_end() +
-                  self._logs_shutdown_success())
+        exact_log(self, cm, self._logs_start_success_beginning() + self._logs_start_success_end() + self._logs_shutdown_success())
 
     def test_send(self):
         def run():
@@ -226,10 +219,7 @@ class TestWsClient(TestCase):
 
         self.ws_client._on_message.assert_called_once_with(self.wsa_mock, 'test')
 
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() +
-                  self._logs_start_success_end() +
-                  self._logs_shutdown_success())
+        exact_log(self, cm, self._logs_start_success_beginning() + self._logs_start_success_end() + self._logs_shutdown_success())
 
     def test_send_without_start(self):
         def run():
@@ -238,9 +228,7 @@ class TestWsClient(TestCase):
 
         self.ws_client._on_message = MagicMock()
 
-        expected_errors = [
-            'WsClient: Must be started before sending payloads'
-        ]
+        expected_errors = ['WsClient: Must be started before sending payloads']
 
         cm, success = self.run_in_test_context(run, expected_errors=expected_errors)
 
@@ -267,18 +255,19 @@ class TestWsClient(TestCase):
 
         self.ws_client._on_message = MagicMock()
 
-        expected_errors = [
-            'WsClient: Must be started before sending payloads',
-            'WsClient: Hard reset close timeout'
-        ]
+        expected_errors = ['WsClient: Must be started before sending payloads', 'WsClient: Hard reset close timeout']
 
         cm, success = self.run_in_test_context(run, expected_errors=expected_errors)
 
-        exact_log(self, cm,
-                  self._logs_start_success_beginning() +
-                  self._logs_start_success_end() +
-                  self._logs_check_health_error("162.00") +
-                  # self._logs_start_success_end() +
-                  self._logs_hard_restart_error() +
-                  self._logs_start_success_end() +
-                  self._logs_shutdown_success())
+        exact_log(
+            self,
+            cm,
+            self._logs_start_success_beginning()
+            + self._logs_start_success_end()
+            + self._logs_check_health_error('162.00')
+            +
+            # self._logs_start_success_end() +
+            self._logs_hard_restart_error()
+            + self._logs_start_success_end()
+            + self._logs_shutdown_success(),
+        )

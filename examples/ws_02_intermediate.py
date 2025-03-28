@@ -26,7 +26,7 @@ ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 ws_client.start()
 
 requests = [
-    {'channel': 'md+265598', 'data': {"fields": ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
+    {'channel': 'md+265598', 'data': {'fields': ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
     {'channel': 'or'},
     {'channel': 'tr'},
     {'channel': f'sd+{account_id}'},
