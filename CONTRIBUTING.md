@@ -99,10 +99,8 @@ Before you start contributing, please:
 
 ## Code Style
 
-- Follow PEP 8 guidelines
-- Write docstrings for all public functions and classes
-- Keep functions focused and single-purpose
-- Use meaningful variable and function names
+- You can run the format command with `make format` in the Makefile.
+- The formatting rules are defined in `pyproject.toml`
 
 ## Documentation
 
