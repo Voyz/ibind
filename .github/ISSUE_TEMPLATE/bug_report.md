@@ -1,4 +1,12 @@
-### Note:  Before making an issue, try checking out the [IBKR documentation](https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction) or [IBind Wiki](https://github.com/Voyz/ibind/wiki) first.  You may find an answer there.
+<!--- 
+
+Before creating an issue try checking out the IBKR documentation, IBind Wiki or search other existing issues, you may find an answer there:
+
+- https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1
+- https://github.com/Voyz/ibind/wiki
+- https://github.com/Voyz/ibind/issues?q=is%3Aissue%20
+
+--->
 
 ### Describe the bug
 
