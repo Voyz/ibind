@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class ScannerMixin():  # pragma: no cover
+class ScannerMixin:  # pragma: no cover
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#scanner
     """
@@ -21,13 +21,7 @@ class ScannerMixin():  # pragma: no cover
         """
         return self.get('iserver/scanner/params')
 
-    def market_scanner(
-            self: 'IbkrClient',
-            instrument: str,
-            type: str,
-            location: str,
-            filter: List[Dict[str, str]] = None
-    ) -> Result:
+    def market_scanner(self: 'IbkrClient', instrument: str, type: str, location: str, filter: List[Dict[str, str]] = None) -> Result:
         """
         Searches for contracts according to the filters specified in /iserver/scanner/params endpoint.
         Users can receive a maximum of 50 contracts from 1 request.
@@ -45,7 +39,8 @@ class ScannerMixin():  # pragma: no cover
                 'instrument': instrument,
                 'type': type,
                 'location': location,
-            }, optional={'filter': filter or []}
+            },
+            optional={'filter': filter or []},
         )
         return self.post('iserver/scanner/run', params)
 
@@ -56,13 +51,13 @@ class ScannerMixin():  # pragma: no cover
         return self.get('hmds/scanner/params')
 
     def hmds_market_scanner(
-            self: 'IbkrClient',
-            instrument: str,
-            location: str,
-            scan_code: str,
-            sec_type: str,
-            filter: List[Dict[str, str]],
-            max_items: int = None,
+        self: 'IbkrClient',
+        instrument: str,
+        location: str,
+        scan_code: str,
+        sec_type: str,
+        filter: List[Dict[str, str]],
+        max_items: int = None,
     ) -> Result:
         """
         Request a market scanner from our HMDS service.
@@ -77,14 +72,7 @@ class ScannerMixin():  # pragma: no cover
             maxItems (int, optional): Specify how many items should be returned. Default and maximum set to 250.
         """
         params = params_dict(
-            {
-                'instrument': instrument,
-                'location': location,
-                'scanCode': scan_code,
-                'secType': sec_type
-            }, optional={
-                'maxItems': max_items,
-                'filter': filter
-            }
+            {'instrument': instrument, 'location': location, 'scanCode': scan_code, 'secType': sec_type},
+            optional={'maxItems': max_items, 'filter': filter},
         )
         return self.post('hmds/scanner/run', params)

@@ -9,7 +9,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
 
 
-class ContractMixin():
+class ContractMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#contract
     """
@@ -24,7 +24,7 @@ class ContractMixin():
         Parameters:
             conids (OneOrMany[str]): One or many contract ID strings. Value Format: 1234.
         """
-        return self.get('trsrv/secdef', {'conids': ",".join(conids)})
+        return self.get('trsrv/secdef', {'conids': ','.join(conids)})
 
     def all_conids_by_exchange(self: 'IbkrClient', exchange: str) -> Result:  # pragma: no cover
         """
@@ -76,11 +76,7 @@ class ContractMixin():
         return self.get(f'iserver/contract/{conid}/info-and-rules', {'isBuy': is_buy})
 
     def algo_params_by_conid(
-            self: 'IbkrClient',
-            conid: str,
-            algos: List[str] = None,
-            add_description: str = None,
-            add_params: str = None
+        self: 'IbkrClient', conid: str, algos: List[str] = None, add_description: str = None, add_params: str = None
     ) -> Result:  # pragma: no cover
         """
         Returns supported IB Algos for contract.
@@ -91,13 +87,7 @@ class ContractMixin():
             add_description (str, optional): Whether or not to add algo descriptions to response. Set to 1 for yes, 0 for no.
             add_params (str, optional): Whether or not to show algo parameters. Set to 1 for yes, 0 for no.
         """
-        params = params_dict(
-            optional={
-                'algos': algos,
-                'addDescription': add_description,
-                'addParams': add_params
-            }, preprocessors={'algos': ';'.join}
-        )
+        params = params_dict(optional={'algos': algos, 'addDescription': add_description, 'addParams': add_params}, preprocessors={'algos': ';'.join})
 
         return self.get(f'iserver/contract/{conid}/algos', params)
 
@@ -111,12 +101,7 @@ class ContractMixin():
         """
         return self.get('iserver/secdef/bond-filters', {'symbol': symbol, 'issuerId': issuer_id})
 
-    def search_contract_by_symbol(
-            self: 'IbkrClient',
-            symbol: str,
-            name: bool = None,
-            sec_type: str = None
-    ) -> Result:  # pragma: no cover
+    def search_contract_by_symbol(self: 'IbkrClient', symbol: str, name: bool = None, sec_type: str = None) -> Result:  # pragma: no cover
         """
         Search by underlying symbol or company name. Relays back what derivative contract(s) it has. This endpoint must be called before using /secdef/info.
 
@@ -125,20 +110,17 @@ class ContractMixin():
             name (bool, optional): Determines if symbol reflects company name or ticker symbol.
             sec_type (str, optional): Valid Values: “STK”, “IND”, “BOND”. Declares underlying security type.
         """
-        params = params_dict(
-            {'symbol': symbol},
-            optional={'name': name, 'secType': sec_type}
-        )
+        params = params_dict({'symbol': symbol}, optional={'name': name, 'secType': sec_type})
 
         return self.get('iserver/secdef/search', params)
 
     def search_contract_rules(
-            self: 'IbkrClient',
-            conid: str,
-            exchange: str = None,
-            is_buy: bool = None,
-            modify_order: bool = None,
-            order_id: int = None,
+        self: 'IbkrClient',
+        conid: str,
+        exchange: str = None,
+        is_buy: bool = None,
+        modify_order: bool = None,
+        order_id: int = None,
     ) -> Result:  # pragma: no cover
         """
         Returns trading related rules for a specific contract and side.
@@ -150,27 +132,19 @@ class ContractMixin():
             modify_order (bool, optional): Used to find trading rules related to an existing order.
             order_id (int): Required for modify_order:true. Specify the order identifier used for tracking a given order.
         """
-        params = params_dict(
-            {'conid': conid},
-            optional={
-                'exchange': exchange,
-                'isBuy': is_buy,
-                'modifyOrder': modify_order,
-                'orderId': order_id
-            }
-        )
+        params = params_dict({'conid': conid}, optional={'exchange': exchange, 'isBuy': is_buy, 'modifyOrder': modify_order, 'orderId': order_id})
 
         return self.post('iserver/contract/rules', params)
 
     def search_secdef_info_by_conid(
-            self: 'IbkrClient',
-            conid: str,
-            sec_type: str,
-            month: str,
-            exchange: str = None,
-            strike: str = None,
-            right: str = None,
-            issuer_id: str = None,
+        self: 'IbkrClient',
+        conid: str,
+        sec_type: str,
+        month: str,
+        exchange: str = None,
+        strike: str = None,
+        right: str = None,
+        issuer_id: str = None,
     ) -> Result:  # pragma: no cover
         """
         Provides Contract Details of Futures, Options, Warrants, Cash and CFDs based on conid.
@@ -196,17 +170,17 @@ class ContractMixin():
                 'strike': strike,
                 'right': right,
                 'issuerId': issuer_id,
-            }
+            },
         )
 
         return self.get('iserver/secdef/info', params)
 
     def search_strikes_by_conid(
-            self: 'IbkrClient',
-            conid: str,
-            sec_type: str,
-            month: str,
-            exchange: str = None,
+        self: 'IbkrClient',
+        conid: str,
+        sec_type: str,
+        month: str,
+        exchange: str = None,
     ) -> Result:  # pragma: no cover
         """
         Query to receive a list of potential strikes supported for a given underlying.
@@ -223,7 +197,7 @@ class ContractMixin():
                 'sectype': sec_type,
                 'month': month,
             },
-            optional={'exchange': exchange}
+            optional={'exchange': exchange},
         )
 
         return self.get('iserver/secdef/strikes', params)
@@ -265,7 +239,7 @@ class ContractMixin():
         """
         symbols = query_to_symbols(queries)
 
-        stocks_result = self.get('trsrv/stocks', params={"symbols": symbols})
+        stocks_result = self.get('trsrv/stocks', params={'symbols': symbols})
 
         if default_filtering is None:
             default_filtering = self.default_filtering
@@ -304,13 +278,14 @@ class ContractMixin():
         stocks_result = self.security_stocks_by_symbol(queries, default_filtering)
 
         conids = {}
-        for i, (symbol, instruments), in enumerate(stocks_result.data.items()):
-            if len(instruments) != 1 or len(instruments[0]["contracts"]) != 1:
+        for i, (symbol, instruments), in enumerate(stocks_result.data.items()):  # fmt: skip
+            if len(instruments) != 1 or len(instruments[0]['contracts']) != 1:
                 raise RuntimeError(
-                    f'Filtering stock "{symbol}" returned {len(instruments)} instruments and {len(instruments[0]["contracts"]) if len(instruments) else 0} contracts using following query: {queries[i]}.\nPlease use filters to ensure that only one instrument and one contract per symbol is selected in order to avoid conid ambiguity.\nBe aware that contracts are filtered as {{"isUS": True}} by default. Set default_filtering=False to prevent this default filtering or specify custom filters. See inline documentation for more details.\nInstruments returned:\n{pprint.pformat(instruments)}')
+                    f'Filtering stock "{symbol}" returned {len(instruments)} instruments and {len(instruments[0]["contracts"]) if len(instruments) else 0} contracts using following query: {queries[i]}.\nPlease use filters to ensure that only one instrument and one contract per symbol is selected in order to avoid conid ambiguity.\nBe aware that contracts are filtered as {{"isUS": True}} by default. Set default_filtering=False to prevent this default filtering or specify custom filters. See inline documentation for more details.\nInstruments returned:\n{pprint.pformat(instruments)}'
+                )
 
             # this should always be a valid expression, otherwise the above exception will have raised
-            conid = instruments[0]["contracts"][0]["conid"]
+            conid = instruments[0]['contracts'][0]['conid']
             conids[symbol] = conid
 
         if return_type == 'list':  # pragma: no cover
@@ -319,11 +294,11 @@ class ContractMixin():
         return pass_result(conids, stocks_result)
 
     def trading_schedule_by_symbol(
-            self: 'IbkrClient',
-            asset_class: str,
-            symbol: str,
-            exchange: str = None,
-            exchange_filter: str = None,
+        self: 'IbkrClient',
+        asset_class: str,
+        symbol: str,
+        exchange: str = None,
+        exchange_filter: str = None,
     ) -> Result:  # pragma: no cover
         """
         Returns the trading schedule up to a month for the requested contract.
@@ -334,9 +309,6 @@ class ContractMixin():
             exchange (str, optional): Specify the primary exchange of your contract.
             exchange_filter (str, optional): Specify all exchanges you want to retrieve data from.
         """
-        params = params_dict(
-            {'assetClass': asset_class, 'symbol': symbol},
-            optional={'exchange': exchange, 'exchangeFilter': exchange_filter}
-        )
+        params = params_dict({'assetClass': asset_class, 'symbol': symbol}, optional={'exchange': exchange, 'exchangeFilter': exchange_filter})
 
         return self.get('trsrv/secdef/schedule', params)

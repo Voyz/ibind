@@ -10,6 +10,7 @@ In this example we:
 
 Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
+
 import os
 import time
 
@@ -39,7 +40,9 @@ print('\n\n#### One symbol ####')
 print(f'{history}')
 
 st = time.time()
-history_sync = client.marketdata_history_by_symbols(['AAPL', 'MSFT', 'GOOG', 'TSLA', 'AMZN'], period='1d', bar='1d', outside_rth=True, run_in_parallel=False)
+history_sync = client.marketdata_history_by_symbols(
+    ['AAPL', 'MSFT', 'GOOG', 'TSLA', 'AMZN'], period='1d', bar='1d', outside_rth=True, run_in_parallel=False
+)
 diff_five_symbols_sync = time.time() - st
 print('\n\n#### Five symbols synchronous ####')
 print(f'{history_sync}')
@@ -53,7 +56,12 @@ print(f'{history}')
 
 time.sleep(5)
 st = time.time()
-history = client.marketdata_history_by_symbols(['AAPL', 'MSFT', 'GOOG', 'TSLA', 'AMZN', 'ADBE', 'AMD', 'COIN', 'META', 'DIS', 'BAC', 'XOM', 'KO', 'WMT', 'V'], period='1d', bar='1d', outside_rth=True)
+history = client.marketdata_history_by_symbols(
+    ['AAPL', 'MSFT', 'GOOG', 'TSLA', 'AMZN', 'ADBE', 'AMD', 'COIN', 'META', 'DIS', 'BAC', 'XOM', 'KO', 'WMT', 'V'],
+    period='1d',
+    bar='1d',
+    outside_rth=True,
+)
 diff_fifteen_symbols = time.time() - st
 print('\n\n#### Fifteen symbols ####')
 print(f'{history}')

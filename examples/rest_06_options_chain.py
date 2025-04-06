@@ -41,22 +41,13 @@ options['months'] = options['months'].split(';')
 options['exchange'] = options['exchange'].split(';')
 
 print('\n#### search for strikes ####')
-strikes = client.search_strikes_by_conid(
-    conid=spx_contract['conid'],
-    sec_type='OPT',
-    month=options['months'][0]
-).data
+strikes = client.search_strikes_by_conid(conid=spx_contract['conid'], sec_type='OPT', month=options['months'][0]).data
 print(str(strikes).replace("'put'", "\n'put'"))
-
 
 
 print('\n#### validate contract ####')
 info = client.search_secdef_info_by_conid(
-    conid=spx_contract['conid'],
-    sec_type='OPT',
-    month=options['months'][0],
-    strike=strikes['call'][0],
-    right='C'
+    conid=spx_contract['conid'], sec_type='OPT', month=options['months'][0], strike=strikes['call'][0], right='C'
 ).data
 
 print_table(info)

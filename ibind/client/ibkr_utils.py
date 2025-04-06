@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 @dataclass
-class StockQuery():
+class StockQuery:
     """
     A class to encapsulate query parameters for filtering stock data.
 
@@ -33,6 +33,7 @@ class StockQuery():
         contract_conditions (Optional[dict], optional): Key-value pairs representing conditions to apply to
             stock contracts. Each condition is matched exactly against the contract's attributes.
     """
+
     symbol: str
     name_match: Optional[str] = field(default=None)
     instrument_conditions: Optional[dict] = field(default=None)
@@ -51,10 +52,10 @@ def _filter(data: dict, conditions: dict) -> bool:
 
 
 def process_instruments(
-        instruments: dict,
-        name_match: str = None,
-        instrument_conditions: dict = None,
-        contract_conditions: dict = None,
+    instruments: dict,
+    name_match: str = None,
+    instrument_conditions: dict = None,
+    contract_conditions: dict = None,
 ) -> [dict]:
     """
     Filters a list of instruments based on specified name matching and conditions.
@@ -88,7 +89,7 @@ def process_instruments(
             filtered_contracts = list(
                 filter(
                     lambda x: _filter(x, contract_conditions),
-                    instrument["contracts"],
+                    instrument['contracts'],
                 )
             )
 
@@ -115,12 +116,7 @@ def filter_stocks(queries: StockQueries, result: Result, default_filtering: bool
             _LOGGER.error(f'Error getting stocks. Could not find valid instruments {symbol} in result: {result}. Skipping query={q}.')
             continue
 
-        filtered_instruments = process_instruments(
-            data[symbol],
-            name_match,
-            instrument_conditions,
-            contract_conditions
-        )
+        filtered_instruments = process_instruments(data[symbol], name_match, instrument_conditions, contract_conditions)
 
         stocks[symbol] = filtered_instruments
 
@@ -128,7 +124,7 @@ def filter_stocks(queries: StockQueries, result: Result, default_filtering: bool
 
 
 def query_to_symbols(queries):
-    return ",".join([q if isinstance(q, str) else q.symbol for q in queries])
+    return ','.join([q if isinstance(q, str) else q.symbol for q in queries])
 
 
 def process_query(q, default_filtering: bool = True):
@@ -153,10 +149,15 @@ class QuestionType(VerboseEnum):
 
     This enum class represents different types of precautionary messages that may be returned by IBKR's API when placing an order. These warnings often require user confirmation before proceeding.
     """
+
     PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
     ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
-    MISSING_MARKET_DATA = 'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
-    STOP_ORDER_RISKS = 'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
+    MISSING_MARKET_DATA = (
+        'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
+    )
+    STOP_ORDER_RISKS = (
+        'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
+    )
 
 
 Answers = Dict[Union[QuestionType, str], bool]
@@ -242,10 +243,10 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
         data = result.data
 
         if 'error' in data:
-            order_tag = original_result.request["json"]["orders"][0].get("cOID")
-            error_match = f'Order couldn\'t be submitted: Local order ID={order_tag} is already registered.'
+            order_tag = original_result.request['json']['orders'][0].get('cOID')
+            error_match = f"Order couldn't be submitted: Local order ID={order_tag} is already registered."
             if error_match in data['error']:
-                raise ExternalBrokerError(f'Order couldn\'t be submitted. Order with order_tag/cOID {order_tag!r} is already registered.')
+                raise ExternalBrokerError(f"Order couldn't be submitted. Order with order_tag/cOID {order_tag!r} is already registered.")
 
             raise ExternalBrokerError(f'While handling questions an error was returned: {pprint.pformat(data)}')
 
@@ -277,7 +278,9 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
             # the result to a reply will either contain another question or a confirmation
             result = reply_callback(first_data['id'], True)
         else:
-            raise RuntimeError(f'A question was not given a positive reply. Question: "{question}". Answers: \n{pprint.pformat(answers)}\n. Request: {result.request}')
+            raise RuntimeError(
+                f'A question was not given a positive reply. Question: "{question}". Answers: \n{pprint.pformat(answers)}\n. Request: {result.request}'
+            )
 
     raise RuntimeError(f'Too many questions: {original_result}: {questions}')
 
@@ -317,37 +320,37 @@ class OrderRequest:
     is_close: Optional[bool] = field(default=None)
 
     def to_dict(self) -> dict:
-        """ Convert dataclass to a dictionary, excluding None values. """
+        """Convert dataclass to a dictionary, excluding None values."""
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name) is not None}
 
 
 _ORDER_REQUEST_MAPPING = {
-    'conid': "conid",
-    'side': "side",
-    'quantity': "quantity",
-    'order_type': "orderType",
-    'price': "price",
-    'coid': "cOID",
-    'acct_id': "acctId",
-    'conidex': "conidex",
-    'sec_type': "secType",
-    'parent_id': "parentId",
-    'listing_exchange': "listingExchange",
-    'is_single_group': "isSingleGroup",
-    'outside_rth': "outsideRTH",
-    'aux_price': "auxPrice",
-    'ticker': "ticker",
-    'tif': "tif",
-    'trailing_amt': "trailingAmt",
-    'trailing_type': "trailingType",
-    'referrer': "referrer",
-    'cash_qty': "cashQty",
-    'fx_qty': "fxQty",
-    'use_adaptive': "useAdaptive",
-    'is_ccy_conv': "isCcyConv",
-    'allocation_method': "allocationMethod",
-    'strategy': "strategy",
-    'strategy_parameters': "strategyParameters",
+    'conid': 'conid',
+    'side': 'side',
+    'quantity': 'quantity',
+    'order_type': 'orderType',
+    'price': 'price',
+    'coid': 'cOID',
+    'acct_id': 'acctId',
+    'conidex': 'conidex',
+    'sec_type': 'secType',
+    'parent_id': 'parentId',
+    'listing_exchange': 'listingExchange',
+    'is_single_group': 'isSingleGroup',
+    'outside_rth': 'outsideRTH',
+    'aux_price': 'auxPrice',
+    'ticker': 'ticker',
+    'tif': 'tif',
+    'trailing_amt': 'trailingAmt',
+    'trailing_type': 'trailingType',
+    'referrer': 'referrer',
+    'cash_qty': 'cashQty',
+    'fx_qty': 'fxQty',
+    'use_adaptive': 'useAdaptive',
+    'is_ccy_conv': 'isCcyConv',
+    'allocation_method': 'allocationMethod',
+    'strategy': 'strategy',
+    'strategy_parameters': 'strategyParameters',
     'is_close': 'isClose',
 }
 
@@ -360,41 +363,37 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
         _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         return order_request
     else:
-        return {
-            mapping[k]: v for k, v in order_request.to_dict().items() if v is not None
-        }
+        return {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None}
 
 
 def make_order_request(
-        conid: Union[int, str],
-        side: str,
-        quantity: float,
-        order_type: str,
-        acct_id: str,
-
-        # optional
-        price: float = None,
-        conidex: str = None,
-        sec_type: str = None,
-        coid: str = None,
-        parent_id: str = None,
-        listing_exchange: str = None,
-        is_single_group: bool = None,
-        outside_rth: bool = None,
-        aux_price: float = None,
-        ticker: str = None,
-        tif: str = 'GTC',
-        trailing_amt: float = None,
-        trailing_type: str = None,
-        referrer: str = None,
-        cash_qty: float = None,
-        fx_qty: float = None,
-        use_adaptive: bool = None,
-        is_ccy_conv: bool = None,
-        allocation_method: str = None,
-        strategy: str = None,
-        strategy_parameters=None,
-
+    conid: Union[int, str],
+    side: str,
+    quantity: float,
+    order_type: str,
+    acct_id: str,
+    # optional
+    price: float = None,
+    conidex: str = None,
+    sec_type: str = None,
+    coid: str = None,
+    parent_id: str = None,
+    listing_exchange: str = None,
+    is_single_group: bool = None,
+    outside_rth: bool = None,
+    aux_price: float = None,
+    ticker: str = None,
+    tif: str = 'GTC',
+    trailing_amt: float = None,
+    trailing_type: str = None,
+    referrer: str = None,
+    cash_qty: float = None,
+    fx_qty: float = None,
+    use_adaptive: bool = None,
+    is_ccy_conv: bool = None,
+    allocation_method: str = None,
+    strategy: str = None,
+    strategy_parameters=None,
 ):  # pragma: no cover
     """
      Create an order request object. Arguments set as None will not be included.
@@ -427,90 +426,90 @@ def make_order_request(
         allocation_method (str, Optional): Allocation method for FA account orders.
         strategy (str, Optional): IB Algo algorithm to use for the order.
         strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
-     """
+    """
     warn("'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.", DeprecationWarning, stacklevel=2)
 
     order_request = {}
 
     if conid is not None:
-        order_request["conid"] = int(conid)
+        order_request['conid'] = int(conid)
 
     if side is not None:
-        order_request["side"] = str(side)
+        order_request['side'] = str(side)
 
     if quantity is not None:
-        order_request["quantity"] = int(quantity)
+        order_request['quantity'] = int(quantity)
 
     if order_type is not None:
-        order_request["orderType"] = str(order_type)
+        order_request['orderType'] = str(order_type)
 
     if price is not None:
-        order_request["price"] = price
+        order_request['price'] = price
 
     if coid is not None:
-        order_request["cOID"] = coid
+        order_request['cOID'] = coid
 
     # optional
 
     if acct_id is not None:
-        order_request["acctId"] = acct_id
+        order_request['acctId'] = acct_id
 
     if conidex is not None:
-        order_request["conidex"] = conidex
+        order_request['conidex'] = conidex
 
     if sec_type is not None:
-        order_request["secType"] = sec_type
+        order_request['secType'] = sec_type
 
     if parent_id is not None:
-        order_request["parentId"] = parent_id
+        order_request['parentId'] = parent_id
 
     if listing_exchange is not None:
-        order_request["listingExchange"] = listing_exchange
+        order_request['listingExchange'] = listing_exchange
 
     if is_single_group is not None:
-        order_request["isSingleGroup"] = is_single_group
+        order_request['isSingleGroup'] = is_single_group
 
     if outside_rth is not None:
-        order_request["outsideRTH"] = outside_rth
+        order_request['outsideRTH'] = outside_rth
 
     if aux_price is not None:
-        order_request["auxPrice"] = aux_price
+        order_request['auxPrice'] = aux_price
 
     if ticker is not None:
-        order_request["ticker"] = ticker
+        order_request['ticker'] = ticker
 
     if tif is not None:
-        order_request["tif"] = tif
+        order_request['tif'] = tif
 
     if trailing_amt is not None:
-        order_request["trailingAmt"] = trailing_amt
+        order_request['trailingAmt'] = trailing_amt
 
     if trailing_type is not None:
-        order_request["trailingType"] = trailing_type
+        order_request['trailingType'] = trailing_type
 
     if referrer is not None:
-        order_request["referrer"] = referrer
+        order_request['referrer'] = referrer
 
     if cash_qty is not None:
-        order_request["cashQty"] = cash_qty
+        order_request['cashQty'] = cash_qty
 
     if fx_qty is not None:
-        order_request["fxQty"] = fx_qty
+        order_request['fxQty'] = fx_qty
 
     if use_adaptive is not None:
-        order_request["useAdaptive"] = use_adaptive
+        order_request['useAdaptive'] = use_adaptive
 
     if is_ccy_conv is not None:
-        order_request["isCcyConv"] = is_ccy_conv
+        order_request['isCcyConv'] = is_ccy_conv
 
     if allocation_method is not None:
-        order_request["allocationMethod"] = allocation_method
+        order_request['allocationMethod'] = allocation_method
 
     if strategy is not None:
-        order_request["strategy"] = strategy
+        order_request['strategy'] = strategy
 
     if strategy_parameters is not None:
-        order_request["strategyParameters"] = strategy_parameters
+        order_request['strategyParameters'] = strategy_parameters
 
     return order_request
 
@@ -519,7 +518,9 @@ def date_from_ibkr(d: str) -> datetime.datetime:
     try:
         return datetime.datetime(int(d[:4]), int(d[4:6]), int(d[6:8]), int(d[8:10]), int(d[10:12]), int(d[12:14]))
     except ValueError:
-        raise ValueError(f'Date seems to be missing fields: year={d[0:4]}, month={d[4:6]}, day={d[6:8]}, hour={d[8:10]}, minute={d[10:12]}, second={d[12:14]}')
+        raise ValueError(
+            f'Date seems to be missing fields: year={d[0:4]}, month={d[4:6]}, day={d[6:8]}, hour={d[8:10]}, minute={d[10:12]}, second={d[12:14]}'
+        )
 
 
 def extract_conid(data):
@@ -534,22 +535,22 @@ def extract_conid(data):
     return None
 
 
-class Tickler():
+class Tickler:
     """
-       Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
+    Utility class used for maintaining the OAuth connection alive by repeatedly calling the `tickle` method.
 
-       The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
-       the session from expiring. This is essential for keeping the OAuth session active.
-       """
+    The Tickler runs in a separate thread and periodically sends requests to the IBKR API to prevent
+    the session from expiring. This is essential for keeping the OAuth session active.
+    """
 
     def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
         """
-       Initializes the Tickler instance.
+        Initializes the Tickler instance.
 
-       Parameters:
-           client (IbkrClient): The client instance with a `tickle` method that maintains the session.
-           interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
-       """
+        Parameters:
+            client (IbkrClient): The client instance with a `tickle` method that maintains the session.
+            interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
+        """
         self._client = client
         self._interval = interval
         self._stop_event = threading.Event()
@@ -602,8 +603,8 @@ class Tickler():
 
 
 def cleanup_market_history_responses(
-        market_history_response: Dict[str, Union[Exception, Result]],
-        raise_on_error: bool = False,
+    market_history_response: Dict[str, Union[Exception, Result]],
+    raise_on_error: bool = False,
 ):
     """
     Processes and cleans up market history responses, converting raw data into structured records.
@@ -645,7 +646,7 @@ def cleanup_market_history_responses(
         >>> market_history_responses = {
         ...     symbol: client.marketdata_history_by_conid(**request)
         ...     for symbol, request in requests.items()
-        ... }
+        ... }  # fmt: skip
         >>> results = cleanup_market_history_responses(market_history_responses)
         {
             "AAPL": [
@@ -672,13 +673,15 @@ def cleanup_market_history_responses(
         data = entry.data['data']
         records = []
         for record in data:
-            records.append({
-                "open": record['o'],
-                "high": record['h'],
-                "low": record['l'],
-                "close": record['c'],
-                "volume": record['v'],
-                "date": datetime.datetime.fromtimestamp(record['t'] / 1000)
-            })
+            records.append(
+                {
+                    'open': record['o'],
+                    'high': record['h'],
+                    'low': record['l'],
+                    'close': record['c'],
+                    'volume': record['v'],
+                    'date': datetime.datetime.fromtimestamp(record['t'] / 1000),
+                }
+            )
         results[symbol] = records
     return results

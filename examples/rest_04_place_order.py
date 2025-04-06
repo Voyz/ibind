@@ -10,6 +10,7 @@ In this example we:
 
 Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 """
+
 import datetime
 import os
 from unittest.mock import patch, MagicMock
@@ -20,7 +21,7 @@ from ibind.client.ibkr_utils import OrderRequest
 ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
-cacert = os.getenv('IBIND_CACERT', False) # insert your cacert path here
+cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 client = IbkrClient(cacert=cacert)
 
 conid = '265598'
@@ -29,25 +30,18 @@ size = 1
 order_type = 'MKT'
 order_tag = f'my_order-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}'
 
-order_request = OrderRequest(
-    conid=conid,
-    side=side,
-    quantity=size,
-    order_type=order_type,
-    acct_id=account_id,
-    coid=order_tag
-)
+order_request = OrderRequest(conid=conid, side=side, quantity=size, order_type=order_type, acct_id=account_id, coid=order_tag)
 
 answers = {
     QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True,
     QuestionType.ORDER_VALUE_LIMIT: True,
-    "Unforeseen new question": True,
+    'Unforeseen new question': True,
 }
 
 mocked_responses = [
     [{'id': 0, 'message': ['price exceeds the Percentage constraint of 3%.']}],
     [{'id': 1, 'message': ['exceeds the Total Value Limit of']}],
-    [{'success': True}]
+    [{'success': True}],
 ]
 
 print('#### submit_order ####')

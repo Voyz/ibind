@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class PortfolioMixin():  # pragma: no cover
+class PortfolioMixin:  # pragma: no cover
     """
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#portfolio
     * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
@@ -68,13 +68,13 @@ class PortfolioMixin():  # pragma: no cover
         return self.get('portfolio/allocation', params=params)
 
     def positions(
-            self: 'IbkrClient',
-            account_id: str = None,
-            page: int = 0,
-            model: str = None,
-            sort: str = None,
-            direction: str = None,
-            period: str = None,
+        self: 'IbkrClient',
+        account_id: str = None,
+        page: int = 0,
+        model: str = None,
+        sort: str = None,
+        direction: str = None,
+        period: str = None,
     ) -> Result:
         """
         Returns a list of positions for the given account. The endpoint supports paging, each page will return up to 100 positions.
@@ -102,11 +102,11 @@ class PortfolioMixin():  # pragma: no cover
         return self.get(f'portfolio/{account_id}/positions/{page}', params)
 
     def positions2(
-            self: 'IbkrClient',
-            account_id: str = None,
-            model: str = None,
-            sort: str = None,
-            direction: str = None,
+        self: 'IbkrClient',
+        account_id: str = None,
+        model: str = None,
+        sort: str = None,
+        direction: str = None,
     ) -> Result:
         """
         Returns a list of positions for the given account.
@@ -198,13 +198,7 @@ class PortfolioMixin():  # pragma: no cover
         return self.post('pa/performance', {'acctIds': account_ids, 'period': period})
 
     @ensure_list_arg('account_ids', 'conids')
-    def transaction_history(
-            self: 'IbkrClient',
-            account_ids: OneOrMany[str],
-            conids: OneOrMany[str],
-            currency: str,
-            days: str = None
-    ) -> Result:
+    def transaction_history(self: 'IbkrClient', account_ids: OneOrMany[str], conids: OneOrMany[str], currency: str, days: str = None) -> Result:
         """
         Transaction history for a given number of conids and accounts. Types of transactions include dividend payments, buy and sell transactions, transfers.
 
@@ -219,6 +213,7 @@ class PortfolioMixin():  # pragma: no cover
                 'acctIds': account_ids,
                 'conids': conids,
                 'currency': currency,
-            }, optional={'days': days}
+            },
+            optional={'days': days},
         )
         return self.post('pa/transactions', params)

@@ -12,7 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class SessionMixin():
+class SessionMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
     """
@@ -83,7 +83,9 @@ class SessionMixin():
             if isinstance(e, ExternalBrokerError) and e.status_code == 401:
                 _LOGGER.info('Gateway session is not authenticated.')
             elif isinstance(e, ConnectTimeout):
-                _LOGGER.error('ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.')
+                _LOGGER.error(
+                    'ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.'
+                )
             else:
                 _LOGGER.error(f'Tickle request failed: {e}')
             return False
