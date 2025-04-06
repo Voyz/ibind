@@ -284,7 +284,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
 @dataclass
 class OrderRequest:
-    conid: Union[int, str]
+    conid: int
     side: str
     quantity: float
     order_type: str
