@@ -101,6 +101,10 @@ Before you start contributing, please:
 
 - You can run the format command with `make format` in the Makefile.
 - The formatting rules are defined in `pyproject.toml`
+- Follow PEP 8 guidelines
+- Write docstrings for all public functions and classes
+- Keep functions focused and single-purpose
+- Use meaningful variable and function names
 
 ## Documentation
 
@@ -111,7 +115,9 @@ Before you start contributing, please:
 
 ## Release Process
 
-- TBD
+- IBind is distributed through Pypi.
+- Semantic Versioning 2.0.0 is used.
+- Minor changes are published directly as new releases. Otherwise one or many release candidate versions are published (eg. `rc1`, `rc2`, etc.) and made available for a period of time in order to test the new functionalities.
 
 ## Questions?
 
