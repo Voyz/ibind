@@ -1,3 +1,12 @@
+---
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: bug
+assignees: ''
+
+---
+
 <!--- 
 
 Before creating an issue try checking out the IBKR documentation, IBind Wiki or search other existing issues, you may find an answer there:
