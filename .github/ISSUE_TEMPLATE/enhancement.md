@@ -1,3 +1,12 @@
+---
+name: Enhancement
+about: Suggest a feature or an enhancement.
+title: ''
+labels: enhancement
+assignees: ''
+
+---
+
 ### Describe Enhancement
 <!--- A detailed description of the change or addition you are proposing -->
 
