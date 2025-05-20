@@ -139,3 +139,41 @@ IBIND_OAUTH1A_DH_GENERATOR = int(os.getenv('IBIND_OAUTH1A_DH_GENERATOR', 2))
 
 IBIND_OAUTH1A_REALM = os.getenv('IBIND_OAUTH1A_REALM', 'limited_poa')
 """ OAuth 1.0a connection type. This is generally set to "limited_poa", however should be set to "test_realm" when using the TESTCONS consumer key. """
+
+##### OAuth 2.0 #####
+
+IBIND_OAUTH2_CLIENT_ID = os.getenv('IBIND_OAUTH2_CLIENT_ID', None)
+""" OAuth 2.0 Client ID. """
+
+IBIND_OAUTH2_CLIENT_KEY_ID = os.getenv('IBIND_OAUTH2_CLIENT_KEY_ID', None)
+""" OAuth 2.0 Client Key ID. """
+
+IBIND_OAUTH2_TOKEN_URL = os.getenv('IBIND_OAUTH2_TOKEN_URL', None) # Defaults to 'https://api.ibkr.com/oauth2/api/v1/token' in OAuth2Config if None
+""" OAuth 2.0 Token Endpoint URL. """
+
+IBIND_OAUTH2_SSO_SESSION_URL = os.getenv('IBIND_OAUTH2_SSO_SESSION_URL', None) # Defaults to 'https://api.ibkr.com/gw/api/v1/sso-sessions' in OAuth2Config if None
+""" OAuth 2.0 SSO Session Endpoint URL. """
+
+IBIND_OAUTH2_AUDIENCE = os.getenv('IBIND_OAUTH2_AUDIENCE', None) # Defaults to '/token' in OAuth2Config if None
+""" OAuth 2.0 Audience for JWT. """
+
+IBIND_OAUTH2_SCOPE = os.getenv('IBIND_OAUTH2_SCOPE', None) # Defaults to 'sso-sessions.write' in OAuth2Config if None
+""" OAuth 2.0 Scope. """
+
+IBIND_OAUTH2_REST_URL = os.getenv('IBIND_OAUTH2_REST_URL', None)
+""" IBKR REST API Base URL when using OAuth 2.0. Defaults to IBIND_REST_URL or https://api.ibkr.com/v1/api/ in OAuth2Config. """
+
+IBIND_OAUTH2_WS_URL = os.getenv('IBIND_OAUTH2_WS_URL', None)
+""" IBKR WebSocket API URL when using OAuth 2.0. Defaults to IBIND_WS_URL or wss://api.ibkr.com/v1/api/ws in OAuth2Config. """
+
+IBIND_OAUTH2_IP_ADDRESS = os.getenv('IBIND_OAUTH2_IP_ADDRESS', None)
+""" Pre-configured IP address for OAuth 2.0. If None, it will be auto-fetched. """
+
+IBIND_OAUTH2_PRIVATE_KEY_PEM = os.getenv('IBIND_OAUTH2_PRIVATE_KEY_PEM')
+""" OAuth 2.0 Private Key PEM string. This should contain the actual multi-line PEM content. """
+
+IBIND_OAUTH2_PRIVATE_KEY_PATH = os.getenv('IBIND_OAUTH2_PRIVATE_KEY_PATH')
+""" Path to the OAuth 2.0 Private Key PEM file. If provided and IBIND_OAUTH2_PRIVATE_KEY_PEM is not set, the key will be loaded from this file. """
+
+IBIND_OAUTH2_USERNAME = os.getenv('IBIND_OAUTH2_USERNAME')
+""" IBKR Username for OAuth 2.0 'credential' claim. """
