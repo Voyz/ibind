@@ -1,6 +1,6 @@
 # Combined imports
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from ibind import var
 from ibind.oauth import OAuthConfig # For OAuth2Config parent
 import base64
@@ -14,8 +14,13 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from ibind.support.logs import project_logger
 import logging
+from ibind.support.errors import ExternalBrokerError # Ensure this is imported
 
 _LOGGER = project_logger(__file__)
+
+# Forward declaration for type hint if IbkrClient is not fully imported
+if TYPE_CHECKING:
+    from ibind.client.ibkr_client import IbkrClient
 
 # OAuth2Config class definition
 @dataclass
@@ -99,18 +104,16 @@ class OAuth2Handler:
     Handles the OAuth 2.0 authentication flow with Interactive Brokers.
     Adapted from an earlier proof-of-concept script (e.g., a standalone IBOAuthAuthenticator).
     """
-    def __init__(self, config: OAuth2Config, private_key_pem: str, username: str, ip_address: str):
-        self.config = config
-        self.username = username
-        self.ip_address = ip_address
-        if not private_key_pem:
-            raise ValueError("Private key PEM cannot be empty.")
+    def __init__(self, client: 'IbkrClient'):
+        self.client = client
+        if not self.client.oauth_config.private_key_pem:
+            raise ValueError("Private key PEM cannot be empty (accessed via client.oauth_config).")
         try:
-            self.jwt_private_key = RSA.import_key(private_key_pem.replace('\\n', '\n'))
+            self.jwt_private_key = RSA.import_key(
+                self.client.oauth_config.private_key_pem.replace('\\\\n', '\\n')
+            )
         except Exception as e:
             raise ValueError(f"Failed to import private key: {e}")
-        self.session = requests.Session()
-        self.session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
 
     def _base64_encode(self, val: bytes) -> str:
         return base64.b64encode(val).decode().replace('+', '-').replace('/', '_').rstrip('=')
@@ -132,21 +135,21 @@ class OAuth2Handler:
         header = {
             'alg': 'RS256',
             'typ': 'JWT',
-            'kid': self.config.client_key_id
+            'kid': self.client.oauth_config.client_key_id
         }
-        if url_for_assertion == self.config.token_url:
+        if url_for_assertion == self.client.oauth_config.token_url:
             claims = {
-                'iss': self.config.client_id,
-                'sub': self.config.client_id,
-                'aud': self.config.audience,
+                'iss': self.client.oauth_config.client_id,
+                'sub': self.client.oauth_config.client_id,
+                'aud': self.client.oauth_config.audience,
                 'exp': now + 60,
                 'iat': now - 10
             }
-        elif url_for_assertion == self.config.sso_session_url:
+        elif url_for_assertion == self.client.oauth_config.sso_session_url:
             claims = {
-                'ip': self.ip_address,
-                'credential': self.username,
-                'iss': self.config.client_id,
+                'ip': self.client.oauth_config.ip_address,
+                'credential': self.client.oauth_config.username,
+                'iss': self.client.oauth_config.client_id,
                 'exp': now + 86400,
                 'iat': now
             }
@@ -185,49 +188,49 @@ class OAuth2Handler:
 
     def get_access_token(self) -> Optional[str]:
         """Gets an OAuth 2.0 access token."""
-        url = self.config.token_url
+        url = self.client.oauth_config.token_url
         client_assertion = self._compute_client_assertion(url)
         form_data = {
             'grant_type': 'client_credentials',
-            'scope': self.config.scope,
-            'client_id': self.config.client_id,
+            'scope': self.client.oauth_config.scope,
+            'client_id': self.client.oauth_config.client_id,
             'client_assertion_type': 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
             'client_assertion': client_assertion
         }
         headers = {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
         }
 
         _LOGGER.debug(f"Requesting OAuth 2.0 Access Token from {url}")
         if _LOGGER.isEnabledFor(logging.DEBUG):
-            _LOGGER.debug(f"Access Token Request Headers: {headers}")
-            _LOGGER.debug(f"Access Token Request Form Data: {pprint.pformat(form_data)}")
+            _LOGGER.debug(f"Access Token Request Headers (to be passed to client._request): {headers}")
+            _LOGGER.debug(f"Access Token Request Form Data (to be passed to client._request): {pprint.pformat(form_data)}")
 
         try:
-            resp = self.session.post(url, headers=headers, data=form_data, timeout=10)
-            _LOGGER.debug(f"Access Token Response Status: {resp.status_code}")
-            if _LOGGER.isEnabledFor(logging.DEBUG):
-                 _LOGGER.debug(f"Access Token Response Headers: {resp.headers}")
-                 _LOGGER.debug(f"Access Token Response Content: {self._pretty_request_response(resp)}")
-            resp.raise_for_status()
-            token_data = resp.json()
+            result = self.client._request(
+                method='POST',
+                endpoint=url,
+                base_url='',
+                extra_headers=headers,
+                data=form_data
+            )
+            if not result or not isinstance(result.data, dict):
+                _LOGGER.error(f"Failed to obtain OAuth 2.0 Access Token. Result: {result.data if result and hasattr(result, 'data') else 'Result object missing or data attribute missing'}")
+                return None
+
+            token_data = result.data
             access_token = token_data.get('access_token')
             if not access_token:
                 _LOGGER.error(f"access_token not found in response: {token_data}")
                 return None
             _LOGGER.info("Successfully obtained OAuth 2.0 Access Token.")
             return access_token
-        except requests.exceptions.HTTPError as e:
-            _LOGGER.error(f"HTTP error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {e.response.text if e.response else 'N/A'}")
-            return None
-        except requests.exceptions.RequestException as e:
-            _LOGGER.error(f"Request exception obtaining OAuth 2.0 Access Token: {e}")
-            return None
-        except json.JSONDecodeError as e:
-            _LOGGER.error(f"JSON decode error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+        except ExternalBrokerError as e:
+            _LOGGER.error(f"HTTP error obtaining OAuth 2.0 Access Token via client._request: {e}")
             return None
         except Exception as e:
-            _LOGGER.error(f"Unexpected error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+            _LOGGER.error(f"Unexpected error obtaining OAuth 2.0 Access Token via client._request: {e}", exc_info=True)
             return None
 
     def get_sso_bearer_token(self, access_token: str) -> Optional[str]:
@@ -236,7 +239,7 @@ class OAuth2Handler:
             _LOGGER.error("Cannot get SSO bearer token without an access token.")
             return None
 
-        url = self.config.sso_session_url
+        url = self.client.oauth_config.sso_session_url
         signed_request_assertion_jwt = self._compute_client_assertion(url)
 
         headers = {
@@ -247,34 +250,33 @@ class OAuth2Handler:
 
         _LOGGER.debug(f"Requesting SSO Bearer Token from {url}")
         if _LOGGER.isEnabledFor(logging.DEBUG):
-            _LOGGER.debug(f"SSO Bearer Token Request Headers: {headers}")
-            _LOGGER.debug(f"SSO Bearer Token Request Body (JWT Assertion): {signed_request_assertion_jwt[:100]}...")
+            _LOGGER.debug(f"SSO Bearer Token Request Headers (to be passed to client._request): {headers}")
+            _LOGGER.debug(f"SSO Bearer Token Request Body (JWT Assertion, to be passed to client._request): {signed_request_assertion_jwt[:100]}...")
 
         try:
-            resp = self.session.post(url, headers=headers, data=signed_request_assertion_jwt, timeout=10)
-            _LOGGER.debug(f"SSO Bearer Token Response Status: {resp.status_code}")
-            if _LOGGER.isEnabledFor(logging.DEBUG):
-                _LOGGER.debug(f"SSO Bearer Token Response Headers: {resp.headers}")
-                _LOGGER.debug(f"SSO Bearer Token Response Content: {self._pretty_request_response(resp)}")
-            resp.raise_for_status()
-            sso_data = resp.json()
+            result = self.client._request(
+                method='POST',
+                endpoint=url,
+                base_url='',
+                extra_headers=headers,
+                data=signed_request_assertion_jwt
+            )
+            if not result or not isinstance(result.data, dict):
+                _LOGGER.error(f"Failed to obtain SSO Bearer Token. Result: {result.data if result and hasattr(result, 'data') else 'Result object missing or data attribute missing'}")
+                return None
+
+            sso_data = result.data
             sso_bearer_token = sso_data.get('access_token')
             if not sso_bearer_token:
                 _LOGGER.error(f"SSO Bearer Token ('access_token') not found in response: {sso_data}")
                 return None
             _LOGGER.info("Successfully obtained SSO Bearer Token.")
             return sso_bearer_token
-        except requests.exceptions.HTTPError as e:
-            _LOGGER.error(f"HTTP error obtaining SSO Bearer Token: {e}\nResponse content: {e.response.text if e.response else 'N/A'}")
-            return None
-        except requests.exceptions.RequestException as e:
-            _LOGGER.error(f"Request exception obtaining SSO Bearer Token: {e}")
-            return None
-        except json.JSONDecodeError as e:
-            _LOGGER.error(f"JSON decode error obtaining SSO Bearer Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+        except ExternalBrokerError as e:
+            _LOGGER.error(f"HTTP error obtaining SSO Bearer Token via client._request: {e}")
             return None
         except Exception as e:
-            _LOGGER.error(f"Unexpected error obtaining SSO Bearer Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+            _LOGGER.error(f"Unexpected error obtaining SSO Bearer Token via client._request: {e}", exc_info=True)
             return None
 
     def authenticate(self) -> Optional[str]:
@@ -287,17 +289,18 @@ class OAuth2Handler:
         if not sso_bearer_token:
             _LOGGER.error("Authentication failed: Could not retrieve SSO bearer token.")
             return None
-        self.config.access_token = access_token
-        self.config.sso_bearer_token = sso_bearer_token
-        _LOGGER.info("OAuth 2.0 authentication successful. Tokens stored in config.")
-        _LOGGER.debug(f"OAuth 2.0 Authentication successful. SSO Token: {self.config.sso_bearer_token[:20]}... (truncated)")
+        self.client.oauth_config.access_token = access_token
+        self.client.oauth_config.sso_bearer_token = sso_bearer_token
+        _LOGGER.info("OAuth 2.0 authentication successful. Tokens stored in client.oauth_config.")
+        _LOGGER.debug(f"OAuth 2.0 Authentication successful. SSO Token: {self.client.oauth_config.sso_bearer_token[:20]}... (truncated)")
         return sso_bearer_token
 
-def authenticate_oauth2(config: OAuth2Config) -> Optional[str]:
+def authenticate_oauth2(client: 'IbkrClient') -> Optional[str]:
     """Main function to authenticate using OAuth 2.0 and return the SSO Bearer Token."""
+    config = client.oauth_config
     _LOGGER.info(f"Starting OAuth 2.0 authentication for client_id: {config.client_id}, username: {config.username}")
 
-    config.verify_config() # Ensure basic config is present
+    config.verify_config()
 
     if not config.ip_address:
         _LOGGER.info("IP address not configured, attempting to fetch public IP.")
@@ -309,35 +312,86 @@ def authenticate_oauth2(config: OAuth2Config) -> Optional[str]:
     else:
         _LOGGER.info(f"Using pre-configured IP address: {config.ip_address}")
 
-    # Ensure private_key_pem is loaded if path was provided (OAuth2Config now handles this in __post_init__)
-    # However, an explicit check here adds robustness if __post_init__ logic changes or fails silently.
     if not config.private_key_pem:
-        # Check if path was available and __post_init__ should have loaded it
-        if var.IBIND_OAUTH2_PRIVATE_KEY_PATH: # Check original env var for path
+        if var.IBIND_OAUTH2_PRIVATE_KEY_PATH:
              _LOGGER.error(f"private_key_pem is not set, but IBIND_OAUTH2_PRIVATE_KEY_PATH ({var.IBIND_OAUTH2_PRIVATE_KEY_PATH}) was. This suggests a load failure from path in OAuth2Config.__post_init__.")
         else:
             _LOGGER.error("private_key_pem is not set and no private key path was configured via IBIND_OAUTH2_PRIVATE_KEY_PATH. Cannot proceed.")
         return None
 
     try:
-        handler = OAuth2Handler(
-            config=config,
-            private_key_pem=config.private_key_pem,
-            username=config.username,
-            ip_address=config.ip_address
-        )
+        handler = OAuth2Handler(client=client)
         sso_token = handler.authenticate()
         if sso_token:
-            config.sso_bearer_token = sso_token # Store on the config object for client use
-            _LOGGER.info("OAuth 2.0 Authentication successful. SSO Token obtained and stored.")
+            _LOGGER.info("OAuth 2.0 Authentication successful. SSO Token obtained and stored in client.oauth_config.")
             return sso_token
         else:
-            # More detailed logging if authenticate() returns None
             _LOGGER.error("OAuth 2.0 Authentication failed: handler.authenticate() returned None. Check OAuth2Handler logs for more details (e.g., issues in get_access_token or get_sso_bearer_token).")
             return None
     except ValueError as e:
-        _LOGGER.error(f"OAuth 2.0 authentication failed due to ValueError: {e}", exc_info=True) # Added exc_info
+        _LOGGER.error(f"OAuth 2.0 authentication failed due to ValueError: {e}", exc_info=True)
         return None
     except Exception as e:
-        _LOGGER.error(f"An unexpected error occurred during OAuth 2.0 authentication process: {e}", exc_info=True) # Added exc_info
+        _LOGGER.error(f"An unexpected error occurred during OAuth 2.0 authentication process: {e}", exc_info=True)
         return None
+
+def establish_oauth2_brokerage_session(client: 'IbkrClient') -> None:
+    """
+    Establishes the brokerage session for an OAuth 2.0 authenticated client.
+
+    This involves validating the SSO session and then initializing the brokerage session.
+    """
+    _LOGGER.debug(f"{client}: OAuth 2.0: Attempting to establish brokerage session (/sso/validate and initialize).")
+
+    try:
+        validation_result = client.validate()
+        _LOGGER.debug(f"{client}: /sso/validate result: {validation_result.data if validation_result else 'No result'}")
+
+        sso_is_valid = False
+        if validation_result and hasattr(validation_result, 'data') and isinstance(validation_result.data, dict):
+            if validation_result.data.get('RESULT') is True:
+                sso_is_valid = True
+                _LOGGER.debug(f"{client}: /sso/validate deemed successful based on 'RESULT': True.")
+            elif validation_result.data.get('authenticated') is True:  # Fallback check
+                sso_is_valid = True
+                _LOGGER.debug(f"{client}: /sso/validate deemed successful based on 'authenticated': True.")
+
+        if not sso_is_valid:
+            _LOGGER.warning(
+                f"{client}: /sso/validate did not indicate a clear success. "
+                f"Cannot proceed with brokerage session initialization. "
+                f"Validation data: {validation_result.data if validation_result else 'No result'}"
+            )
+            return
+
+        _LOGGER.debug(f"{client}: /sso/validate successful. Now attempting to initialize brokerage session.")
+        try:
+            _LOGGER.debug(f"{client}: Calling initialize_brokerage_session(compete=True).")
+            init_result = client.initialize_brokerage_session(compete=True)
+            _LOGGER.debug(f"{client}: initialize_brokerage_session(compete=True) result: {init_result.data if init_result else 'No result'}")
+
+            auth_status_after_init = client.authentication_status()
+            _LOGGER.debug(f"{client}: /iserver/auth/status (after compete=True init): {auth_status_after_init.data if auth_status_after_init else 'No result'}")
+            if not (auth_status_after_init and auth_status_after_init.data and auth_status_after_init.data.get('authenticated')):
+                _LOGGER.warning(f"{client}: Still not authenticated after compete=True init.")
+
+        except ExternalBrokerError as e_init_compete_true:
+            _LOGGER.error(f"{client}: initialize_brokerage_session(compete=True) failed: {e_init_compete_true}")
+            if e_init_compete_true.status_code == 500 and "failed to generate sso dh token" in str(e_init_compete_true):
+                _LOGGER.warning(f"{client}: Retrying initialize_brokerage_session with compete=False due to DH token error.")
+                try:
+                    init_result_false = client.initialize_brokerage_session(compete=False)
+                    _LOGGER.debug(f"{client}: initialize_brokerage_session(compete=False) result: {init_result_false.data if init_result_false else 'No result'}")
+
+                    auth_status_after_init_false = client.authentication_status()
+                    _LOGGER.debug(f"{client}: /iserver/auth/status (after compete=False init): {auth_status_after_init_false.data if auth_status_after_init_false else 'No result'}")
+                    if not (auth_status_after_init_false and auth_status_after_init_false.data and auth_status_after_init_false.data.get('authenticated')):
+                        _LOGGER.warning(f"{client}: Still not authenticated after compete=False init.")
+                except Exception as e_init_compete_false:
+                    _LOGGER.error(f"{client}: initialize_brokerage_session(compete=False) also failed: {e_init_compete_false}")
+            # else: other error from compete=True, not the DH token one. We just log it above.
+        except Exception as e_init_generic:
+            _LOGGER.error(f"{client}: A generic error occurred during initialize_brokerage_session(compete=True): {e_init_generic}")
+
+    except Exception as e_validate_sequence:
+        _LOGGER.error(f"{client}: Error during /sso/validate or subsequent brokerage session initialization sequence: {e_validate_sequence}")

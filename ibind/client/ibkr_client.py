@@ -20,7 +20,7 @@ from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 # OAuth specific imports moved to global scope
 from ibind.oauth import OAuthConfig
 from ibind.oauth.oauth1a import OAuth1aConfig, generate_oauth_headers, req_live_session_token
-from ibind.oauth.oauth2 import OAuth2Config, authenticate_oauth2
+from ibind.oauth.oauth2 import OAuth2Config, authenticate_oauth2, establish_oauth2_brokerage_session
 
 _LOGGER = project_logger(__file__)
 
@@ -272,61 +272,13 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         # OAuth types and authenticate_oauth2 are now globally imported
 
         if isinstance(self.oauth_config, OAuth2Config):
-            sso_token = authenticate_oauth2(self.oauth_config) # Removed client=self
+            sso_token = authenticate_oauth2(self) # Pass self (the client instance)
             if not sso_token:
                 raise ExternalBrokerError("Failed to obtain OAuth 2.0 SSO Bearer Token during oauth_init")
 
             if init_brokerage_session:
-                _LOGGER.debug(f"{self}: OAuth 2.0 init_brokerage_session is True. Attempting /sso/validate.")
-                try:
-                    validation_result = self.validate()
-                    _LOGGER.debug(f"{self}: /sso/validate result: {validation_result.data if validation_result else 'No result'}")
-
-                    sso_is_valid = False
-                    if validation_result and hasattr(validation_result, 'data') and isinstance(validation_result.data, dict):
-                        if validation_result.data.get('RESULT') is True:
-                            sso_is_valid = True
-                            _LOGGER.debug(f"{self}: /sso/validate deemed successful based on 'RESULT': True.")
-                        elif validation_result.data.get('authenticated') is True: # Fallback check
-                            sso_is_valid = True
-                            _LOGGER.debug(f"{self}: /sso/validate deemed successful based on 'authenticated': True.")
-
-                    if sso_is_valid:
-                        _LOGGER.debug(f"{self}: /sso/validate successful. Now attempting to establish brokerage session.")
-                        try:
-                            # Attempt to initialize brokerage session
-                            _LOGGER.debug(f"{self}: Calling initialize_brokerage_session(compete=True).")
-                            init_result = self.initialize_brokerage_session(compete=True)
-                            _LOGGER.debug(f"{self}: initialize_brokerage_session(compete=True) result: {init_result.data if init_result else 'No result'}")
-
-                            # Check auth status immediately after successful init
-                            auth_status_after_init = self.authentication_status()
-                            _LOGGER.debug(f"{self}: /iserver/auth/status (after compete=True init): {auth_status_after_init.data if auth_status_after_init else 'No result'}")
-                            if not (auth_status_after_init and auth_status_after_init.data and auth_status_after_init.data.get('authenticated')):
-                                _LOGGER.warning(f"{self}: Still not authenticated after compete=True init.")
-
-                        except ExternalBrokerError as e_init_compete_true:
-                            _LOGGER.error(f"{self}: initialize_brokerage_session(compete=True) failed: {e_init_compete_true}")
-                            if e_init_compete_true.status_code == 500 and "failed to generate sso dh token" in str(e_init_compete_true):
-                                _LOGGER.warning(f"{self}: Retrying initialize_brokerage_session with compete=False.")
-                                try:
-                                    init_result_false = self.initialize_brokerage_session(compete=False)
-                                    _LOGGER.debug(f"{self}: initialize_brokerage_session(compete=False) result: {init_result_false.data if init_result_false else 'No result'}")
-
-                                    auth_status_after_init_false = self.authentication_status()
-                                    _LOGGER.debug(f"{self}: /iserver/auth/status (after compete=False init): {auth_status_after_init_false.data if auth_status_after_init_false else 'No result'}")
-                                    if not (auth_status_after_init_false and auth_status_after_init_false.data and auth_status_after_init_false.data.get('authenticated')):
-                                        _LOGGER.warning(f"{self}: Still not authenticated after compete=False init.")
-
-                                except Exception as e_init_compete_false:
-                                    _LOGGER.error(f"{self}: initialize_brokerage_session(compete=False) also failed: {e_init_compete_false}")
-                            # else: other error from compete=True, not the DH token one.
-                        except Exception as e_init_generic:
-                            _LOGGER.error(f"{self}: A generic error occurred during initialize_brokerage_session(compete=True): {e_init_generic}")
-                    else:
-                        _LOGGER.warning(f"{self}: /sso/validate did not indicate a clear success. Cannot proceed with brokerage session initialization. Validation data: {validation_result.data if validation_result else 'No result'}")
-                except Exception as e_validate_sequence:
-                    _LOGGER.error(f"{self}: Error during /sso/validate or subsequent brokerage session initialization sequence: {e_validate_sequence}")
+                establish_oauth2_brokerage_session(self) # Call the new function
+            # Removed the large block of session init logic here
 
             if maintain_oauth:
                 _LOGGER.info(f"{self}: Starting tickler for OAuth 2.0.")
