@@ -29,6 +29,8 @@ def to_bool(value):
     return bool(strtobool(str(value)))
 
 
+# TODO: we could load .env vars here if dotenv is importable
+
 ##### GENERAL #####
 
 IBIND_USE_SESSION = to_bool(os.environ.get('IBIND_USE_SESSION', True))
