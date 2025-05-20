@@ -165,10 +165,13 @@ IBIND_OAUTH2_WS_URL = os.getenv('IBIND_OAUTH2_WS_URL', None)
 """ IBKR WebSocket API URL when using OAuth 2.0. Defaults to IBIND_WS_URL or wss://api.ibkr.com/v1/api/ws in OAuth2Config. """
 
 IBIND_OAUTH2_IP_ADDRESS = os.getenv('IBIND_OAUTH2_IP_ADDRESS', None)
-""" Optional: Pre-configured IP address for OAuth 2.0. If None, it will be auto-fetched. """
+""" Pre-configured IP address for OAuth 2.0. If None, it will be auto-fetched. """
 
 IBIND_OAUTH2_PRIVATE_KEY_PEM = os.getenv('IBIND_OAUTH2_PRIVATE_KEY_PEM')
 """ OAuth 2.0 Private Key PEM string. This should contain the actual multi-line PEM content. """
+
+IBIND_OAUTH2_PRIVATE_KEY_PATH = os.getenv('IBIND_OAUTH2_PRIVATE_KEY_PATH')
+""" Path to the OAuth 2.0 Private Key PEM file. If provided and IBIND_OAUTH2_PRIVATE_KEY_PEM is not set, the key will be loaded from this file. """
 
 IBIND_OAUTH2_USERNAME = os.getenv('IBIND_OAUTH2_USERNAME')
 """ IBKR Username for OAuth 2.0 'credential' claim. """

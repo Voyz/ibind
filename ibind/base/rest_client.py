@@ -211,58 +211,62 @@ class RestClient:
         """
         Wrapper function which allows overriding the default request and error handling logic in the subclass.
         """
+        request_params = filter_none(kwargs)
+        attempt = 1
+        while attempt <= self._max_retries:
+            current_base_url = base_url if base_url is not None else self.base_url
+            request_url = f'{current_base_url}{endpoint.lstrip("/")}'
 
-        base_url = base_url if base_url is not None else self.base_url
+            all_headers = self._get_headers(method, request_url) # Get base headers from subclass
+            if extra_headers:
+                all_headers.update(extra_headers) # Add/override with any specific extra_headers
 
-        endpoint = endpoint.lstrip('/')
-        url = f'{base_url}{endpoint}'
-
-        headers = self._get_headers(request_method=method, request_url=url)
-        headers = {**headers, **(extra_headers or {})}
-
-        # we want to allow default values used by IBKR, so we remove all None parameters
-        kwargs = filter_none(kwargs)
-
-        # choose which function should be used to make a reqeust based on use_session field
-        request_function = self._session.request if self.use_session else requests.request
-
-        # we repeat the request attempts in case of ReadTimeouts up to max_retries
-        for attempt in range(self._max_retries + 1):
             if log:
-                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
+                self.logger.info(f'Attempt {attempt}: {method} {request_url} Headers: {all_headers} Kwargs: {request_params}')
+
+            result = Result(request={
+                'method': method,
+                'url': request_url,
+                'headers': all_headers,
+                'params': request_params
+            })
 
             try:
-                response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
-                result = Result(request={'url': url, **kwargs})
-                return self._process_response(response, result)
-
-            except ReadTimeout as e:
-                if attempt >= self._max_retries:
-                    raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
-
-                self.logger.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
-                _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
-
-                continue  # Continue to the next iteration for a retry
-
-            except (ConnectionError, ChunkedEncodingError) as e:
-                self.logger.warning(
-                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
-                )
-                _LOGGER.warning(
-                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
-                )
-                self.close()
                 if self.use_session:
-                    self.make_session()  # Recreate session automatically
-                continue  # Retry the request with a fresh session
-
-            except ExternalBrokerError:
-                raise
-
+                    response = self._session.request(
+                        method,
+                        request_url,
+                        headers=all_headers,
+                        timeout=self._timeout,
+                        verify=self.cacert,
+                        **request_params
+                    )
+                else:
+                    response = requests.request(
+                        method,
+                        request_url,
+                        headers=all_headers,
+                        timeout=self._timeout,
+                        verify=self.cacert,
+                        **request_params
+                    )
+                return self._process_response(response, result)
+            except (ReadTimeout, Timeout) as e:
+                self.logger.warning(f'Attempt {attempt} timed out for {method} {request_url}: {e}')
+                if attempt == self._max_retries:
+                    raise TimeoutError(f'{self}: Max retries reached for {method} {request_url}') from e
+                attempt += 1
+            except ChunkedEncodingError as e:
+                # Treat ChunkedEncodingError similar to a timeout for retry purposes
+                self.logger.warning(f'Attempt {attempt} failed with ChunkedEncodingError for {method} {request_url}: {e}')
+                if attempt == self._max_retries:
+                    raise ExternalBrokerError(f'{self}: Max retries reached for {method} {request_url} after ChunkedEncodingError') from e
+                attempt += 1
             except Exception as e:
-                self.logger.exception(e)
-                raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
+                self.logger.error(f'{self}: Request {method} {request_url} failed: {e}')
+                raise ExternalBrokerError(f'{self}: Request {method} {request_url} failed') from e
+        # This line should not be reached if logic is correct, but as a fallback:
+        raise ExternalBrokerError(f'{self}: Request {method} {request_url} failed after {self._max_retries} retries without specific exception.')
 
     def _process_response(self, response, result: Result) -> Result:
         try:

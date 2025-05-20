@@ -1,6 +1,7 @@
+from __future__ import annotations
 import importlib.util
 import os
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 from ibind import var
 from ibind.base.rest_client import RestClient, Result
@@ -16,9 +17,9 @@ from ibind.client.ibkr_utils import Tickler
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 
-# OAuth specific imports
-from ibind.oauth import OAuthConfig # Base class
-from ibind.oauth.oauth1a import OAuth1aConfig
+# OAuth specific imports moved to global scope
+from ibind.oauth import OAuthConfig
+from ibind.oauth.oauth1a import OAuth1aConfig, generate_oauth_headers, req_live_session_token
 from ibind.oauth.oauth2 import OAuth2Config, authenticate_oauth2
 
 _LOGGER = project_logger(__file__)
@@ -54,7 +55,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         use_session: bool = var.IBIND_USE_SESSION,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         use_oauth: bool = var.IBIND_USE_OAUTH,
-        oauth_config: Union[OAuthConfig, OAuth1aConfig, OAuth2Config] = None, # Updated typing
+        oauth_config: Optional[Union[OAuthConfig, OAuth1aConfig, OAuth2Config]] = None,
     ) -> None:
         """
         Parameters:
@@ -74,7 +75,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
-            oauth_config (Union[OAuthConfig, OAuth1aConfig, OAuth2Config], optional): The configuration for OAuth. 
+            oauth_config (Optional[Union['OAuthConfig', 'OAuth1aConfig', 'OAuth2Config']], optional): The configuration for OAuth. 
                                                                                  If use_oauth is True and oauth_config is None, 
                                                                                  OAuth1aConfig or OAuth2Config might be instantiated by default 
                                                                                  based on further logic or environment variables.
@@ -83,29 +84,47 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self._use_oauth = use_oauth
         self.oauth_config = oauth_config
         self.account_id = account_id # Set account_id early for logger
+        self._tickler_thread_is_running = False # Initialize tickler state
 
-        # Determine URL and cacert based on OAuth status first
+        user_provided_url = url 
+
+        if self.oauth_config is None:
+            raise ValueError(
+                "use_oauth is True but no oauth_config was provided. "
+                "Please provide an instance of OAuth1aConfig or OAuth2Config."
+            )
+
         if self._use_oauth:
-            if self.oauth_config is None:
-                _LOGGER.warning("use_oauth is True but no oauth_config provided. Defaulting to OAuth1aConfig. Specify oauth_config for OAuth 2.0.")
-                self.oauth_config = OAuth1aConfig()
+            # OAuth1aConfig and OAuth2Config are globally imported
+            determined_url = None
+            oauth_config_url = None
 
             if isinstance(self.oauth_config, OAuth2Config):
-                url = self.oauth_config.oauth_rest_url
+                oauth_config_url = self.oauth_config.oauth_rest_url
             elif isinstance(self.oauth_config, OAuth1aConfig):
-                url = url if url is not None and self.oauth_config.oauth_rest_url is None else self.oauth_config.oauth_rest_url
+                oauth_config_url = self.oauth_config.oauth_rest_url
             else:
-                raise ValueError("Unsupported oauth_config type provided.")
-            effective_cacert = True # For OAuth, SSL verification is typically required
-        else:
-            if url is None:
+                raise ValueError("Unsupported oauth_config type provided for URL determination.")
+
+            if user_provided_url is not var.IBIND_REST_URL:
+                determined_url = user_provided_url
+            elif oauth_config_url is not None:
+                determined_url = oauth_config_url
+            else:
+                determined_url = user_provided_url
+            
+            url = determined_url 
+            effective_cacert = True 
+        else: 
+            if user_provided_url is var.IBIND_REST_URL and var.IBIND_REST_URL is None:
                  url = f'https://{host}:{port}{base_route}'
+            else: 
+                 url = user_provided_url
             effective_cacert = cacert
 
-        if url is None: # Should only happen if OAuth was true but config didn't provide a URL
+        if url is None: 
              raise ValueError("URL could not be determined. Ensure oauth_config provides a suitable oauth_rest_url if use_oauth is True, or provide a url directly.")
 
-        # Call super().__init__ early to initialize _headers and other base attributes
         super().__init__(
             url=url,
             cacert=effective_cacert,
@@ -115,21 +134,14 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             auto_register_shutdown=auto_register_shutdown,
         )
 
-        # Defensive initialization of _headers.
-        # RestClient.__init__ is expected to initialize self._headers.
-        # If it's missing or None, initialize it here to prevent downstream errors.
         if not hasattr(self, '_headers') or self._headers is None:
-            log_msg = "_headers attribute was not initialized (or was None) by RestClient.__init__(). Initializing to an empty dict in IbkrClient."
-            # self.logger is expected to be initialized by super().__init__ via self._make_logger()
-            # and is used in subsequent lines.
+            log_msg = "_headers attribute was not initialized (or was None) prior to this check. Initializing to an empty dict in IbkrClient."
             if hasattr(self, 'logger') and self.logger:
                 self.logger.warning(log_msg)
             else:
-                # Fallback to module-level logger if self.logger is unexpectedly unavailable.
                 _LOGGER.warning(f"IbkrClient __init__: {log_msg} (using module logger as self.logger might be unavailable).")
             self._headers = {}
 
-        # Now that super().__init__ has run, _headers exists and other initializations can proceed.
         self.logger.info('#################')
         self.logger.info(
             f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth}, oauth_version={self.oauth_config.version() if self.oauth_config else None})'
@@ -159,36 +171,50 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
     def _get_headers(self, request_method: str, request_url: str):
         headers = self._headers.copy() # Start with base session headers
 
-        if self._use_oauth:
-            if isinstance(self.oauth_config, OAuth2Config):
-                # For OAuth 2.0, use session headers and add/overwrite Authorization and User-Agent
-                if hasattr(self.oauth_config, 'sso_bearer_token') and self.oauth_config.sso_bearer_token:
-                    headers["Authorization"] = f"Bearer {self.oauth_config.sso_bearer_token}"
-                    headers["User-Agent"] = "python/3.11" # Ensure User-Agent is consistently set
-                else:
-                    _LOGGER.error("OAuth 2.0 is configured, but SSO bearer token is missing when trying to set headers.")
-                    # If token is missing, remove Authorization if it was somehow in base headers from a previous (failed) state.
-                    headers.pop("Authorization", None)
-                return headers # Return session headers modified for OAuth 2.0
-            elif isinstance(self.oauth_config, OAuth1aConfig):
-                # OAuth 1.0a: No custom headers for the live_session_token endpoint itself
-                if request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
-                    # For this specific OAuth1a endpoint, we might not want other default headers either.
-                    # However, the original logic returned {} which means no headers.
-                    # For now, let's stick to returning just the OAuth1a generated ones, or none if it's this specific URL.
-                    return {} # Return empty dict for this specific OAuth1a call, as before
+        if not self._use_oauth or not self.oauth_config:
+            if not self._use_oauth:
+                return headers # Not using OAuth, return base headers
+            if not self.oauth_config:
+                 _LOGGER.error(f"{self}: _use_oauth is True but oauth_config is not set in _get_headers. Returning base headers.")
+                 return headers
 
-                # For other OAuth 1.0a requests, generate necessary headers
-                from ibind.oauth.oauth1a import generate_oauth_headers
-                # OAuth1a headers are usually exclusive or replace existing ones for the signing process.
-                # The generate_oauth_headers function likely creates all necessary headers from scratch.
-                return generate_oauth_headers(
+        # OAuth types are now globally imported, no local imports needed here
+
+        processed_oauth_header = False # Flag to track if an OAuth type was handled
+
+        if isinstance(self.oauth_config, OAuth2Config):
+            processed_oauth_header = True
+            oauth_flow_urls = [
+                self.oauth_config.token_url,
+                self.oauth_config.sso_session_url
+            ]
+            if request_url in oauth_flow_urls:
+                _LOGGER.debug(f"Request URL {request_url} is an OAuth 2.0 flow URL. Skipping Bearer token addition.")
+            elif self.oauth_config.has_sso_bearer_token():
+                headers['Authorization'] = f'Bearer {self.oauth_config.sso_bearer_token}'
+            else:
+                _LOGGER.error(f"OAuth 2.0 configured for {request_url}, but SSO bearer token is missing.")
+        
+        if isinstance(self.oauth_config, OAuth1aConfig):
+            processed_oauth_header = True
+            live_session_token_full_url = f'{self.base_url.rstrip('/')}/{self.oauth_config.live_session_token_endpoint.lstrip('/')}'
+            if request_url == live_session_token_full_url:
+                _LOGGER.debug(f"Request URL {request_url} is OAuth 1.0a live_session_token_endpoint. Returning empty headers.")
+                return {} 
+            else:
+                _LOGGER.debug(f"Generating OAuth 1.0a headers for {request_url}")
+                oauth1_headers = generate_oauth_headers(
                     oauth_config=self.oauth_config,
                     request_method=request_method,
                     request_url=request_url,
-                    live_session_token=self.live_session_token
+                    live_session_token=getattr(self, 'live_session_token', None)
                 )
-        return headers # Return the (potentially modified) headers
+                headers.update(oauth1_headers)
+
+        if self._use_oauth and not processed_oauth_header:
+             _LOGGER.warning(f"{self}: _use_oauth is True but oauth_config type was not recognized as OAuth1aConfig or OAuth2Config. Type: {type(self.oauth_config)}. Returning base headers.")
+            
+        return headers
 
     def generate_live_session_token(self):
         """
@@ -205,7 +231,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         if not isinstance(self.oauth_config, OAuth1aConfig):
             _LOGGER.error("generate_live_session_token is only for OAuth 1.0a")
             return
-        from ibind.oauth.oauth1a import req_live_session_token
+        # req_live_session_token is now globally imported
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(
             self, self.oauth_config
         )
@@ -243,37 +269,39 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         _LOGGER.info(f'{self}: Initialising OAuth {self.oauth_config.version()}')
 
+        # OAuth types and authenticate_oauth2 are now globally imported
+
         if isinstance(self.oauth_config, OAuth2Config):
-            sso_token = authenticate_oauth2(self.oauth_config) # This populates self.oauth_config.sso_bearer_token
+            sso_token = authenticate_oauth2(self.oauth_config) # Removed client=self
             if not sso_token:
                 raise ExternalBrokerError("Failed to obtain OAuth 2.0 SSO Bearer Token during oauth_init")
 
             if init_brokerage_session:
-                _LOGGER.info(f"{self}: OAuth 2.0 init_brokerage_session is True. Attempting /sso/validate.")
+                _LOGGER.debug(f"{self}: OAuth 2.0 init_brokerage_session is True. Attempting /sso/validate.")
                 try:
                     validation_result = self.validate()
-                    _LOGGER.info(f"{self}: /sso/validate result: {validation_result.data if validation_result else 'No result'}")
+                    _LOGGER.debug(f"{self}: /sso/validate result: {validation_result.data if validation_result else 'No result'}")
 
                     sso_is_valid = False
                     if validation_result and hasattr(validation_result, 'data') and isinstance(validation_result.data, dict):
                         if validation_result.data.get('RESULT') is True:
                             sso_is_valid = True
-                            _LOGGER.info(f"{self}: /sso/validate deemed successful based on 'RESULT': True.")
+                            _LOGGER.debug(f"{self}: /sso/validate deemed successful based on 'RESULT': True.")
                         elif validation_result.data.get('authenticated') is True: # Fallback check
                             sso_is_valid = True
-                            _LOGGER.info(f"{self}: /sso/validate deemed successful based on 'authenticated': True.")
+                            _LOGGER.debug(f"{self}: /sso/validate deemed successful based on 'authenticated': True.")
 
                     if sso_is_valid:
-                        _LOGGER.info(f"{self}: /sso/validate successful. Now attempting to establish brokerage session.")
+                        _LOGGER.debug(f"{self}: /sso/validate successful. Now attempting to establish brokerage session.")
                         try:
                             # Attempt to initialize brokerage session
-                            _LOGGER.info(f"{self}: Calling initialize_brokerage_session(compete=True).")
+                            _LOGGER.debug(f"{self}: Calling initialize_brokerage_session(compete=True).")
                             init_result = self.initialize_brokerage_session(compete=True)
-                            _LOGGER.info(f"{self}: initialize_brokerage_session(compete=True) result: {init_result.data if init_result else 'No result'}")
+                            _LOGGER.debug(f"{self}: initialize_brokerage_session(compete=True) result: {init_result.data if init_result else 'No result'}")
 
                             # Check auth status immediately after successful init
                             auth_status_after_init = self.authentication_status()
-                            _LOGGER.info(f"{self}: /iserver/auth/status (after compete=True init): {auth_status_after_init.data if auth_status_after_init else 'No result'}")
+                            _LOGGER.debug(f"{self}: /iserver/auth/status (after compete=True init): {auth_status_after_init.data if auth_status_after_init else 'No result'}")
                             if not (auth_status_after_init and auth_status_after_init.data and auth_status_after_init.data.get('authenticated')):
                                 _LOGGER.warning(f"{self}: Still not authenticated after compete=True init.")
 
@@ -283,10 +311,10 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                                 _LOGGER.warning(f"{self}: Retrying initialize_brokerage_session with compete=False.")
                                 try:
                                     init_result_false = self.initialize_brokerage_session(compete=False)
-                                    _LOGGER.info(f"{self}: initialize_brokerage_session(compete=False) result: {init_result_false.data if init_result_false else 'No result'}")
+                                    _LOGGER.debug(f"{self}: initialize_brokerage_session(compete=False) result: {init_result_false.data if init_result_false else 'No result'}")
 
                                     auth_status_after_init_false = self.authentication_status()
-                                    _LOGGER.info(f"{self}: /iserver/auth/status (after compete=False init): {auth_status_after_init_false.data if auth_status_after_init_false else 'No result'}")
+                                    _LOGGER.debug(f"{self}: /iserver/auth/status (after compete=False init): {auth_status_after_init_false.data if auth_status_after_init_false else 'No result'}")
                                     if not (auth_status_after_init_false and auth_status_after_init_false.data and auth_status_after_init_false.data.get('authenticated')):
                                         _LOGGER.warning(f"{self}: Still not authenticated after compete=False init.")
 
@@ -308,7 +336,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             if importlib.util.find_spec('Crypto') is None:
                 raise ImportError('Installation lacks OAuth 1.0a support. Please install by using `pip install ibind[oauth]`')
             self.generate_live_session_token()
-            from ibind.oauth.oauth1a import validate_live_session_token
+            from ibind.oauth.oauth1a import validate_live_session_token # Conditional import
             success = validate_live_session_token(
                 live_session_token=self.live_session_token,
                 live_session_token_signature=self.live_session_token_signature,
@@ -323,20 +351,16 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         else:
             raise ValueError("Unsupported oauth_config type during oauth_init.")
 
-    def start_tickler(self):
+    def start_tickler(self) -> None:
         """
         Starts the `Tickler` instance and starts it in a separate thread to maintain the session.
-
-        The Tickler sends periodic requests to the IBKR API to prevent the session from expiring.
-        This is necessary when using OAuth authentication to keep the connection active.
-
-        Note:
-            - The Tickler should be stopped when the session is no longer needed using `stop_tickler()`.
-
+        This can be useful for maintaining any session, not just OAuth, especially for users not using IBeam.
         """
-        _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
-        self._tickler = Tickler(self)
-        self._tickler.start()
+        if not self._tickler_thread_is_running:
+            _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
+            self._tickler = Tickler(self)
+            self._tickler.start()
+            self._tickler_thread_is_running = True # Set flag after starting
 
     def stop_tickler(self):
         """
@@ -347,6 +371,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         """
         if hasattr(self, '_tickler') and self._tickler is not None:
             self._tickler.stop()
+            self._tickler_thread_is_running = False # Set flag after stopping
 
     def close(self):
         if self._use_oauth and self.oauth_config and self.oauth_config.shutdown_oauth:
@@ -364,21 +389,24 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             return
 
         _LOGGER.info(f'{self}: Shutting down OAuth {self.oauth_config.version()} session')
+
+        # OAuth types are now globally imported
+
         if isinstance(self.oauth_config, OAuth2Config):
-            if hasattr(self.oauth_config, 'sso_bearer_token') and self.oauth_config.sso_bearer_token:
+            if self.oauth_config.has_sso_bearer_token():
                 try:
-                    # self.post will use _get_headers which provides the Bearer token
                     logout_result = self.post('logout', log=False)
-                    _LOGGER.info(f"OAuth 2.0 logout attempt result: {logout_result.data if logout_result and hasattr(logout_result, 'data') else 'No data in result'}")
+                    if logout_result and hasattr(logout_result, 'data') and logout_result.data.get('confirmed') is True:
+                        _LOGGER.debug(f"{self}: OAuth 2.0 logout confirmed by API.")
                 except Exception as e:
                     _LOGGER.error(f"Error during OAuth 2.0 logout: {e}")
             self.oauth_config.sso_bearer_token = None
             self.oauth_config.access_token = None
-            self.stop_tickler() # Stop tickler if it was started for OAuth 2.0
+            self.stop_tickler()
 
         elif isinstance(self.oauth_config, OAuth1aConfig):
             self.stop_tickler()
-            self.logout() # Existing logout for OAuth 1.0a / Gateway
+            self.logout()
 
         else:
             _LOGGER.warning("oauth_shutdown called with unknown oauth_config type.")

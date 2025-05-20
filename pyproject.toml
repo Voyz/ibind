@@ -28,7 +28,6 @@ keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'i
 
 [project.optional-dependencies]
 dev = [
-    "python-dotenv>=0.21" # For .env loading in tests/scripts
 ]
 
 [project.urls]

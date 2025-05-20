@@ -13,6 +13,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from ibind.support.logs import project_logger
+import logging
+
+_LOGGER = project_logger(__file__)
 
 # OAuth2Config class definition
 @dataclass
@@ -49,6 +52,10 @@ class OAuth2Config(OAuthConfig):
     def version(self):
         return 2.0
 
+    def has_sso_bearer_token(self) -> bool:
+        """Checks if an SSO bearer token is present and non-empty."""
+        return bool(hasattr(self, 'sso_bearer_token') and self.sso_bearer_token)
+
     def verify_config(self) -> None:
         required_params = [
             'client_id',
@@ -66,15 +73,13 @@ class OAuth2Config(OAuthConfig):
         super().verify_config()
 
 # Original oauth2.py logic starts here
-_LOGGER = project_logger(__file__)
-
 def _get_public_ip():
     """Fetches the public IP address from an external service."""
     try:
         response = requests.get("https://api.ipify.org?format=json", timeout=5)
         response.raise_for_status()
         ip_address = response.json()["ip"]
-        _LOGGER.info(f"Successfully fetched public IP address: {ip_address}")
+        _LOGGER.debug(f"Successfully fetched public IP address: {ip_address}")
         return ip_address
     except requests.exceptions.RequestException as e:
         _LOGGER.error(f"Could not fetch public IP address: {e}")
@@ -82,11 +87,17 @@ def _get_public_ip():
     except json.JSONDecodeError as e:
         _LOGGER.error(f"Could not parse IP address from response: {e}")
         return None
+    except KeyError as e:
+        _LOGGER.error(f"Could not extract IP from response (KeyError: {e})")
+        return None
+    except Exception as e:
+        _LOGGER.error(f"An unexpected error occurred while fetching public IP: {e}")
+        return None
 
 class OAuth2Handler:
     """
     Handles the OAuth 2.0 authentication flow with Interactive Brokers.
-    Adapted from the original IBOAuthAuthenticator.
+    Adapted from an earlier proof-of-concept script (e.g., a standalone IBOAuthAuthenticator).
     """
     def __init__(self, config: OAuth2Config, private_key_pem: str, username: str, ip_address: str):
         self.config = config
@@ -95,11 +106,11 @@ class OAuth2Handler:
         if not private_key_pem:
             raise ValueError("Private key PEM cannot be empty.")
         try:
-            self.jwt_private_key = RSA.import_key(private_key_pem.replace('\\\\n', '\\n'))
+            self.jwt_private_key = RSA.import_key(private_key_pem.replace('\\n', '\n'))
         except Exception as e:
             raise ValueError(f"Failed to import private key: {e}")
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "python/3.11"})
+        self.session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
 
     def _base64_encode(self, val: bytes) -> str:
         return base64.b64encode(val).decode().replace('+', '-').replace('/', '_').rstrip('=')
@@ -147,7 +158,7 @@ class OAuth2Handler:
     def _pretty_request_response(self, resp: requests.Response) -> str:
         req = resp.request
         rqh = '\\n'.join(f"{k}: {v}" for k, v in req.headers.items())
-        rqh = rqh.replace(', ', ',\\n    ')
+        rqh = rqh.replace(', ', '\\n    ')
         rqb = req.body if req.body else ""
         if isinstance(rqb, bytes):
             rqb = rqb.decode('utf-8', errors='replace')
@@ -173,70 +184,101 @@ class OAuth2Handler:
         return return_str
 
     def get_access_token(self) -> Optional[str]:
+        """Gets an OAuth 2.0 access token."""
         url = self.config.token_url
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        client_assertion = self._compute_client_assertion(url)
         form_data = {
-            'client_assertion_type': 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-            'client_assertion': self._compute_client_assertion(url),
             'grant_type': 'client_credentials',
-            'scope': self.config.scope
+            'scope': self.config.scope,
+            'client_id': self.config.client_id,
+            'client_assertion_type': 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+            'client_assertion': client_assertion
         }
+        headers = {
+            'Accept': 'application/json'
+        }
+
+        _LOGGER.debug(f"Requesting OAuth 2.0 Access Token from {url}")
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(f"Access Token Request Headers: {headers}")
+            _LOGGER.debug(f"Access Token Request Form Data: {pprint.pformat(form_data)}")
+
         try:
-            _LOGGER.info(f"Requesting OAuth 2.0 Access Token from {url}")
-            response = self.session.post(url=url, headers=headers, data=form_data, timeout=10)
-            _LOGGER.debug(self._pretty_request_response(response))
-            response.raise_for_status()
-            token = response.json().get("access_token")
-            if token:
-                _LOGGER.info("Successfully obtained OAuth 2.0 Access Token.")
-            else:
-                _LOGGER.error("Failed to obtain OAuth 2.0 Access Token from response.")
-            return token
+            resp = self.session.post(url, headers=headers, data=form_data, timeout=10)
+            _LOGGER.debug(f"Access Token Response Status: {resp.status_code}")
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                 _LOGGER.debug(f"Access Token Response Headers: {resp.headers}")
+                 _LOGGER.debug(f"Access Token Response Content: {self._pretty_request_response(resp)}")
+            resp.raise_for_status()
+            token_data = resp.json()
+            access_token = token_data.get('access_token')
+            if not access_token:
+                _LOGGER.error(f"access_token not found in response: {token_data}")
+                return None
+            _LOGGER.info("Successfully obtained OAuth 2.0 Access Token.")
+            return access_token
+        except requests.exceptions.HTTPError as e:
+            _LOGGER.error(f"HTTP error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {e.response.text if e.response else 'N/A'}")
+            return None
         except requests.exceptions.RequestException as e:
-            _LOGGER.error(f"Error getting access token: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                _LOGGER.error(f"Response body: {e.response.text}")
+            _LOGGER.error(f"Request exception obtaining OAuth 2.0 Access Token: {e}")
             return None
         except json.JSONDecodeError as e:
-            _LOGGER.error(f"Error decoding JSON response for access token: {e}")
-            if 'response' in locals() and response:
-                 _LOGGER.error(f"Response body: {response.text}")
+            _LOGGER.error(f"JSON decode error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+            return None
+        except Exception as e:
+            _LOGGER.error(f"Unexpected error obtaining OAuth 2.0 Access Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
             return None
 
     def get_sso_bearer_token(self, access_token: str) -> Optional[str]:
+        """Gets an SSO bearer token using a previously obtained access_token."""
         if not access_token:
             _LOGGER.error("Cannot get SSO bearer token without an access token.")
             return None
+
         url = self.config.sso_session_url
+        signed_request_assertion_jwt = self._compute_client_assertion(url)
+
         headers = {
-            "Authorization": "Bearer " + access_token,
-            "Content-Type": "application/jwt"
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/jwt',
+            'Accept': 'application/json'
         }
-        signed_request = self._compute_client_assertion(url)
+
+        _LOGGER.debug(f"Requesting SSO Bearer Token from {url}")
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(f"SSO Bearer Token Request Headers: {headers}")
+            _LOGGER.debug(f"SSO Bearer Token Request Body (JWT Assertion): {signed_request_assertion_jwt[:100]}...")
+
         try:
-            _LOGGER.info(f"Requesting SSO Bearer Token from {url}")
-            response = self.session.post(url=url, headers=headers, data=signed_request, timeout=10)
-            _LOGGER.debug(self._pretty_request_response(response))
-            response.raise_for_status()
-            sso_token = response.json().get("access_token")
-            if sso_token:
-                _LOGGER.info("Successfully obtained SSO Bearer Token.")
-            else:
-                _LOGGER.error("Failed to obtain SSO Bearer Token from response.")
-            return sso_token
+            resp = self.session.post(url, headers=headers, data=signed_request_assertion_jwt, timeout=10)
+            _LOGGER.debug(f"SSO Bearer Token Response Status: {resp.status_code}")
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug(f"SSO Bearer Token Response Headers: {resp.headers}")
+                _LOGGER.debug(f"SSO Bearer Token Response Content: {self._pretty_request_response(resp)}")
+            resp.raise_for_status()
+            sso_data = resp.json()
+            sso_bearer_token = sso_data.get('access_token')
+            if not sso_bearer_token:
+                _LOGGER.error(f"SSO Bearer Token ('access_token') not found in response: {sso_data}")
+                return None
+            _LOGGER.info("Successfully obtained SSO Bearer Token.")
+            return sso_bearer_token
+        except requests.exceptions.HTTPError as e:
+            _LOGGER.error(f"HTTP error obtaining SSO Bearer Token: {e}\nResponse content: {e.response.text if e.response else 'N/A'}")
+            return None
         except requests.exceptions.RequestException as e:
-            _LOGGER.error(f"Error getting SSO bearer token: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                _LOGGER.error(f"Response body: {e.response.text}")
+            _LOGGER.error(f"Request exception obtaining SSO Bearer Token: {e}")
             return None
         except json.JSONDecodeError as e:
-            _LOGGER.error(f"Error decoding JSON response for SSO bearer token: {e}")
-            if 'response' in locals() and response:
-                _LOGGER.error(f"Response body: {response.text}")
+            _LOGGER.error(f"JSON decode error obtaining SSO Bearer Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
+            return None
+        except Exception as e:
+            _LOGGER.error(f"Unexpected error obtaining SSO Bearer Token: {e}\nResponse content: {resp.text if 'resp' in locals() and hasattr(resp, 'text') else 'N/A'}")
             return None
 
     def authenticate(self) -> Optional[str]:
-        _LOGGER.info("Starting OAuth 2.0 authentication flow within OAuth2Handler.")
+        _LOGGER.debug("Starting OAuth 2.0 authentication flow within OAuth2Handler.")
         access_token = self.get_access_token()
         if not access_token:
             _LOGGER.error("Authentication failed: Could not retrieve access token.")
@@ -248,42 +290,54 @@ class OAuth2Handler:
         self.config.access_token = access_token
         self.config.sso_bearer_token = sso_bearer_token
         _LOGGER.info("OAuth 2.0 authentication successful. Tokens stored in config.")
+        _LOGGER.debug(f"OAuth 2.0 Authentication successful. SSO Token: {self.config.sso_bearer_token[:20]}... (truncated)")
         return sso_bearer_token
 
 def authenticate_oauth2(config: OAuth2Config) -> Optional[str]:
-    _LOGGER.info(f"Starting OAuth 2.0 authentication with client ID: {config.client_id}")
-    if not config.private_key_pem:
-        _LOGGER.error("OAuth 2.0 Authentication: Missing private_key_pem in config.")
-        raise ValueError("private_key_pem must be provided in OAuth2Config.")
-    if not config.username:
-        _LOGGER.error("OAuth 2.0 Authentication: Missing username in config.")
-        raise ValueError("username must be provided in OAuth2Config.")
-    ip_address_to_use = config.ip_address
-    if not ip_address_to_use:
-        _LOGGER.info("IP address not found in config, attempting to fetch public IP.")
-        ip_address_to_use = _get_public_ip()
-        if not ip_address_to_use:
-            _LOGGER.error("Failed to obtain public IP address. Cannot proceed with OAuth 2.0 authentication.")
+    """Main function to authenticate using OAuth 2.0 and return the SSO Bearer Token."""
+    _LOGGER.info(f"Starting OAuth 2.0 authentication for client_id: {config.client_id}, username: {config.username}")
+
+    config.verify_config() # Ensure basic config is present
+
+    if not config.ip_address:
+        _LOGGER.info("IP address not configured, attempting to fetch public IP.")
+        config.ip_address = _get_public_ip()
+        if not config.ip_address:
+            _LOGGER.error("Failed to obtain public IP address. Cannot proceed with OAuth 2.0.")
             return None
-        config.ip_address = ip_address_to_use
+        _LOGGER.info(f"Using auto-detected public IP: {config.ip_address}")
     else:
-        _LOGGER.info(f"Using pre-configured IP address from config: {ip_address_to_use}")
+        _LOGGER.info(f"Using pre-configured IP address: {config.ip_address}")
+
+    # Ensure private_key_pem is loaded if path was provided (OAuth2Config now handles this in __post_init__)
+    # However, an explicit check here adds robustness if __post_init__ logic changes or fails silently.
+    if not config.private_key_pem:
+        # Check if path was available and __post_init__ should have loaded it
+        if var.IBIND_OAUTH2_PRIVATE_KEY_PATH: # Check original env var for path
+             _LOGGER.error(f"private_key_pem is not set, but IBIND_OAUTH2_PRIVATE_KEY_PATH ({var.IBIND_OAUTH2_PRIVATE_KEY_PATH}) was. This suggests a load failure from path in OAuth2Config.__post_init__.")
+        else:
+            _LOGGER.error("private_key_pem is not set and no private key path was configured via IBIND_OAUTH2_PRIVATE_KEY_PATH. Cannot proceed.")
+        return None
+
     try:
         handler = OAuth2Handler(
             config=config,
             private_key_pem=config.private_key_pem,
             username=config.username,
-            ip_address=ip_address_to_use
+            ip_address=config.ip_address
         )
-        sso_bearer_token = handler.authenticate()
-        if sso_bearer_token:
-            _LOGGER.info("OAuth 2.0 authentication successful. SSO Bearer Token obtained.")
+        sso_token = handler.authenticate()
+        if sso_token:
+            config.sso_bearer_token = sso_token # Store on the config object for client use
+            _LOGGER.info("OAuth 2.0 Authentication successful. SSO Token obtained and stored.")
+            return sso_token
         else:
-            _LOGGER.error("OAuth 2.0 authentication failed.")
-        return sso_bearer_token
-    except ValueError as ve:
-        _LOGGER.error(f"Configuration error during OAuth 2.0 authentication: {ve}")
+            # More detailed logging if authenticate() returns None
+            _LOGGER.error("OAuth 2.0 Authentication failed: handler.authenticate() returned None. Check OAuth2Handler logs for more details (e.g., issues in get_access_token or get_sso_bearer_token).")
+            return None
+    except ValueError as e:
+        _LOGGER.error(f"OAuth 2.0 authentication failed due to ValueError: {e}", exc_info=True) # Added exc_info
         return None
     except Exception as e:
-        _LOGGER.error(f"Unexpected error during OAuth 2.0 authentication: {e}", exc_info=True)
+        _LOGGER.error(f"An unexpected error occurred during OAuth 2.0 authentication process: {e}", exc_info=True) # Added exc_info
         return None
