@@ -350,7 +350,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
 @dataclass
 class OrderRequest:
-    conid: int
+    conid: Optional[int]
     side: str
     quantity: float
     order_type: str
@@ -424,9 +424,14 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
 
     if isinstance(order_request, dict):
         _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
-        return order_request
+        d = order_request
     else:
-        return {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None}
+        d = {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None}
+
+    if 'conidex' in d and 'conid' in d:
+        raise ValueError("Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.")
+
+    return d
 
 
 def make_order_request(
