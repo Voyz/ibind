@@ -3,7 +3,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch, call
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions
+from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions, question_type_to_message_id
 from ibind.support.logs import project_logger
 from test.integration.client import ibkr_responses
 from test_utils import verify_log
@@ -192,6 +192,11 @@ class TestIbkrUtilsI(TestCase):
             ],
             rv.data['TEAM'],
         )
+
+    def test_question_type_to_message_id_successful(self):
+        question_type = QuestionType.PRICE_PERCENTAGE_CONSTRAINT
+        message_id = question_type_to_message_id(question_type)
+        self.assertEqual(message_id, 'o163')
 
 
 class TestFindAnswer(TestCase):
