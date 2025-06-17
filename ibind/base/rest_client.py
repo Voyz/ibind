@@ -284,7 +284,7 @@ class RestClient:
 
     def close(self):
         """Closes the session to release resources."""
-        if hasattr(self, 'session'):
+        if hasattr(self, '_session'):
             self._session.close()
             self._session = None
 
