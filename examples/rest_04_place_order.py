@@ -24,7 +24,7 @@ account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 client = IbkrClient(cacert=cacert)
 
-conid = '265598'
+conid = 265598
 side = 'BUY'
 size = 1
 order_type = 'MKT'

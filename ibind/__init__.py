@@ -5,7 +5,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_ws_client import IbkrWsClient
 from ibind.client.ibkr_ws_client import IbkrWsKey
 from ibind.client.ibkr_ws_client import IbkrSubscriptionProcessor
-from ibind.client.ibkr_utils import StockQuery, make_order_request, OrderRequest, QuestionType, Answers
+from ibind.client.ibkr_utils import StockQuery, make_order_request, OrderRequest, QuestionType, Answers, question_type_to_message_id
 from ibind.client.ibkr_definitions import snapshot_keys_to_ids
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import ibind_logs_initialize
@@ -28,6 +28,7 @@ __all__ = [
     'QueueAccessor',
     'execute_in_parallel',
     'ExternalBrokerError',
+    'question_type_to_message_id'
 ]
 
 patch_dotenv()

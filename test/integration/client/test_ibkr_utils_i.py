@@ -3,7 +3,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch, call
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions
+from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions, question_type_to_message_id, OrderRequest, parse_order_request
 from ibind.support.logs import project_logger
 from test.integration.client import ibkr_responses
 from test_utils import verify_log
@@ -193,6 +193,11 @@ class TestIbkrUtilsI(TestCase):
             rv.data['TEAM'],
         )
 
+    def test_question_type_to_message_id_successful(self):
+        question_type = QuestionType.PRICE_PERCENTAGE_CONSTRAINT
+        message_id = question_type_to_message_id(question_type)
+        self.assertEqual(message_id, 'o163')
+
 
 class TestFindAnswer(TestCase):
     def setUp(self):
@@ -291,3 +296,42 @@ class TestHandleQuestionsI(TestCase):
             handle_questions(self.original_result, self.answers, self.reply_callback)
 
         verify_log(self, cm, ['While handling questions multiple messages were returned: ' + pformat(self.original_result.data[0]['message'])])
+
+class TestParseOrderRequestI(TestCase):
+    def test_parse_both_with_conidex(self):
+        order_request = OrderRequest(
+            conid=None,
+            side='BUY',
+            quantity=321,
+            order_type='MKT',
+            acct_id='DU1234567',
+            conidex='33333' # should cause exception
+        )
+
+        d = parse_order_request(order_request)
+
+        self.assertEqual({
+            'side': 'BUY',
+            'quantity': 321,
+            'orderType': 'MKT',
+            'acctId': 'DU1234567',
+            'conidex': '33333',
+            'tif': 'GTC'
+        }, d)
+
+    def test_raise_with_conid_and_conidex(self):
+        with self.assertRaises(ValueError) as cm_err:
+            order_request = OrderRequest(
+                conid=123,
+                side='BUY',
+                quantity=321,
+                order_type='MKT',
+                acct_id='DU1234567',
+                conidex='33333' # should cause exception
+            )
+
+            parse_order_request(order_request)
+
+        self.assertEqual(f"Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.", str(cm_err.exception))
+
+
