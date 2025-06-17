@@ -105,6 +105,9 @@ IBIND_MAINTAIN_OAUTH = to_bool(os.environ.get('IBIND_MAINTAIN_OAUTH', True))
 IBIND_SHUTDOWN_OAUTH = to_bool(os.environ.get('IBIND_SHUTDOWN_OAUTH', True))
 """ Whether OAuth should be automatically stopped on termination. """
 
+IBIND_TICKLER_INTERVAL = int(os.environ.get('IBIND_TICKLER_INTERVAL', 60))
+""" The interval at which Tickler should call the `tickle` endpoint. """
+
 ##### OAuth 1.0a #####
 
 IBIND_OAUTH1A_REST_URL = os.getenv('IBIND_OAUTH1A_REST_URL', 'https://api.ibkr.com/v1/api/')

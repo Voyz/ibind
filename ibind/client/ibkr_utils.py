@@ -14,7 +14,7 @@ from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneO
 _LOGGER = project_logger(__file__)
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ibind import IbkrClient
+    from ibind import IbkrClient, var
 
 
 @dataclass
@@ -541,7 +541,7 @@ class Tickler:
     the session from expiring. This is essential for keeping the OAuth session active.
     """
 
-    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
+    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = var.IBIND_TICKLER_INTERVAL):
         """
         Initializes the Tickler instance.
 

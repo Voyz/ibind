@@ -210,30 +210,37 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         if init_brokerage_session:
             self.initialize_brokerage_session()
 
-    def start_tickler(self):
+    def start_tickler(self, interval: int = var.IBIND_TICKLER_INTERVAL):
         """
         Starts the `Tickler` instance and starts it in a separate thread to maintain the OAuth session.
 
         The Tickler sends periodic requests to the IBKR API to prevent the session from expiring.
         This is necessary when using OAuth authentication to keep the connection active.
 
+        Parameters:
+            interval (Union[int, float]): Interval between tickles in seconds. Default is 60 seconds.
+
         Note:
             - The Tickler should be stopped when the session is no longer needed using `stop_tickler()`.
 
         """
         _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
-        self._tickler = Tickler(self)
+        self._tickler = Tickler(self, interval)
         self._tickler.start()
 
-    def stop_tickler(self):
+    def stop_tickler(self, timeout=None):
         """
         Stops the Tickler thread if the Tickler is running.
 
         The Tickler is responsible for maintaining an active session by sending periodic requests to
         the IBKR API. This method stops the Tickler process, preventing further requests.
+
+        Parameters:
+            timeout (Optional[float]): Maximum time to wait for the Tickler thread to terminate.
+                                       If None, waits indefinitely.
         """
         if hasattr(self, '_tickler') and self._tickler is not None:
-            self._tickler.stop()
+            self._tickler.stop(timeout)
 
     def close(self):
         if self._use_oauth and self.oauth_config.shutdown_oauth:
