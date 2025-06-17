@@ -10,11 +10,12 @@ from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
+from ibind import var
 
 _LOGGER = project_logger(__file__)
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ibind import IbkrClient, var
+    from ibind import IbkrClient
 
 
 @dataclass
