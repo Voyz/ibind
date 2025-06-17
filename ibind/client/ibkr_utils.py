@@ -243,10 +243,8 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
         data = result.data
 
         if 'error' in data:
-            order_tag = original_result.request['json']['orders'][0].get('cOID')
-            error_match = f"Order couldn't be submitted: Local order ID={order_tag} is already registered."
-            if error_match in data['error']:
-                raise ExternalBrokerError(f"Order couldn't be submitted. Order with order_tag/cOID {order_tag!r} is already registered.")
+            if "Order couldn't be submitted: Local order ID=" in data['error']:
+                raise ExternalBrokerError(f"Order couldn't be submitted. Orders are already registered: {original_result.request.get('json', {}).get('orders', {})}")
 
             raise ExternalBrokerError(f'While handling questions an error was returned: {pprint.pformat(data)}')
 
