@@ -198,7 +198,7 @@ class PortfolioMixin:  # pragma: no cover
         return self.post('pa/performance', {'acctIds': account_ids, 'period': period})
 
     @ensure_list_arg('account_ids')
-    def account_allperiods(self: 'IbkrClient', account_ids: OneOrMany[str]) -> Result:
+    def all_periods(self: 'IbkrClient', account_ids: OneOrMany[str]) -> Result:
         """
         Returns the performance across all available time periods for the given accounts, if more than one account is passed, the result is consolidated.
 
