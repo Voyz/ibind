@@ -1,4 +1,4 @@
-.PHONY: help lint scan clean
+.PHONY: help lint scan clean test test-unit test-cov test-unit-cov
 
 # Default target when just running 'make'
 .DEFAULT_GOAL := help
@@ -25,8 +25,24 @@ clean:  ## Clean up python cache files
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 
+.PHONY: test
+test:  ## Run unit and integration tests (excludes e2e)
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ test/integration/ -v
+
+.PHONY: test-unit  
+test-unit:  ## Run only unit tests
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ -v
+
+.PHONY: test-cov
+test-cov:  ## Run unit and integration tests with coverage report
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ test/integration/ --cov=ibind --cov-report=term-missing --cov-report=html
+
+.PHONY: test-unit-cov
+test-unit-cov:  ## Run unit tests with coverage report
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ --cov=ibind --cov-report=term-missing --cov-report=html
+
 .PHONY: check-all
-check-all: lint scan format  ## Run all checks (lint, scan, format)
+check-all: lint scan format test  ## Run all checks (lint, scan, format, test)
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.

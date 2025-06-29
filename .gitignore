@@ -10,3 +10,4 @@ build/docs/mkdocs.yml
 *.env
 .vscode
 .DS_Store
+venv

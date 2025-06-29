@@ -18,6 +18,9 @@ wrong? [Create an issue and let us know!][issues]*
     <a href="https://github.com/Voyz/ibind/releases">
         <img src="https://img.shields.io/pypi/v/ibind?label=version"/> 
     </a>
+    <a href="https://github.com/Voyz/ibind">
+        <img src="https://img.shields.io/badge/coverage-68%25-green.svg"/>
+    </a>
 </p>
 
 IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with [OAuth 1.0a][wiki-oauth1a] support.
