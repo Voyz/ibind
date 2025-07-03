@@ -74,7 +74,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
             oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
         """
-
+        self._tickler: Optional[Tickler] = None
         self._use_oauth = use_oauth
 
         if self._use_oauth:
@@ -225,7 +225,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         """
         _LOGGER.info(f'{self}: Starting Tickler to maintain the connection alive')
-        self._tickler = Tickler(self, interval)
+        if self._tickler is None:
+            self._tickler = Tickler(self, interval)
         self._tickler.start()
 
     def stop_tickler(self, timeout=None):
@@ -239,7 +240,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout (Optional[float]): Maximum time to wait for the Tickler thread to terminate.
                                        If None, waits indefinitely.
         """
-        if hasattr(self, '_tickler') and self._tickler is not None:
+        if self._tickler is not None:
             self._tickler.stop(timeout)
 
     def close(self):
