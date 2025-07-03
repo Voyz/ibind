@@ -226,6 +226,9 @@ class RestClient:
         # choose which function should be used to make a reqeust based on use_session field
         request_function = self._session.request if self.use_session else requests.request
 
+        if request_function is None:
+            _LOGGER.warning(f'{self}: an attempt was made to create a request with no valid session.')
+
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             if log:
