@@ -51,6 +51,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        log_responses: bool = var.IBIND_LOG_RESPONSES,
         use_oauth: bool = var.IBIND_USE_OAUTH,
         oauth_config: 'OAuthConfig' = None,
     ) -> None:
@@ -97,6 +98,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             max_retries=max_retries,
             use_session=use_session,
             auto_register_shutdown=auto_register_shutdown,
+            log_responses=log_responses,
         )
 
         self.logger.info('#################')

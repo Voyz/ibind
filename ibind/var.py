@@ -39,6 +39,9 @@ IBIND_USE_SESSION = to_bool(os.environ.get('IBIND_USE_SESSION', True))
 IBIND_AUTO_REGISTER_SHUTDOWN = to_bool(os.environ.get('IBIND_AUTO_REGISTER_SHUTDOWN', True))
 """ Whether to automatically register the shutdown handler. """
 
+IBIND_LOG_RESPONSES = to_bool(os.environ.get('IBIND_LOG_RESPONSES', False))
+""" Whether to log responses coming from the broker. """
+
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))

@@ -82,6 +82,7 @@ class RestClient:
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        log_responses: bool = var.IBIND_LOG_RESPONSES,
     ) -> None:
         """
         Parameters:
@@ -106,6 +107,7 @@ class RestClient:
 
         self._timeout = timeout
         self._max_retries = max_retries
+        self._log_responses = log_responses
 
         self._make_logger()
 
@@ -237,24 +239,24 @@ class RestClient:
             try:
                 response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
-                return self._process_response(response, result)
+                result = self._process_response(response, result)
+                if self._log_responses:
+                    self.logger.info(result)
+                return result
 
             except ReadTimeout as e:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
-
-                self.logger.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
-                _LOGGER.info(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
+                msg = f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}'
+                self.logger.info(msg)
+                _LOGGER.info(msg)
 
                 continue  # Continue to the next iteration for a retry
 
             except (ConnectionError, ChunkedEncodingError) as e:
-                self.logger.warning(
-                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
-                )
-                _LOGGER.warning(
-                    f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
-                )
+                msg = f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                self.logger.warning(msg)
+                _LOGGER.warning(msg)
                 self.close()
                 if self.use_session:
                     self.make_session()  # Recreate session automatically
