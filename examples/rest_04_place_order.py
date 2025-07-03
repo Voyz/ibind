@@ -22,7 +22,7 @@ ibind_logs_initialize(log_to_file=False)
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
-client = IbkrClient(cacert=cacert)
+client = IbkrClient(cacert=cacert, use_session=False)
 
 conid = 265598
 side = 'BUY'
