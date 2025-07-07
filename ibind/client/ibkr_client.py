@@ -15,6 +15,7 @@ from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.client.ibkr_utils import Tickler
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import new_daily_rotating_file_handler, project_logger
+from ibind.support.py_utils import exception_to_string
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind.oauth import OAuthConfig
@@ -231,7 +232,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self._tickler = Tickler(self, interval)
         self._tickler.start()
 
-    def stop_tickler(self, timeout=None):
+    def stop_tickler(self, timeout:float=None):
         """
         Stops the Tickler thread if the Tickler is running.
 
@@ -260,3 +261,38 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         _LOGGER.info(f'{self}: Shutting down OAuth')
         self.stop_tickler()
         self.logout()
+
+
+    def handle_health_status(self) -> bool:
+        """
+        Handles the health status of the IBKR connection.
+
+        If the connection is not healthy, it attempts to re-establish OAuth authentication.
+
+        Returns:
+            bool: True if the connection is healthy, False otherwise.
+        """
+        healthy = self.check_health()
+        if healthy:
+            # All good, do nothing.
+            return True
+
+        if not self._use_oauth:
+            # Do nothing; wait for a reconnection either from IBeam or manually.
+            _LOGGER.warning(f'IBKR connection is not healthy. Ensure authentication with the Gateway is re-established.')
+            return False
+
+        _LOGGER.warning(f'IBKR connection is not healthy. Attempting to re-establish OAuth authentication.')
+        try:
+            self.stop_tickler(15)
+        except Exception as e:  # pragma: no cover
+            _LOGGER.error(f'Error stopping tickler during reauthentication: {exception_to_string(e)}')
+
+        try:
+            self.oauth_init(
+                maintain_oauth=self.oauth_config.maintain_oauth,
+                init_brokerage_session=self.oauth_config.init_brokerage_session,
+            )
+        except Exception as e: # pragma: no cover
+            _LOGGER.error(f'Error reauthenticating OAuth during reauthentication: {exception_to_string(e)}')
+        return False

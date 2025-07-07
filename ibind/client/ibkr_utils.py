@@ -653,7 +653,7 @@ class Tickler:
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
 
-    def stop(self, timeout=None):
+    def stop(self, timeout:float=None):
         """
         Stops the Tickler thread.
 
