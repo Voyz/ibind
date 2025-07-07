@@ -95,7 +95,7 @@ def process_instruments(
             )
 
             # if no contracts are left, we don't need the instrument
-            if not len(filtered_contracts):
+            if not filtered_contracts:
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
@@ -632,7 +632,7 @@ class Tickler:
                 _LOGGER.info('Tickler interrupted')
                 break
             except TimeoutError:
-                _LOGGER.warning(f'Tickler encountered a timeout error. This could indicate the servers are restarting. Investigate further if you see this log repeat frequently.')
+                _LOGGER.warning('Tickler encountered a timeout error. This could indicate the servers are restarting. Investigate further if you see this log repeat frequently.')
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
 

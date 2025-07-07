@@ -279,10 +279,10 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
 
         if not self._use_oauth:
             # Do nothing; wait for a reconnection either from IBeam or manually.
-            _LOGGER.warning(f'IBKR connection is not healthy. Ensure authentication with the Gateway is re-established.')
+            _LOGGER.warning('IBKR connection is not healthy. Ensure authentication with the Gateway is re-established.')
             return False
 
-        _LOGGER.warning(f'IBKR connection is not healthy. Attempting to re-establish OAuth authentication.')
+        _LOGGER.warning('IBKR connection is not healthy. Attempting to re-establish OAuth authentication.')
         try:
             self.stop_tickler(15)
         except Exception as e:  # pragma: no cover
