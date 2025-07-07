@@ -27,25 +27,17 @@ class OrderMixin:
             force (bool, optional): Force the system to clear saved information and make a fresh request for orders. Submission will appear as a blank array. Defaults to False.
             account_id (str): For linked accounts, allows users to view orders on sub-accounts as specified.
 
-        Available filters:
-            * Inactive:
-                Order was received by the system but is no longer active because it was rejected or cancelled.
-            * PendingSubmit:
-                Order has been transmitted but have not received confirmation yet that order accepted by destination exchange or venue.
-            * PreSubmitted:
-                Simulated order transmitted but the order has yet to be elected. Order is held by IB system until election criteria are met.
-            * Submitted:
-                Order has been accepted by the system.
-            * Filled:
-                Order has been completely filled.
-            * PendingCancel:
-                Sent an order cancellation request but have not yet received confirmation order cancelled by destination exchange or venue.
-            * Cancelled:
-                The balance of your order has been confirmed canceled by the system.
-            * WarnState:
-                Order has a specific warning message such as for basket orders.
-            * SortByTime:
-                There is an initial sort by order state performed so active orders are always above inactive and filled then orders are sorted chronologically.
+        Available filter values:
+
+            * `inactive`: The order is inactive and is not yet transmitted.
+            * `pending_submit`: Order was received by the system but is no longer active because it was rejected or cancelled.
+            * `pre_submitted`: Order has been transmitted but have not received confirmation yet that order accepted by destination exchange or venue.
+            * `submitted`: Order has been accepted by the system.
+            * `filled`: Order has been completely filled.
+            * `pending_cancel`: Sent an order cancellation request but have not yet received confirmation order cancelled by destination exchange or venue.
+            * `cancelled`: The balance of your order has been confirmed canceled by the system.
+            * `warn_state`: Order has a specific warning message such as for basket orders.
+            * `sort_by_time`: There is an initial sort by order state performed so active orders are always above inactive and filled then orders are sorted chronologically.
 
         Note:
             - This endpoint requires a pre-flight request. Orders is the list of live orders (cancelled, filled, submitted).

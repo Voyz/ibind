@@ -332,6 +332,6 @@ class TestParseOrderRequestI(TestCase):
 
             parse_order_request(order_request)
 
-        self.assertEqual(f"Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.", str(cm_err.exception))
+        self.assertEqual("Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.", str(cm_err.exception))
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "ibind"
-version = "0.1.15"
+version = "0.1.16"
 authors = [
     { name="Voy Zan", email="voy1982@yahoo.co.uk" },
 ]
@@ -63,6 +63,9 @@ line-length = 150
 [tool.ruff.format]
 quote-style = "single"
 docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+"test/**/*" = ["S101"]        # allow plain `assert` in any test file
 
 [build-system]
 requires = [
