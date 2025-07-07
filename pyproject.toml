@@ -64,6 +64,9 @@ line-length = 150
 quote-style = "single"
 docstring-code-format = true
 
+[tool.ruff.lint.per-file-ignores]
+"test/**/*" = ["S101"]        # allow plain `assert` in any test file
+
 [build-system]
 requires = [
     "setuptools"
