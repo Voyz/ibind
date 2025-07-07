@@ -11,3 +11,4 @@ build/docs/mkdocs.yml
 .vscode
 .DS_Store
 venv
+.coverage
