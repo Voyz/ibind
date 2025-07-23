@@ -67,6 +67,25 @@ class PortfolioMixin:  # pragma: no cover
         params = params_dict({'acctIds': account_ids})
         return self.get('portfolio/allocation', params=params)
 
+    def combo_positions(self: 'IbkrClient', account_id: str = None, no_cache: bool = False) -> Result:
+        """
+        Provides all positions held in the account acquired as a combination, including values such as ratios, size, and market value.
+
+        Parameters:
+            account_id (str, optional): The account ID for which account should place the order.
+            nocache (bool, optional): Set if request should be made without caching. Defaults to false.
+        """
+
+        if account_id is None:
+            account_id = self.account_id
+
+        params = params_dict(
+            optional={
+                'nocache': no_cache,
+            }
+        )
+        return self.get(f'portfolio/{account_id}/combo/positions', params)
+
     def positions(
         self: 'IbkrClient',
         account_id: str = None,
