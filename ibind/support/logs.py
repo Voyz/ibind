@@ -35,6 +35,7 @@ def ibind_logs_initialize(
     log_to_file: bool = var.LOG_TO_FILE,
     log_level: str = var.LOG_LEVEL,
     log_format: str = var.LOG_FORMAT,
+    print_file_logs: bool = var.PRINT_FILE_LOGS,
 ):
     """
     Initialises the logging system.
@@ -59,18 +60,20 @@ def ibind_logs_initialize(
     _log_to_file = log_to_file
 
     logger = logging.getLogger('ibind')
-    formatter = logging.Formatter(log_format)
+    formatter = logging.Formatter(log_format, datefmt='%H:%M:%S')
     logger.setLevel(logging.DEBUG)
 
+    h1 = logging.StreamHandler(stream=sys.stdout)
     if log_to_console:
         # outputting only to a single stream to ensure chronological ordering of all messages
-        h1 = logging.StreamHandler(stream=sys.stdout)
         h1.setLevel(getattr(logging, log_level))
         h1.setFormatter(formatter)
         logger.addHandler(h1)
 
     if not _log_to_file:
         logging.getLogger('ibind_fh').addFilter(lambda record: False)
+    elif print_file_logs:
+        logging.getLogger('ibind_fh').addHandler(h1)
 
 
 def new_daily_rotating_file_handler(logger_name, filepath):

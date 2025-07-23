@@ -59,6 +59,9 @@ LOG_FORMAT = os.getenv('IBIND_LOG_FORMAT', '%(asctime)s|%(levelname)-.1s| %(mess
 LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 """ Directory of file logs produced. """
 
+PRINT_FILE_LOGS = to_bool(os.getenv('IBIND_PRINT_FILE_LOGS', False))
+""" Whether file logs should also be output into terminal. """
+
 ##### IBKR #####
 
 IBIND_REST_URL = os.getenv('IBIND_REST_URL', None)
