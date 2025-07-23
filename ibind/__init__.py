@@ -9,7 +9,7 @@ from ibind.client.ibkr_utils import StockQuery, make_order_request, OrderRequest
 from ibind.client.ibkr_definitions import snapshot_keys_to_ids
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import ibind_logs_initialize
-from ibind.support.py_utils import execute_in_parallel, patch_dotenv
+from ibind.support.py_utils import execute_in_parallel
 
 __all__ = [
     'ibind_logs_initialize',
