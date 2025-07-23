@@ -31,4 +31,4 @@ __all__ = [
     'question_type_to_message_id'
 ]
 
-patch_dotenv()
+# patch_dotenv()

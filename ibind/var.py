@@ -29,7 +29,15 @@ def to_bool(value):
     return bool(strtobool(str(value)))
 
 
-# TODO: we could load .env vars here if dotenv is importable
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(os.getenv('IBIND_ENV_FILE', None))
+    """ Path to the .env file. """
+except ImportError:
+    # dotenv not installed, skip loading
+    pass
 
 ##### GENERAL #####
 
