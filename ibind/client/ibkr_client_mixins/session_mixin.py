@@ -42,11 +42,14 @@ class SessionMixin:
         """
         return self.post('logout')
 
-    def tickle(self: 'IbkrClient') -> Result:  # pragma: no cover
+    def tickle(self: 'IbkrClient', log: bool = False) -> Result:  # pragma: no cover
         """
         If the gateway has not received any requests for several minutes an open session will automatically timeout. The tickle endpoint pings the server to prevent the session from ending. It is expected to call this endpoint approximately every 60 seconds to maintain the connection to the brokerage session.
+
+        Args:
+            log (bool, optional): Log the tickle request. Defaults to False.
         """
-        return self.post('tickle', log=False)
+        return self.post('tickle', log=log)
 
     def reauthenticate(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
