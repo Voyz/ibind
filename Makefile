@@ -1,4 +1,4 @@
-.PHONY: help lint scan clean
+.PHONY: help lint scan clean test test-unit test-cov test-unit-cov
 
 # Default target when just running 'make'
 .DEFAULT_GOAL := help
@@ -25,8 +25,40 @@ clean:  ## Clean up python cache files
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 
+.PHONY: test
+test:  ## Run unit and integration tests (excludes e2e)
+ifeq ($(OS),Windows_NT)
+	cmd /c "set PYTHONPATH=.;test && $(PYTHON) -m pytest test/unit/ test/integration/ -v"
+else
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ test/integration/ -v
+endif
+
+.PHONY: test-unit  
+test-unit:  ## Run only unit tests
+ifeq ($(OS),Windows_NT)
+	cmd /c "set PYTHONPATH=.;test && $(PYTHON) -m pytest test/unit/ -v"
+else
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ -v
+endif
+
+.PHONY: test-cov
+test-cov:  ## Run unit and integration tests with coverage report
+ifeq ($(OS),Windows_NT)
+	cmd /c "set PYTHONPATH=.;test && $(PYTHON) -m pytest test/unit/ test/integration/ --cov=ibind --cov-report=term-missing --cov-report=html"
+else
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ test/integration/ --cov=ibind --cov-report=term-missing --cov-report=html
+endif
+
+.PHONY: test-unit-cov
+test-unit-cov:  ## Run unit tests with coverage report
+ifeq ($(OS),Windows_NT)
+	cmd /c "set PYTHONPATH=.;test && $(PYTHON) -m pytest test/unit/ --cov=ibind --cov-report=term-missing --cov-report=html"
+else
+	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ --cov=ibind --cov-report=term-missing --cov-report=html
+endif
+
 .PHONY: check-all
-check-all: lint scan format  ## Run all checks (lint, scan, format)
+check-all: lint scan format test  ## Run all checks (lint, scan, format, test)
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
