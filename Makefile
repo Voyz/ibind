@@ -16,6 +16,10 @@ install: ## Install python dependencies
 lint:  ## Run code linting
 	ruff check --fix
 
+.PHONY: format 
+format:  ## Run code formatting
+	ruff format
+
 .PHONY: scan
 scan:  ## Run security checks
 	bandit -r . -ll -x site-packages
