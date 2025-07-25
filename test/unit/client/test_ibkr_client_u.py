@@ -15,11 +15,15 @@ def client():
     c.oauth_config.shutdown_oauth = False
     return c
 
-# --- caplog-based tests ---
 def test_handle_health_status_healthy(client, caplog):
+    ## Arrange
     client.check_health.return_value = True
+
+    ## Act
     with caplog.at_level("WARNING", logger="ibind.client.ibkr_client"):
         assert client.handle_health_status() is True
+
+    ## Assert
     # No warning should be logged
     assert not any("IBKR connection is not healthy" in r.message for r in caplog.records)
     client.check_health.assert_called_once()
@@ -27,21 +31,31 @@ def test_handle_health_status_healthy(client, caplog):
     client.oauth_init.assert_not_called()
 
 def test_handle_health_status_not_healthy_no_oauth(client, caplog):
+    ## Arrange
     client.check_health.return_value = False
     client._use_oauth = False
+
+    ## Act
     with caplog.at_level("WARNING", logger="ibind.client.ibkr_client"):
         assert client.handle_health_status() is False
+
+    ## Assert
     assert any("IBKR connection is not healthy. Ensure authentication with the Gateway is re-established." in r.message for r in caplog.records)
     client.stop_tickler.assert_not_called()
     client.oauth_init.assert_not_called()
 
 def test_handle_health_status_not_healthy_oauth_success(client, caplog):
+    ## Arrange
     client.check_health.return_value = False
     client._use_oauth = True
     client.stop_tickler.side_effect = None
     client.oauth_init.side_effect = None
+
+    ## Act
     with caplog.at_level("WARNING", logger="ibind.client.ibkr_client"):
         assert client.handle_health_status() is False
+
+    ## Assert
     assert any("IBKR connection is not healthy. Attempting to re-establish OAuth authentication." in r.message for r in caplog.records)
     client.stop_tickler.assert_called_once_with(15)
     client.oauth_init.assert_called_once_with(maintain_oauth=True, init_brokerage_session=True)
