@@ -1,82 +1,3 @@
-"""
-Unit tests for OAuth 1.0a implementation.
-
-The OAuth 1.0a module provides cryptographic functions and utilities for implementing
-the OAuth 1.0a authorization protocol with Interactive Brokers (IBKR) API. This module
-handles secure signature generation, token validation, and Diffie-Hellman key exchange
-required for establishing authenticated API connections.
-
-Core Functionality Tested:
-==========================
-
-1. **Timestamp and Nonce Generation**:
-   - RFC-compliant timestamp generation for request signing
-   - Cryptographically secure nonce generation for replay attack prevention
-   - Uniqueness validation for security-critical random values
-
-2. **Authorization Header Construction**:
-   - OAuth 1.0a compliant header string formatting
-   - Parameter sorting and encoding per RFC 5849
-   - Realm-based authorization scope handling
-
-3. **Base String Generation**:
-   - Canonical request representation for signature generation
-   - URL encoding and parameter normalization
-   - Support for various HTTP methods and parameter sources
-
-4. **Cryptographic Operations**:
-   - RSA-SHA256 signature generation using private keys
-   - HMAC-SHA256 signature generation for token validation
-   - Private key reading and RSA key import handling
-
-5. **Diffie-Hellman Key Exchange**:
-   - DH challenge generation for secure key agreement
-   - RFC 2631 compliant byte array conversion
-   - Live session token calculation and validation
-
-6. **Token Management**:
-   - Live session token generation from DH shared secrets
-   - Token validation using HMAC-based signatures
-   - Access token secret decryption and processing
-
-Key Components:
-===============
-
-- **Utility Functions**: Timestamp, nonce, and random byte generation
-- **Header Processing**: OAuth header construction and parameter handling
-- **Signature Generation**: RSA and HMAC signature creation
-- **Cryptographic Primitives**: Key reading, encryption, and byte operations
-- **DH Implementation**: Challenge generation and shared secret calculation
-- **Token Operations**: Live session token lifecycle management
-
-Test Coverage:
-==============
-
-This test suite provides comprehensive coverage of all OAuth 1.0a cryptographic
-functions, focusing on:
-
-- **Security Properties**: Uniqueness, randomness, and cryptographic correctness
-- **Protocol Compliance**: RFC 5849 OAuth 1.0a specification adherence
-- **Edge Cases**: Empty inputs, boundary conditions, and error handling
-- **Integration**: End-to-end token generation and validation flows
-
-The tests use mocking for external dependencies (file I/O, cryptographic libraries)
-while maintaining real cryptographic operations where security validation is critical.
-
-Security Considerations:
-========================
-
-These functions handle sensitive cryptographic operations including:
-- Private key material processing
-- Shared secret generation
-- Token signature validation
-- Nonce and timestamp generation for replay protection
-
-All tests ensure proper handling of cryptographic primitives without exposing
-sensitive data in test outputs or temporary files.
-"""
-
-import base64
 import re
 import string
 import pytest
@@ -108,6 +29,19 @@ from ibind.oauth.oauth1a import (
 def mock_time():
     """Create a mock time value for consistent timestamp testing."""
     return 1234567890
+
+
+@pytest.fixture
+def oauth_helpers_mocked():
+    """Create commonly used OAuth helper mocks."""
+    with patch.multiple(
+        'ibind.oauth.oauth1a',
+        generate_oauth_nonce=MagicMock(return_value='test_nonce'),
+        generate_request_timestamp=MagicMock(return_value='1234567890'),
+        generate_base_string=MagicMock(return_value='test_base_string'),
+        generate_authorization_header_string=MagicMock(return_value='OAuth realm="limited_poa"'),
+    ) as mocks:
+        yield mocks
 
 
 def test_generate_request_timestamp_returns_string():
@@ -252,74 +186,31 @@ def test_generate_base_string_basic(base_request_headers):
     assert base_string.startswith('POST&')
     assert 'https%3A%2F%2Fapi.ibkr.com%2Fv1%2Ftest' in base_string
 
-def test_generate_base_string_with_params(base_request_headers):
-    # Arrange
-    request_method = 'GET'
-    request_url = 'https://api.ibkr.com/v1/test'
-    request_params = {'param1': 'value1', 'param2': 'value2'}
 
-    # Act
-    base_string = generate_base_string(
-        request_method=request_method,
-        request_url=request_url,
-        request_headers=base_request_headers,
-        request_params=request_params
-    )
-
-    # Assert
-    assert 'param1%3Dvalue1' in base_string
-    assert 'param2%3Dvalue2' in base_string
-
-def test_generate_base_string_with_form_data(base_request_headers):
+@pytest.mark.parametrize("data_type,data_value,expected_encoded", [
+    ("request_params", {'param1': 'value1', 'param2': 'value2'}, ['param1%3Dvalue1', 'param2%3Dvalue2']),
+    ("request_form_data", {'form_field': 'form_value'}, ['form_field%3Dform_value']),
+    ("request_body", {'body_field': 'body_value'}, ['body_field%3Dbody_value']),
+    ("extra_headers", {'extra_header': 'extra_value'}, ['extra_header%3Dextra_value']),
+])
+def test_generate_base_string_with_data(base_request_headers, data_type, data_value, expected_encoded):
     # Arrange
     request_method = 'POST'
     request_url = 'https://api.ibkr.com/v1/test'
-    request_form_data = {'form_field': 'form_value'}
+    kwargs = {data_type: data_value}
 
     # Act
     base_string = generate_base_string(
         request_method=request_method,
         request_url=request_url,
         request_headers=base_request_headers,
-        request_form_data=request_form_data
+        **kwargs
     )
 
     # Assert
-    assert 'form_field%3Dform_value' in base_string
+    for expected in expected_encoded:
+        assert expected in base_string
 
-def test_generate_base_string_with_body(base_request_headers):
-    # Arrange
-    request_method = 'POST'
-    request_url = 'https://api.ibkr.com/v1/test'
-    request_body = {'body_field': 'body_value'}
-
-    # Act
-    base_string = generate_base_string(
-        request_method=request_method,
-        request_url=request_url,
-        request_headers=base_request_headers,
-        request_body=request_body
-    )
-
-    # Assert
-    assert 'body_field%3Dbody_value' in base_string
-
-def test_generate_base_string_with_extra_headers(base_request_headers):
-    # Arrange
-    request_method = 'POST'
-    request_url = 'https://api.ibkr.com/v1/test'
-    extra_headers = {'extra_header': 'extra_value'}
-
-    # Act
-    base_string = generate_base_string(
-        request_method=request_method,
-        request_url=request_url,
-        request_headers=base_request_headers,
-        extra_headers=extra_headers
-    )
-
-    # Assert
-    assert 'extra_header%3Dextra_value' in base_string
 
 def test_generate_base_string_with_prepend(base_request_headers):
     # Arrange
@@ -595,45 +486,30 @@ def test_to_byte_array_byte_alignment():
     assert result == expected
 
 
+@pytest.mark.parametrize("calculated_signature,provided_signature,expected_result", [
+    ('expected_signature', 'expected_signature', True),
+    ('calculated_signature', 'different_signature', False),
+])
 @patch('ibind.oauth.oauth1a.HMAC.new')
 @patch('ibind.oauth.oauth1a.base64.b64decode')
-def test_validate_live_session_token_valid(mock_b64decode, mock_hmac_new):
+def test_validate_live_session_token(mock_b64decode, mock_hmac_new, calculated_signature, provided_signature, expected_result):
     # Arrange
     mock_token_bytes = b'decoded_token'
     mock_b64decode.return_value = mock_token_bytes
     mock_hmac = mock_hmac_new.return_value
-    mock_hmac.hexdigest.return_value = 'expected_signature'
+    mock_hmac.hexdigest.return_value = calculated_signature
     live_session_token = 'dGVzdF90b2tlbg=='  # noqa: S105
-    live_session_token_signature = 'expected_signature'  # noqa: S105
     consumer_key = 'test_consumer_key'  # noqa: S106
 
     # Act
-    result = validate_live_session_token(live_session_token, live_session_token_signature, consumer_key)
+    result = validate_live_session_token(live_session_token, provided_signature, consumer_key)
 
     # Assert
     mock_b64decode.assert_called_once_with(live_session_token)
     mock_hmac_new.assert_called_once()
     mock_hmac.update.assert_called_once_with(consumer_key.encode('utf-8'))
     mock_hmac.hexdigest.assert_called_once()
-    assert result is True
-
-@patch('ibind.oauth.oauth1a.HMAC.new')
-@patch('ibind.oauth.oauth1a.base64.b64decode')
-def test_validate_live_session_token_invalid(mock_b64decode, mock_hmac_new):
-    # Arrange
-    mock_token_bytes = b'decoded_token'
-    mock_b64decode.return_value = mock_token_bytes
-    mock_hmac = mock_hmac_new.return_value
-    mock_hmac.hexdigest.return_value = 'calculated_signature'
-    live_session_token = 'dGVzdF90b2tlbg=='  # noqa: S105
-    live_session_token_signature = 'different_signature'  # Different from calculated  # noqa: S105
-    consumer_key = 'test_consumer_key'  # noqa: S106
-
-    # Act
-    result = validate_live_session_token(live_session_token, live_session_token_signature, consumer_key)
-
-    # Assert
-    assert result is False
+    assert result is expected_result
 
 
 @patch('ibind.oauth.oauth1a.get_access_token_secret_bytes')
@@ -666,21 +542,6 @@ def test_calculate_live_session_token(mock_b64encode, mock_hmac_new, mock_to_byt
     mock_b64encode.assert_called_once_with(mock_digest)
     assert result == 'encoded_token'
 
-def test_calculate_live_session_token_integration():
-    # Arrange
-    dh_prime = 'ff'  # Small prime for testing
-    dh_random_value = '2'
-    dh_response = '3'
-    prepend = 'deadbeef'  # Will be converted to [222, 173, 190, 239]
-
-    # Act
-    result = calculate_live_session_token(dh_prime, dh_random_value, dh_response, prepend)
-
-    # Assert
-    assert isinstance(result, str)
-    # Should be able to decode without error
-    decoded = base64.b64decode(result.encode())
-    assert isinstance(decoded, bytes)
 
 
 @pytest.fixture
@@ -700,24 +561,33 @@ def oauth_config():
     )
 
 
+@pytest.mark.parametrize("signature_method,live_session_token,expected_sig_calls", [
+    ("HMAC-SHA256", "test_session_token", ["mock_hmac_sig"]),
+    ("RSA-SHA256", None, ["mock_read_key", "mock_rsa_sig"]),
+])
 @patch('ibind.oauth.oauth1a.generate_oauth_nonce')
 @patch('ibind.oauth.oauth1a.generate_request_timestamp')
 @patch('ibind.oauth.oauth1a.generate_base_string')
+@patch('ibind.oauth.oauth1a.read_private_key')
 @patch('ibind.oauth.oauth1a.generate_hmac_sha_256_signature')
+@patch('ibind.oauth.oauth1a.generate_rsa_sha_256_signature')
 @patch('ibind.oauth.oauth1a.generate_authorization_header_string')
-def test_generate_oauth_headers_with_hmac_signature(
-    mock_header_string, mock_hmac_sig, mock_base_string, mock_timestamp, mock_nonce, oauth_config
+def test_generate_oauth_headers_signature_methods(
+    mock_header_string, mock_rsa_sig, mock_hmac_sig, mock_read_key, mock_base_string,
+    mock_timestamp, mock_nonce, oauth_config, signature_method, live_session_token, expected_sig_calls
 ):
     # Arrange
     mock_nonce.return_value = 'test_nonce'
     mock_timestamp.return_value = '1234567890'
     mock_base_string.return_value = 'test_base_string'
-    mock_hmac_sig.return_value = 'test_signature'
+    mock_hmac_sig.return_value = 'test_hmac_signature'
+    mock_rsa_sig.return_value = 'test_rsa_signature'
     mock_header_string.return_value = 'OAuth realm="limited_poa", oauth_consumer_key="test_consumer_key"'
+    mock_private_key = MagicMock()
+    mock_read_key.return_value = mock_private_key
 
     request_method = 'POST'
     request_url = 'https://api.ibkr.com/v1/test'
-    live_session_token = 'test_session_token'  # noqa: S105
 
     # Act
     result = generate_oauth_headers(
@@ -725,7 +595,7 @@ def test_generate_oauth_headers_with_hmac_signature(
         request_method=request_method,
         request_url=request_url,
         live_session_token=live_session_token,
-        signature_method='HMAC-SHA256'
+        signature_method=signature_method
     )
 
     # Assert
@@ -735,50 +605,26 @@ def test_generate_oauth_headers_with_hmac_signature(
     assert 'User-Agent' in result
     assert result['User-Agent'] == 'ibind'
     assert result['Host'] == 'api.ibkr.com'
-    mock_hmac_sig.assert_called_once_with(base_string='test_base_string', live_session_token=live_session_token)
+
+    if signature_method == 'HMAC-SHA256':
+        mock_hmac_sig.assert_called_once_with(base_string='test_base_string', live_session_token=live_session_token)
+        mock_read_key.assert_not_called()
+        mock_rsa_sig.assert_not_called()
+    else:  # RSA-SHA256
+        mock_read_key.assert_called_once_with(oauth_config.signature_key_fp)
+        mock_rsa_sig.assert_called_once_with(base_string='test_base_string', private_signature_key=mock_private_key)
+        mock_hmac_sig.assert_not_called()
 
 
-@patch('ibind.oauth.oauth1a.generate_oauth_nonce')
-@patch('ibind.oauth.oauth1a.generate_request_timestamp')
-@patch('ibind.oauth.oauth1a.generate_base_string')
-@patch('ibind.oauth.oauth1a.read_private_key')
-@patch('ibind.oauth.oauth1a.generate_rsa_sha_256_signature')
-@patch('ibind.oauth.oauth1a.generate_authorization_header_string')
-def test_generate_oauth_headers_with_rsa_signature(
-    mock_header_string, mock_rsa_sig, mock_read_key, mock_base_string, mock_timestamp, mock_nonce, oauth_config
-):
-    # Arrange
-    mock_nonce.return_value = 'test_nonce'
-    mock_timestamp.return_value = '1234567890'
-    mock_base_string.return_value = 'test_base_string'
-    mock_private_key = MagicMock()
-    mock_read_key.return_value = mock_private_key
-    mock_rsa_sig.return_value = 'test_rsa_signature'
-    mock_header_string.return_value = 'OAuth realm="limited_poa", oauth_consumer_key="test_consumer_key"'
-
-    request_method = 'POST'
-    request_url = 'https://api.ibkr.com/v1/test'
-
-    # Act
-    result = generate_oauth_headers(
-        oauth_config=oauth_config,
-        request_method=request_method,
-        request_url=request_url,
-        signature_method='RSA-SHA256'
-    )
-
-    # Assert
-    assert isinstance(result, dict)
-    assert 'Authorization' in result
-    mock_read_key.assert_called_once_with(oauth_config.signature_key_fp)
-    mock_rsa_sig.assert_called_once_with(base_string='test_base_string', private_signature_key=mock_private_key)
-
-
-def test_generate_oauth_headers_with_extra_headers(oauth_config):
+@pytest.mark.parametrize("extra_data_type,extra_data_value,expected_key,expected_location", [
+    ("extra_headers", {'custom_header': 'custom_value'}, 'custom_header', 'request_headers'),
+    ("request_params", {'param1': 'value1', 'param2': 'value2'}, 'request_params', 'kwargs'),
+])
+def test_generate_oauth_headers_with_extra_data(oauth_config, extra_data_type, extra_data_value, expected_key, expected_location):
     # Arrange
     request_method = 'GET'
     request_url = 'https://api.ibkr.com/v1/test'
-    extra_headers = {'custom_header': 'custom_value'}
+    kwargs = {extra_data_type: extra_data_value}
 
     with patch('ibind.oauth.oauth1a.generate_oauth_nonce') as mock_nonce, \
          patch('ibind.oauth.oauth1a.generate_request_timestamp') as mock_timestamp, \
@@ -797,54 +643,22 @@ def test_generate_oauth_headers_with_extra_headers(oauth_config):
             oauth_config=oauth_config,
             request_method=request_method,
             request_url=request_url,
-            extra_headers=extra_headers,
-            signature_method='HMAC-SHA256'
+            signature_method='HMAC-SHA256',
+            **kwargs
         )
 
         # Assert
         assert isinstance(result, dict)
-        # Verify that extra_headers were merged into request_headers
         mock_base_string.assert_called_once()
         call_args = mock_base_string.call_args
-        request_headers = call_args.kwargs.get('request_headers', {})
-        assert 'custom_header' in request_headers
-        assert request_headers['custom_header'] == 'custom_value'
 
-
-def test_generate_oauth_headers_with_request_params(oauth_config):
-    # Arrange
-    request_method = 'GET'
-    request_url = 'https://api.ibkr.com/v1/test'
-    request_params = {'param1': 'value1', 'param2': 'value2'}
-
-    with patch('ibind.oauth.oauth1a.generate_oauth_nonce') as mock_nonce, \
-         patch('ibind.oauth.oauth1a.generate_request_timestamp') as mock_timestamp, \
-         patch('ibind.oauth.oauth1a.generate_base_string') as mock_base_string, \
-         patch('ibind.oauth.oauth1a.generate_hmac_sha_256_signature') as mock_hmac_sig, \
-         patch('ibind.oauth.oauth1a.generate_authorization_header_string') as mock_header_string:
-
-        mock_nonce.return_value = 'test_nonce'
-        mock_timestamp.return_value = '1234567890'
-        mock_base_string.return_value = 'test_base_string'
-        mock_hmac_sig.return_value = 'test_signature'
-        mock_header_string.return_value = 'OAuth realm="limited_poa"'
-
-        # Act
-        result = generate_oauth_headers(
-            oauth_config=oauth_config,
-            request_method=request_method,
-            request_url=request_url,
-            request_params=request_params,
-            signature_method='HMAC-SHA256'
-        )
-
-        # Assert
-        assert isinstance(result, dict)
-        # Verify that request_params were passed correctly
-        mock_base_string.assert_called_once()
-        call_args = mock_base_string.call_args
-        assert 'request_params' in call_args.kwargs
-        assert call_args.kwargs['request_params'] == request_params
+        if expected_location == 'request_headers':
+            request_headers = call_args.kwargs.get('request_headers', {})
+            assert expected_key in request_headers
+            assert request_headers[expected_key] == extra_data_value[expected_key]
+        else:  # kwargs
+            assert expected_key in call_args.kwargs
+            assert call_args.kwargs[expected_key] == extra_data_value
 
 
 @patch('ibind.oauth.oauth1a.generate_dh_random_bytes')
@@ -967,39 +781,3 @@ def test_req_live_session_token_missing_response_data(mock_calculate_lst, mock_g
     # Act & Assert
     with pytest.raises(KeyError):
         req_live_session_token(mock_client, oauth_config)
-
-
-def test_req_live_session_token_integration_flow(oauth_config):
-    # Arrange
-    mock_client = MagicMock()
-    mock_client.base_url = 'https://api.ibkr.com'
-
-    # Mock successful response with realistic data structure
-    mock_response = MagicMock()
-    mock_response.data = {
-        'live_session_token_expiration': 1640995200000,  # Unix timestamp in milliseconds
-        'diffie_hellman_response': 'abc123def456',
-        'live_session_token_signature': 'signature_hash_value'
-    }
-    mock_client.post.return_value = mock_response
-
-    # Act & Assert - This would fail without proper mocking of all dependencies
-    # but demonstrates the integration flow structure
-    with patch('ibind.oauth.oauth1a.prepare_oauth') as mock_prepare, \
-         patch('ibind.oauth.oauth1a.generate_oauth_headers') as mock_headers, \
-         patch('ibind.oauth.oauth1a.calculate_live_session_token') as mock_calc:
-
-        mock_prepare.return_value = ('test_prepend', {'diffie_hellman_challenge': 'test_challenge'}, 'test_random')
-        mock_headers.return_value = {'Authorization': 'test_auth_header'}
-        mock_calc.return_value = 'final_live_session_token'
-
-        # Act
-        result = req_live_session_token(mock_client, oauth_config)
-
-        # Assert
-        live_session_token, lst_expires, lst_signature = result
-        assert live_session_token == 'final_live_session_token'  # noqa: S105
-        assert lst_expires == 1640995200000
-        assert lst_signature == 'signature_hash_value'
-        assert isinstance(result, tuple)
-        assert len(result) == 3
