@@ -473,10 +473,10 @@ def test_recreate_subscriptions_with_no_inactive_subscriptions(subscription_cont
             'subscription_processor': None
         }
     }
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # All subscriptions should remain unchanged since they're all active
     assert len(subscription_controller._subscriptions) == 2
@@ -501,18 +501,18 @@ def test_recreate_subscriptions_with_only_inactive_subscriptions(subscription_co
             'subscription_processor': None
         }
     }
-    
+
     # Mock the subscribe method to succeed for all subscriptions
     mock_subscribe = MagicMock(return_value=True)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # All inactive subscriptions should have been processed
     assert mock_subscribe.call_count == 2
-    
+
     # Verify subscribe was called with correct parameters
     expected_calls = [
         (('inactive_channel_1', {'key': 'value1'}, True, mock_processor), {}),
@@ -548,18 +548,18 @@ def test_recreate_subscriptions_with_mixed_active_inactive(subscription_controll
             'subscription_processor': None
         }
     }
-    
+
     # Mock the subscribe method to succeed for all subscriptions
     mock_subscribe = MagicMock(return_value=True)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # Only inactive subscriptions should have been processed
     assert mock_subscribe.call_count == 2
-    
+
     # Active subscription should remain unchanged
     assert 'active_channel' in subscription_controller._subscriptions
     assert subscription_controller._subscriptions['active_channel']['status'] is True
@@ -588,22 +588,22 @@ def test_recreate_subscriptions_with_partial_failures(subscription_controller, m
             'subscription_processor': mock_processor
         }
     }
-    
+
     # Mock the subscribe method to succeed for some, fail for others
     def mock_subscribe_side_effect(channel, *args, **kwargs):
         if channel == 'inactive_channel_2':
             return False  # Fail this one
         return True  # Success for others
-    
+
     mock_subscribe = MagicMock(side_effect=mock_subscribe_side_effect)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     assert mock_subscribe.call_count == 3
-    
+
     # Failed subscription should be preserved with status=False
     assert 'inactive_channel_2' in subscription_controller._subscriptions
     assert subscription_controller._subscriptions['inactive_channel_2']['status'] is False
@@ -628,17 +628,17 @@ def test_recreate_subscriptions_with_all_failures(subscription_controller, monke
         }
     }
     subscription_controller._subscriptions = original_subscriptions.copy()
-    
+
     # Mock the subscribe method to fail for all subscriptions
     mock_subscribe = MagicMock(return_value=False)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     assert mock_subscribe.call_count == 2
-    
+
     # All failed subscriptions should be preserved
     assert len(subscription_controller._subscriptions) == 2
     for channel, original_sub in original_subscriptions.items():
@@ -660,14 +660,14 @@ def test_recreate_subscriptions_preserves_subscription_processor(subscription_co
             'subscription_processor': original_processor
         }
     }
-    
+
     # Mock the subscribe method to fail
     mock_subscribe = MagicMock(return_value=False)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # Failed subscription should preserve the original processor
     restored_sub = subscription_controller._subscriptions['test_channel']
@@ -684,20 +684,20 @@ def test_recreate_subscriptions_handles_missing_processor_key(subscription_contr
             # Note: no 'subscription_processor' key
         }
     }
-    
+
     # Mock the subscribe method to fail
     mock_subscribe = MagicMock(return_value=False)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # Should handle missing processor gracefully
     assert mock_subscribe.call_count == 1
     # subscribe should have been called with None for processor
     mock_subscribe.assert_called_with('test_channel', {'test': 'data'}, True, None)
-    
+
     # Failed subscription should preserve None processor
     restored_sub = subscription_controller._subscriptions['test_channel']
     assert restored_sub['subscription_processor'] is None
@@ -741,25 +741,25 @@ def test_recreate_subscriptions_thread_safety_with_lock(controller_with_mixed_su
     lock_acquired = []
     original_acquire = controller_with_mixed_subscriptions._operational_lock.acquire
     original_release = controller_with_mixed_subscriptions._operational_lock.release
-    
+
     def track_acquire(*args, **kwargs):
         lock_acquired.append('acquire')
         return original_acquire(*args, **kwargs)
-    
+
     def track_release(*args, **kwargs):
         lock_acquired.append('release')
         return original_release(*args, **kwargs)
-    
+
     monkeypatch.setattr(controller_with_mixed_subscriptions._operational_lock, 'acquire', track_acquire)
     monkeypatch.setattr(controller_with_mixed_subscriptions._operational_lock, 'release', track_release)
-    
+
     # Mock subscribe method
     mock_subscribe = MagicMock(return_value=True)
     monkeypatch.setattr(controller_with_mixed_subscriptions, 'subscribe', mock_subscribe)
-    
+
     # Act
     controller_with_mixed_subscriptions.recreate_subscriptions()
-    
+
     # Assert
     # Lock should have been acquired and released
     assert 'acquire' in lock_acquired
@@ -772,7 +772,7 @@ def test_recreate_subscriptions_logging_behavior(subscription_controller, monkey
     # Arrange
     import logging
     caplog.set_level(logging.INFO)
-    
+
     subscription_controller._subscriptions = {
         'inactive_channel_1': {
             'status': False,
@@ -787,17 +787,17 @@ def test_recreate_subscriptions_logging_behavior(subscription_controller, monkey
             'subscription_processor': None
         }
     }
-    
+
     # Mock subscribe to succeed for one, fail for another
     def mock_subscribe_side_effect(channel, *args, **kwargs):
         return channel == 'inactive_channel_1'
-    
+
     mock_subscribe = MagicMock(side_effect=mock_subscribe_side_effect)
     monkeypatch.setattr(subscription_controller, 'subscribe', mock_subscribe)
-    
+
     # Act
     subscription_controller.recreate_subscriptions()
-    
+
     # Assert
     # Should log info about recreation attempt
     info_logs = [record for record in caplog.records if record.levelname == 'INFO']
@@ -805,7 +805,7 @@ def test_recreate_subscriptions_logging_behavior(subscription_controller, monkey
     info_message = info_logs[0].message
     assert 'Recreating' in info_message
     assert '2/2 subscriptions' in info_message
-    
+
     # Should log error about failed subscriptions
     error_logs = [record for record in caplog.records if record.levelname == 'ERROR']
     assert len(error_logs) > 0
