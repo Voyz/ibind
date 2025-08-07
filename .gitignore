@@ -12,3 +12,4 @@ build/docs/mkdocs.yml
 .DS_Store
 venv
 .coverage
+htmlcov
