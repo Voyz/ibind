@@ -15,7 +15,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import extract_conid
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import TimeoutLock, UNDEFINED
+from ibind.support.py_utils import TimeoutLock, UNDEFINED, wait_until
 
 _LOGGER = project_logger(__file__)
 
@@ -601,8 +601,10 @@ class IbkrWsClient(WsClient):
             bool: True if the subscription was successful, False otherwise.
         """
         if channel[:2] == 'or':
-            if not self._ibkr_client.check_health():
+            if not wait_until(self._ibkr_client.check_health, 'IbkrClient not healthy before subscribing to orders', timeout=15):
                 return False
+            self._ibkr_client.receive_brokerage_accounts()
+            time.sleep(0.25)
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
 
