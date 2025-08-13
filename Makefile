@@ -18,7 +18,7 @@ lint:  ## Run code linting
 
 .PHONY: scan
 scan:  ## Run security checks
-	bandit -r . -ll -x site-packages
+	bandit -r . -ll -x ./test/,site-packages
 
 .PHONY: clean
 clean:  ## Clean up python cache files

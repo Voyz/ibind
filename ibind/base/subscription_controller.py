@@ -10,6 +10,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _LOGGER = project_logger(__file__)
 
+# Default subscription configuration
+DEFAULT_SUBSCRIPTION_RETRIES = 5
+DEFAULT_SUBSCRIPTION_TIMEOUT = 2.0
+DEFAULT_OPERATIONAL_LOCK_TIMEOUT = 60
+
 
 class SubscriptionProcessor(ABC):  # pragma: no cover
     """
@@ -48,15 +53,15 @@ class SubscriptionController:
     def __init__(
         self,
         subscription_processor: SubscriptionProcessor,
-        subscription_retries: int = 5,
-        subscription_timeout: float = 2,
+        subscription_retries: int = DEFAULT_SUBSCRIPTION_RETRIES,
+        subscription_timeout: float = DEFAULT_SUBSCRIPTION_TIMEOUT,
     ):
         self._subscription_processor = subscription_processor
         self._subscription_retries = subscription_retries
         self._subscription_timeout = subscription_timeout
 
         self._subscriptions: Dict[str, dict] = {}
-        self._operational_lock = TimeoutLock(60)
+        self._operational_lock = TimeoutLock(DEFAULT_OPERATIONAL_LOCK_TIMEOUT)
 
     def _send_payload(self: 'WsClient', payload) -> bool:
         try:
