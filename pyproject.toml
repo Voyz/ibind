@@ -1,6 +1,6 @@
 [project]
 name = "ibind"
-version = "0.1.18"
+version = "0.1.19"
 authors = [
     { name="Voy Zan", email="voy1982@yahoo.co.uk" },
 ]
