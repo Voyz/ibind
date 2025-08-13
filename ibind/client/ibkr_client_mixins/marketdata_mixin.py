@@ -232,7 +232,12 @@ class MarketdataMixin:
             # /iserver/marketdata/history accepts 5 concurrent requests in theory, but sometime throttles above 4
             market_history_responses = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=4)
         else:
-            market_history_responses = {symbol: self.marketdata_history_by_conid(**request['kwargs']) for symbol, request in requests.items()}
+            market_history_responses = {}
+            for symbol, request in requests.items():
+                try:
+                    market_history_responses[symbol] = self.marketdata_history_by_conid(**request['kwargs'])
+                except Exception as e:
+                    market_history_responses[symbol] = e
 
         results = cleanup_market_history_responses(market_history_responses, raise_on_error=raise_on_error)
 
