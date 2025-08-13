@@ -1,3 +1,4 @@
+import copy
 from abc import ABC
 from typing import Dict, TYPE_CHECKING, Optional
 
@@ -352,3 +353,6 @@ class SubscriptionController:
 
     def has_subscription(self, channel: str) -> bool:  # pragma: no cover
         return channel in self._subscriptions
+
+    def get_active_subscriptions(self):
+        return {channel: copy.deepcopy(subscription) for channel, subscription in self._subscriptions.items() if self.is_subscription_active(channel)}
