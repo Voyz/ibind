@@ -156,7 +156,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             ExternalBrokerError: If the token request fails.
         """
         from ibind.oauth.oauth1a import req_live_session_token
-
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(
             self, self.oauth_config
         )
@@ -293,6 +292,16 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                 maintain_oauth=self.oauth_config.maintain_oauth,
                 init_brokerage_session=self.oauth_config.init_brokerage_session,
             )
+        except ExternalBrokerError as e:
+            if "Failed to resolve 'api.ibkr.com'" in str(e):
+                _LOGGER.error('Connection to IBKR servers failed during reauthentication. Check internet connection between IBind and \'api.ibkr.com\'')
+                return False
+            elif 'An attempt was made to access a socket in a way forbidden by its access permissions' in str(e):
+                _LOGGER.error('Connection to IBKR servers blocked during reauthentication. Check that nothing is blocking connectivity of the application')
+                return False
+            else:
+                _LOGGER.error(f'Unknown error checking IBKR connection during reauthentication: {exception_to_string(e)}')
+                return False
         except Exception as e: # pragma: no cover
             _LOGGER.error(f'Error reauthenticating OAuth during reauthentication: {exception_to_string(e)}')
         return False
