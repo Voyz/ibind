@@ -383,12 +383,13 @@ class IbkrWsClient(WsClient):
 
     def _handle_account_update(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.ACCOUNT_UPDATES, message)
-        if 'accounts' not in data:
-            _LOGGER.error(f'{self}: Unknown account response: {message}')
-            return
-
-        if self._account_id not in data['accounts']:
+        if 'accounts' in data and self._account_id not in data['accounts']:
             _LOGGER.error(f'{self}: Account ID mismatch: expected={self._account_id}, received={data["accounts"]}')
+        elif 'acctProps' in data:  # expected account update that we ignore
+            pass
+        else:
+            _LOGGER.info(f'{self}: Account message: {data}')
+            return
 
     def _handle_authentication_status(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
@@ -401,10 +402,16 @@ class IbkrWsClient(WsClient):
             if data.get('competing') is False:
                 pass
             _LOGGER.error(f'{self}: Status competing: {data}')
-        elif data == {'message': ''}:
+        elif (  # expected status updates that we ignore
+                data == {'message': ''} or
+                data.get('fail', '') == '' or
+                'serverName' in data or
+                'serverVersion' in data or
+                'username' in data
+        ):
             pass
         else:
-            _LOGGER.info(f'{self}: Unknown status response: {message}')
+            _LOGGER.info(f'{self}: Status message: {data}')
 
     def _handle_bulletin(self, message):  # pragma: no cover
         self._handle_unsolicited_message(IbkrWsKey.BULLETINS, message)
