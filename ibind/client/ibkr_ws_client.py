@@ -227,6 +227,7 @@ class IbkrWsClient(WsClient):
         restart_on_critical: bool = True,
         max_connection_attempts: int = 10,
         cacert: Union[str, bool] = var.IBIND_CACERT,
+        recreate_subscriptions_on_reconnect: bool = True,
         # subscription controller
         subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
         subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
@@ -260,6 +261,7 @@ class IbkrWsClient(WsClient):
             max_ping_interval (int, optional): Maximum interval in seconds to wait for a ping response. Defaults to _DEFAULT_MAX_PING_INTERVAL.
             max_connection_attempts (int, optional): Maximum number of attempts for connecting to the WebSocket. Defaults to 10.
             cacert (Union[str, bool], optional): Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
+            recreate_subscriptions_on_reconnect (bool, optional): Flag to recreate subscriptions on reconnect. Defaults to True.
             subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
@@ -303,6 +305,7 @@ class IbkrWsClient(WsClient):
             cacert=cacert,
             subscription_retries=subscription_retries,
             subscription_timeout=subscription_timeout,
+            recreate_subscriptions_on_reconnect=recreate_subscriptions_on_reconnect
         )
 
         self._operational_lock = TimeoutLock(60)

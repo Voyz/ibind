@@ -43,6 +43,7 @@ class WsClient(SubscriptionController):
         cacert: Union[str, bool] = False,
         subscription_retries: int = 5,
         subscription_timeout: float = 2,
+        recreate_subscriptions_on_reconnect: bool = True
     ):
         """
         Parameters:
@@ -57,6 +58,7 @@ class WsClient(SubscriptionController):
             cacert (Union[str, bool], optional): Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
             subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
+            recreate_subscriptions_on_reconnect (bool, optional): Flag to automatically recreate subscriptions on reconnect. Defaults to True.
         """
         if url is None:
             raise ValueError('url must not be None')
@@ -68,6 +70,7 @@ class WsClient(SubscriptionController):
         self._max_ping_interval = max_ping_interval
         self._ping_interval = ping_interval
         self._max_connection_attempts = max_connection_attempts
+        self._recreate_subscriptions_on_reconnect = recreate_subscriptions_on_reconnect
 
         super().__init__(
             subscription_processor=subscription_processor, subscription_retries=subscription_retries, subscription_timeout=subscription_timeout
@@ -275,7 +278,8 @@ class WsClient(SubscriptionController):
             # This may appear in the flow of reestablishing connection after loss of authentication
             # Returning should be expected and fine, as we should only recreate subscriptions once we're authenticated
             return
-        self.recreate_subscriptions()
+        if self._recreate_subscriptions_on_reconnect:
+            self.recreate_subscriptions()
 
     def _on_open(self, was: WebSocketApp):  # pragma: no cover
         pass
