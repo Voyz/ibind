@@ -728,6 +728,9 @@ def cleanup_market_history_responses(
     results = {}
     for symbol, entry in market_history_response.items():
         if isinstance(entry, Exception):  # pragma: no cover
+            if '"error":"No data."' in str(entry):
+                _LOGGER.info(f'"No data" error for {symbol} when fetching market data. Consider increasing period and bar sizes.')
+
             if raise_on_error:
                 _LOGGER.error(f'Error fetching market data for {symbol}')
                 raise entry
