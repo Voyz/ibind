@@ -7,6 +7,7 @@ from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
+from requests import ConnectionError as RequestsConnectionError
 from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
@@ -226,7 +227,10 @@ class RestClient:
         kwargs = filter_none(kwargs)
 
         # choose which function should be used to make a reqeust based on use_session field
-        request_function = self._session.request if self.use_session else requests.request
+        if self.use_session and self._session is not None:
+            request_function = self._session.request
+        else:
+            request_function = requests.request
 
         if request_function is None:
             _LOGGER.warning(f'{self}: an attempt was made to create a request with no valid session.')
@@ -253,12 +257,14 @@ class RestClient:
 
                 continue  # Continue to the next iteration for a retry
 
-            except (ConnectionError, ChunkedEncodingError) as e:
-                msg = f'{self}: Connection error detected, resetting session and retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+            except (ConnectionError, RequestsConnectionError, ChunkedEncodingError) as e:
+                if attempt >= self._max_retries:
+                    raise ExternalBrokerError(f'{self}: Connection error {str(e)} for {method} {url} {kwargs}') from e
+                msg = f'{self}: Connection error detected, retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
                 self.logger.warning(msg)
                 _LOGGER.warning(msg)
-                self.close()
                 if self.use_session:
+                    self.close_session()
                     self.make_session()  # Recreate session automatically
                 continue  # Retry the request with a fresh session
 
@@ -268,6 +274,8 @@ class RestClient:
             except Exception as e:
                 self.logger.exception(e)
                 raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
+
+        raise ExternalBrokerError(f'{self}: failed to complete request: {method} {url} {kwargs}')
 
     def _process_response(self, response, result: Result) -> Result:
         try:
@@ -287,11 +295,15 @@ class RestClient:
                 f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code
             ) from e
 
-    def close(self):
+    def close_session(self):
         """Closes the session to release resources."""
         if hasattr(self, '_session') and self._session is not None:
             self._session.close()
             self._session = None
+
+    def close(self):
+        self.close_session()
+
 
     def register_shutdown_handler(self):
         """
