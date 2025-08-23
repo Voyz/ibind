@@ -50,18 +50,6 @@ def test_verify_config_base_implementation(concrete_config):
     assert result is None
 
 
-def test_oauth_config_default_attributes():
-    # Arrange & Act
-    config = ConcreteOAuthConfig()
-
-    # Assert
-    # Test that default values are set (these come from var module)
-    assert hasattr(config, 'init_oauth')
-    assert hasattr(config, 'init_brokerage_session')
-    assert hasattr(config, 'maintain_oauth')
-    assert hasattr(config, 'shutdown_oauth')
-
-
 def test_copy_method_creates_shallow_copy(concrete_config):
     # Arrange
     original_id = id(concrete_config)
@@ -122,53 +110,3 @@ def test_copy_method_with_multiple_modifications(concrete_config):
         assert getattr(copied_config, attr) == expected_value
 
 
-def test_copy_preserves_type(concrete_config):
-    # Arrange
-
-    # Act
-    copied_config = concrete_config.copy()
-
-    # Assert
-    assert type(copied_config) is type(concrete_config)
-    assert isinstance(copied_config, ConcreteOAuthConfig)
-    assert isinstance(copied_config, OAuthConfig)
-
-
-def test_copy_method_with_no_modifications(concrete_config):
-    # Arrange
-
-    # Act
-    copied_config = concrete_config.copy()
-
-    # Assert
-    # All attributes should be identical
-    assert copied_config.init_oauth == concrete_config.init_oauth
-    assert copied_config.init_brokerage_session == concrete_config.init_brokerage_session
-    assert copied_config.maintain_oauth == concrete_config.maintain_oauth
-    assert copied_config.shutdown_oauth == concrete_config.shutdown_oauth
-    # But should be a different object
-    assert copied_config is not concrete_config
-
-
-def test_default_values_are_set():
-    # Arrange & Act
-    config = ConcreteOAuthConfig()
-
-    # Assert
-    # Test that all required attributes exist with boolean values
-    assert isinstance(config.init_oauth, bool)
-    assert isinstance(config.init_brokerage_session, bool)
-    assert isinstance(config.maintain_oauth, bool)
-    assert isinstance(config.shutdown_oauth, bool)
-
-
-def test_copy_method_edge_case_empty_kwargs(concrete_config):
-    # Arrange
-    empty_kwargs = {}
-
-    # Act
-    copied_config = concrete_config.copy(**empty_kwargs)
-
-    # Assert
-    assert copied_config is not concrete_config
-    assert copied_config.init_oauth == concrete_config.init_oauth

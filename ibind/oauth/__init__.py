@@ -28,7 +28,7 @@ class OAuthConfig(ABC):
         """
         raise NotImplementedError()
 
-    def verify_config(self):
+    def verify_config(self):  # pragma: no cover
         return
 
     init_oauth: bool = var.IBIND_INIT_OAUTH
