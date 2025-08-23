@@ -21,7 +21,7 @@ from ibind.oauth.oauth1a import (
     to_byte_array,
     get_access_token_secret_bytes,
     calculate_live_session_token,
-    validate_live_session_token,g
+    validate_live_session_token,
     generate_oauth_headers,
     req_live_session_token,
     prepare_oauth,
