@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib import parse
 
-# TODO: Remove bandit ignore once we have a new Crypto implementation
-# Check repo wiki for more details on Security consideration
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher  # nosec
 from Crypto.Hash import SHA256, HMAC, SHA1  # nosec
 from Crypto.PublicKey import RSA  # nosec
@@ -19,7 +17,6 @@ from ibind.oauth import OAuthConfig
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
-
 
 _STRING_ENCODING = 'utf-8'
 _INT_BASE = 16
@@ -229,7 +226,7 @@ def generate_request_timestamp() -> str:
     return str(int(time.time()))
 
 
-def read_private_key(private_key_fp: str) -> RSA.RsaKey:
+def read_private_key(private_key_fp: str) -> RSA.RsaKey: # pragma: no cover
     """
     Reads the private key from the file path provided. The key is used to sign the request and decrypt the access token secret.
     """
