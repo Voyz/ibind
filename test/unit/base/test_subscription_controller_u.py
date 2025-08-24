@@ -3,9 +3,7 @@ from unittest.mock import MagicMock
 
 from ibind.base.subscription_controller import (
     SubscriptionController,
-    SubscriptionProcessor,
-    DEFAULT_SUBSCRIPTION_RETRIES,
-    DEFAULT_SUBSCRIPTION_TIMEOUT
+    SubscriptionProcessor
 )
 from ibind.support.py_utils import UNDEFINED
 
@@ -61,24 +59,24 @@ def subscription_factory():
             'needs_confirmation': needs_confirmation,
             'subscription_processor': subscription_processor
         }
-    
+
     # Pre-defined common subscription types
     create_subscription.active = lambda processor=None, data=None: create_subscription(
         status=True, data=data, needs_confirmation=True, subscription_processor=processor
     )
-    
+
     create_subscription.inactive = lambda processor=None, data=None: create_subscription(
         status=False, data=data, needs_confirmation=True, subscription_processor=processor
     )
-    
+
     create_subscription.active_no_confirm = lambda processor=None, data=None: create_subscription(
         status=True, data=data, needs_confirmation=False, subscription_processor=processor
     )
-    
+
     create_subscription.inactive_no_confirm = lambda processor=None, data=None: create_subscription(
         status=False, data=data, needs_confirmation=False, subscription_processor=processor
     )
-    
+
     return create_subscription
 
 
@@ -110,10 +108,10 @@ def common_subscription_sets(subscription_factory):
 def controller_with_mixed_subscriptions(subscription_factory):
     """Create a SubscriptionController with mixed active and inactive subscriptions using factory."""
     controller = SubscriptionController(subscription_processor=MagicMock())
-    
+
     mock_processor1 = MagicMock()
     mock_processor2 = MagicMock()
-    
+
     controller._subscriptions = {
         'active_1': subscription_factory.active(
             processor=mock_processor1,
@@ -132,7 +130,7 @@ def controller_with_mixed_subscriptions(subscription_factory):
             data={'inactive': 'data2'}
         )
     }
-    
+
     # Add send method since SubscriptionController is a mixin expecting WsClient
     controller.send = MagicMock(return_value=True)
     controller.running = True  # Default to running state
@@ -143,11 +141,11 @@ def test_is_subscription_active_with_factory(subscription_controller, subscripti
     # Test active subscription
     subscription_controller._subscriptions['test_active'] = subscription_factory.active()
     assert subscription_controller.is_subscription_active('test_active') is True
-    
-    # Test inactive subscription  
+
+    # Test inactive subscription
     subscription_controller._subscriptions['test_inactive'] = subscription_factory.inactive()
     assert subscription_controller.is_subscription_active('test_inactive') is False
-    
+
     # Test subscription without status (missing status key)
     incomplete_sub = subscription_factory.inactive()
     del incomplete_sub['status']
@@ -163,15 +161,15 @@ def test_has_active_subscriptions_with_factory(subscription_controller, subscrip
         'inactive_channel': subscription_factory.inactive(data=None)
     }
     assert subscription_controller.has_active_subscriptions() is True
-    
+
     # Test with all inactive subscriptions - should return False
     subscription_controller._subscriptions = common_subscription_sets['all_inactive']
     assert subscription_controller.has_active_subscriptions() is False
-    
-    # Test with empty subscriptions - should return False  
+
+    # Test with empty subscriptions - should return False
     subscription_controller._subscriptions = {}
     assert subscription_controller.has_active_subscriptions() is False
-    
+
     # Test with all active subscriptions - should return True
     subscription_controller._subscriptions = common_subscription_sets['all_active']
     assert subscription_controller.has_active_subscriptions() is True
@@ -184,10 +182,10 @@ def test_has_subscription_with_factory(subscription_controller, subscription_fac
         'existing_channel': subscription_factory.active(data=None)
     }
     assert subscription_controller.has_subscription('existing_channel') is True
-    
+
     # Test with non-existing channel
     assert subscription_controller.has_subscription('non_existing_channel') is False
-    
+
     # Test with empty subscriptions
     subscription_controller._subscriptions = {}
     assert subscription_controller.has_subscription('any_channel') is False
@@ -286,7 +284,7 @@ def test_attempt_unsubscribing_repeated_retry_logic_integration(subscription_con
     test_channel = 'test_channel'
     test_payload = 'unsubscribe_payload'
     subscription_controller._subscription_retries = retries
-    
+
     # Mock only external dependencies - test real _send_payload behavior
     mock_ws_send = MagicMock(return_value=True)
     monkeypatch.setattr(subscription_controller, 'send', mock_ws_send)
@@ -320,11 +318,11 @@ def test_recreate_subscriptions_basic_functionality_integration(subscription_con
     # Mock only external dependencies - test real subscribe behavior
     mock_ws_send = MagicMock(return_value=subscribe_success)
     monkeypatch.setattr(subscription_controller, 'send', mock_ws_send)
-    
+
     # Mock subscription processor to create predictable payloads
     mock_processor = subscription_controller._subscription_processor
     mock_processor.make_subscribe_payload = MagicMock(return_value='test_payload')
-    
+
     # Mock wait_until - simplified approach
     # In real usage, wait_until waits for external WebSocket handler to set status=True
     # For testing, we just return the desired result without complex simulation
@@ -361,7 +359,7 @@ def test_recreate_subscriptions_basic_functionality_integration(subscription_con
                         assert subscription_controller._subscriptions[channel]['status'] is True
                 else:
                     assert subscription_controller._subscriptions[channel]['status'] is False
-        
+
         # Verify we attempted subscriptions for inactive channels
         # Note: Actual call count may be higher due to retries
         assert mock_ws_send.call_count >= inactive_count
@@ -371,7 +369,7 @@ def test_recreate_subscriptions_with_failures_integration(subscription_controlle
     # Arrange
     mock_processor = MagicMock()
     mock_processor.make_subscribe_payload = MagicMock(return_value='test_payload')
-    
+
     original_subscriptions = {
         'inactive_channel_1': subscription_factory.inactive(
             processor=mock_processor,
@@ -387,7 +385,7 @@ def test_recreate_subscriptions_with_failures_integration(subscription_controlle
     # Mock external dependencies based on failure scenario
     if failure_scenario == "partial":
         # For partial failure: send succeeds, but wait_until fails for confirmation-requiring channels
-        mock_ws_send = MagicMock(return_value=True)  
+        mock_ws_send = MagicMock(return_value=True)
         mock_wait_until = MagicMock(return_value=False)  # Confirmation fails
     else:  # all failures
         mock_ws_send = MagicMock(return_value=False)  # WebSocket send fails
@@ -395,7 +393,7 @@ def test_recreate_subscriptions_with_failures_integration(subscription_controlle
 
     monkeypatch.setattr(subscription_controller, 'send', mock_ws_send)
     monkeypatch.setattr('ibind.base.subscription_controller.wait_until', mock_wait_until)
-    
+
     # Set up default processor for channels without specific processor
     subscription_controller._subscription_processor.make_subscribe_payload = MagicMock(return_value='default_payload')
 
@@ -425,7 +423,7 @@ def test_recreate_subscriptions_preserves_subscription_processor_integration(sub
     # Arrange
     original_processor = MagicMock()
     original_processor.make_subscribe_payload = MagicMock(return_value='original_payload')
-    
+
     subscription_controller._subscriptions = {
         'test_channel': subscription_factory.inactive(
             processor=original_processor,
@@ -450,7 +448,7 @@ def test_recreate_subscriptions_handles_missing_processor_key_integration(subscr
     test_subscription = subscription_factory.inactive(data={'test': 'data'})
     # Remove the processor key to simulate missing processor
     del test_subscription['subscription_processor']
-    
+
     subscription_controller._subscriptions = {
         'test_channel': test_subscription
     }
@@ -458,7 +456,7 @@ def test_recreate_subscriptions_handles_missing_processor_key_integration(subscr
     # Mock external dependencies to simulate failure
     mock_ws_send = MagicMock(return_value=False)  # WebSocket send fails
     monkeypatch.setattr(subscription_controller, 'send', mock_ws_send)
-    
+
     # Set up default processor
     subscription_controller._subscription_processor.make_subscribe_payload = MagicMock(return_value='default_payload')
 

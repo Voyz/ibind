@@ -1,7 +1,5 @@
-import datetime
 import logging
 import pytest
-from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 
 from ibind.support.logs import (
@@ -258,56 +256,56 @@ def test_daily_rotating_file_handler_open():
     # Mock only file operations and Path.mkdir, not the entire Path class
     with patch('builtins.open', mock_open()) as mock_file_open, \
          patch('pathlib.Path.mkdir') as mock_mkdir:
-        
+
         handler = DailyRotatingFileHandler(base_filename)
-        
+
         # Test real get_timestamp behavior by using a fixed date
         with patch.object(handler, 'get_timestamp', return_value='2024-01-15'):
             # Act - Test real _open behavior
-            file_obj = handler._open()
+            handler._open()
 
-    # Assert
-    assert handler.timestamp == '2024-01-15'
-    expected_path = '/tmp/test.log__2024-01-15.txt'  # noqa: S108
-    
-    # Verify real get_filename behavior was used
-    assert handler.get_filename('2024-01-15') == expected_path
-    
-    # Verify directory creation and file opening
-    mock_mkdir.assert_called_with(parents=True, exist_ok=True)
-    mock_file_open.assert_called_with(expected_path, 'a', encoding='utf-8')
+        # Assert
+        assert handler.timestamp == '2024-01-15'
+        expected_path = '/tmp/test.log__2024-01-15.txt'  # noqa: S108
+
+        # Verify real get_filename behavior was used
+        assert handler.get_filename('2024-01-15') == expected_path
+
+        # Verify directory creation and file opening
+        mock_mkdir.assert_called_with(parents=True, exist_ok=True)
+        mock_file_open.assert_called_with(expected_path, 'a', encoding='utf-8')
 
 
 def test_daily_rotating_file_handler_emit_rotation():
     # Arrange
     base_filename = '/tmp/test.log'  # noqa: S108
-    
-    with patch('builtins.open', mock_open()) as mock_file_open, \
-         patch('pathlib.Path.mkdir') as mock_mkdir:
-        
+
+    with patch('builtins.open', mock_open()), \
+         patch('pathlib.Path.mkdir'):
+
         handler = DailyRotatingFileHandler(base_filename)
         handler.timestamp = '2024-01-15'  # Set initial timestamp
-        
+
         # Create a mock stream to simulate file being open
         mock_stream = MagicMock()
         handler.stream = mock_stream
-        
+
         # Create test log record
         record = logging.LogRecord('test', logging.INFO, 'path', 1, 'test message', (), None)
-        
+
         # Test case 1: Same timestamp - no rotation
         with patch.object(handler, 'get_timestamp', return_value='2024-01-15'):
             handler.emit(record)
-        
+
         # Should not have called close or _open
         mock_stream.close.assert_not_called()
-        
+
         # Test case 2: Different timestamp - should rotate
         with patch.object(handler, 'get_timestamp', return_value='2024-01-16'), \
              patch.object(handler, '_open', return_value=MagicMock()) as mock_open_method:
-            
+
             handler.emit(record)
-        
+
         # Should have closed old file and opened new one
         mock_stream.close.assert_called_once()
         mock_open_method.assert_called_once()
