@@ -678,34 +678,53 @@ def test_req_live_session_token_integration(mock_file, mock_time_func, mock_choi
         assert 'OAuth realm=' in auth_header
         assert 'oauth_signature=' in auth_header
 
-@patch('ibind.oauth.oauth1a.prepare_oauth')
-@patch('ibind.oauth.oauth1a.generate_oauth_headers')
-def test_req_live_session_token_api_failure(mock_gen_headers, mock_prepare, oauth_config, mock_client):
-    # Arrange
-    mock_prepare.return_value = ('prepend_value', {'diffie_hellman_challenge': 'challenge'}, 'dh_random_value')
-    mock_gen_headers.return_value = {'Authorization': 'OAuth realm="limited_poa"'}
+@patch('secrets.randbits', return_value=0x123, autospec=True)
+@patch('secrets.choice', side_effect=lambda x: 'a', autospec=True)
+@patch('time.time', return_value=1234567890, autospec=True)
+@patch('builtins.open', new_callable=mock_open, read_data='dummy_key_content')
+def test_req_live_session_token_api_failure(mock_file, mock_time_func, mock_choice_func, mock_randbits_func, oauth_config, mock_client, real_test_keys):
+    # Arrange - Use real crypto behavior, only mock API failure
+    oauth_config.encryption_key_fp = '/tmp/encryption_key.pem'  # noqa: S108
+    oauth_config.signature_key_fp = '/tmp/signature_key.pem'  # noqa: S108
 
-    # Mock API failure
-    mock_client.post.side_effect = Exception('API request failed')
+    # Create real encrypted access token secret for testing
+    test_secret = b'test_decrypted_secret'
+    cipher = PKCS1_v1_5_Cipher.new(real_test_keys['public_key'])
+    encrypted_secret = cipher.encrypt(test_secret)
+    oauth_config.access_token_secret = base64.b64encode(encrypted_secret).decode('utf-8')
 
-    # Act & Assert
-    with pytest.raises(Exception, match='API request failed'):
-        req_live_session_token(mock_client, oauth_config)
+    with patch('ibind.oauth.oauth1a.RSA.importKey', autospec=True) as mock_rsa_import:
+        mock_rsa_import.return_value = real_test_keys['private_key']
+
+        mock_client.post.side_effect = Exception('API request failed')
+
+        # Act & Assert - Test real OAuth flow behavior with API failure
+        with pytest.raises(Exception, match='API request failed'):
+            req_live_session_token(mock_client, oauth_config)
 
 
-@patch('ibind.oauth.oauth1a.prepare_oauth')
-@patch('ibind.oauth.oauth1a.generate_oauth_headers')
-@patch('ibind.oauth.oauth1a.calculate_live_session_token')
-def test_req_live_session_token_missing_response_data(mock_calculate_lst, mock_gen_headers, mock_prepare, oauth_config, mock_client):
-    # Arrange
-    mock_prepare.return_value = ('prepend_value', {'diffie_hellman_challenge': 'challenge'}, 'dh_random_value')
-    mock_gen_headers.return_value = {'Authorization': 'OAuth realm="limited_poa"'}
+@patch('secrets.randbits', return_value=0x123, autospec=True)
+@patch('secrets.choice', side_effect=lambda x: 'a', autospec=True)
+@patch('time.time', return_value=1234567890, autospec=True)
+@patch('builtins.open', new_callable=mock_open, read_data='dummy_key_content')
+def test_req_live_session_token_missing_response_data(mock_file, mock_time_func, mock_choice_func, mock_randbits_func, oauth_config, mock_client, real_test_keys):
+    # Arrange - Use real crypto behavior, only mock API response
+    oauth_config.encryption_key_fp = '/tmp/encryption_key.pem'  # noqa: S108
+    oauth_config.signature_key_fp = '/tmp/signature_key.pem'  # noqa: S108
 
-    # Mock response with missing data
-    mock_response = MagicMock()
-    mock_response.data = {}  # Missing required fields
-    mock_client.post.return_value = mock_response
+    # Create real encrypted access token secret for testing
+    test_secret = b'test_decrypted_secret'
+    cipher = PKCS1_v1_5_Cipher.new(real_test_keys['public_key'])
+    encrypted_secret = cipher.encrypt(test_secret)
+    oauth_config.access_token_secret = base64.b64encode(encrypted_secret).decode('utf-8')
 
-    # Act & Assert
-    with pytest.raises(KeyError):
-        req_live_session_token(mock_client, oauth_config)
+    with patch('ibind.oauth.oauth1a.RSA.importKey', autospec=True) as mock_rsa_import:
+        mock_rsa_import.return_value = real_test_keys['private_key']
+
+        mock_response = MagicMock()
+        mock_response.data = {}  # Missing required fields
+        mock_client.post.return_value = mock_response
+
+        # Act & Assert - Test real OAuth flow behavior with missing response data
+        with pytest.raises(KeyError):
+            req_live_session_token(mock_client, oauth_config)
