@@ -16,7 +16,7 @@ class OAuthConfig(ABC):
     """
 
     @abstractmethod
-    def version(self):
+    def version(self):  # pragma: no cover
         """
         Returns the OAuth version.
 

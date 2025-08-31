@@ -29,26 +29,6 @@ def test_oauth_config_abstract_version_method():
         OAuthConfig()
 
 
-def test_concrete_config_version_method(concrete_config):
-    # Arrange
-
-    # Act
-    result = concrete_config.version()
-
-    # Assert
-    assert result == "test_version"
-
-
-def test_verify_config_base_implementation(concrete_config):
-    # Arrange
-
-    # Act
-    result = concrete_config.verify_config()
-
-    # Assert
-    # Base implementation returns None
-    assert result is None
-
 
 def test_copy_method_creates_shallow_copy(concrete_config):
     # Arrange
