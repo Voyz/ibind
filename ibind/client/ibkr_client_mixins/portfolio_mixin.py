@@ -227,7 +227,7 @@ class PortfolioMixin:  # pragma: no cover
         return self.post('pa/allperiods', {'acctIds': account_ids})
 
     @ensure_list_arg('account_ids', 'conids')
-    def transaction_history(self: 'IbkrClient', account_ids: OneOrMany[str], conids: OneOrMany[str], currency: str, days: str = None) -> Result:
+    def transaction_history(self: 'IbkrClient', account_ids: OneOrMany[str], conids: OneOrMany[str], currency: str, days: int = None) -> Result:
         """
         Transaction history for a given number of conids and accounts. Types of transactions include dividend payments, buy and sell transactions, transfers.
 
