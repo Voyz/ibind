@@ -121,7 +121,7 @@ class OrderMixin:
         """
         return self.post(f'iserver/reply/{reply_id}', params={'confirmed': confirmed})
 
-    def whatif_order(self: 'IbkrClient', order_request: OrderRequest, account_id: str) -> Result:  # pragma: no cover
+    def whatif_order(self: 'IbkrClient', order_request: OrderRequest, account_id: str = None) -> Result:  # pragma: no cover
         """
         This endpoint allows you to preview order without actually submitting the order and you can get commission information in the response. Also supports bracket orders.
 
