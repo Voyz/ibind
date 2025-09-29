@@ -335,6 +335,7 @@ class IbkrWsClient(WsClient):
         return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
 
     def _on_reconnect(self):
+        self._last_heartbeat = 0
         super()._on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
