@@ -358,6 +358,8 @@ class OrderRequest:
     # optional
     price: Optional[float] = field(default=None)
     conidex: Optional[str] = field(default=None)
+    manual_indicator: Optional[bool] = field(default=None)
+    ext_operator: Optional[str] = field(default=None)
     sec_type: Optional[str] = field(default=None)
     coid: Optional[str] = field(default=None)
     parent_id: Optional[str] = field(default=None)
@@ -369,17 +371,24 @@ class OrderRequest:
     tif: Optional[str] = field(default='GTC')
     trailing_amt: Optional[float] = field(default=None)
     trailing_type: Optional[str] = field(default=None)
+    customer_account: Optional[str] = field(default=None)
+    is_pro_customer: Optional[bool] = field(default=None)
     referrer: Optional[str] = field(default=None)
     cash_qty: Optional[float] = field(default=None)
     fx_qty: Optional[float] = field(default=None)
     use_adaptive: Optional[bool] = field(default=None)
     is_ccy_conv: Optional[bool] = field(default=None)
     allocation_method: Optional[str] = field(default=None)
+    manual_order_time: Optional[int] = field(default=None)
+    deactivated: Optional[bool] = field(default=None)
     strategy: Optional[str] = field(default=None)
     strategy_parameters: Optional[dict] = field(default=None)
 
     # undocumented
     is_close: Optional[bool] = field(default=None)
+
+    # any additional fields that have not yet been mapped
+    custom_fields: Optional[dict] = field(default=None)
 
     def to_dict(self) -> dict:
         """Convert dataclass to a dictionary, excluding None values."""
@@ -395,6 +404,8 @@ _ORDER_REQUEST_MAPPING = {
     'coid': 'cOID',
     'acct_id': 'acctId',
     'conidex': 'conidex',
+    'manual_indicator': 'manualIndicator',
+    'ext_operator': 'extOperator',
     'sec_type': 'secType',
     'parent_id': 'parentId',
     'listing_exchange': 'listingExchange',
@@ -405,12 +416,16 @@ _ORDER_REQUEST_MAPPING = {
     'tif': 'tif',
     'trailing_amt': 'trailingAmt',
     'trailing_type': 'trailingType',
+    'customer_account': 'customerAccount',
+    'is_pro_customer': 'isProCustomer',
     'referrer': 'referrer',
     'cash_qty': 'cashQty',
     'fx_qty': 'fxQty',
     'use_adaptive': 'useAdaptive',
     'is_ccy_conv': 'isCcyConv',
     'allocation_method': 'allocationMethod',
+    'manual_order_time': 'manualOrderTime',
+    'deactivated': 'deactivated',
     'strategy': 'strategy',
     'strategy_parameters': 'strategyParameters',
     'is_close': 'isClose',
@@ -425,7 +440,10 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
         _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
         d = order_request
     else:
-        d = {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None}
+        d = {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None and k != 'custom_fields'}
+
+        if order_request.custom_fields is not None:
+            d.update(order_request.custom_fields)
 
     if 'conidex' in d and 'conid' in d:
         raise ValueError("Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.")
