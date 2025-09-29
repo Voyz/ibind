@@ -1,5 +1,5 @@
 import datetime
-from typing import Union, TYPE_CHECKING, List, Dict
+from typing import Union, TYPE_CHECKING, List, Dict, Hashable
 
 from ibind.base.rest_client import Result
 from ibind.client.ibkr_definitions import snapshot_by_id
@@ -193,7 +193,7 @@ class MarketdataMixin:
 
     def marketdata_history_by_conids(
         self: 'IbkrClient',
-        conids: Union[List[str], Dict[str, str]],
+        conids: Union[List[str], Dict[Hashable, str]],
         period: str = '1min',
         bar: str = '1min',
         outside_rth: bool = True,
@@ -207,7 +207,7 @@ class MarketdataMixin:
         For each conid provided, it queries the marketdata history for the specified symbols. The results are then cleaned up and unified. Due to this grouping and post-processing, this method returns data directly without the Result dataclass.
 
         Parameters:
-            conids (OneOrMany[str]): A list of conids to get market data for.
+            conids (Union[List[str], Dict[Hashable, str]]): A list of conids to get market data for.
             exchange (str, optional): Returns the exchange you want to receive data from.
             period (str): Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
             bar (str): Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
@@ -221,11 +221,11 @@ class MarketdataMixin:
         """
 
         if not isinstance(conids, dict):
-            # In case conids aren't a symbol->conid dict, generate a dummy conid->conid dict in order to preserve the functionality. In such case, the 'symbol' variable actually is a 'conid'.
+            # In case conids aren't a hashable->conid dict, generate a dummy conid->conid dict in order to preserve the functionality. In such case, the 'key' variable actually is a 'conid'.
             conids = {conid: conid for conid in conids}
 
         static_params = {'period': period, 'bar': bar, 'outside_rth': outside_rth, 'start_time': start_time}
-        requests = {symbol: {'kwargs': {'conid': conid} | static_params} for symbol, conid in conids.items()}
+        requests = {key: {'kwargs': {'conid': conid} | static_params} for key, conid in conids.items()}
 
         # when there is only one conid, we avoid running in parallel
         if run_in_parallel and len(conids) > 1:
@@ -233,11 +233,11 @@ class MarketdataMixin:
             market_history_responses = execute_in_parallel(self.marketdata_history_by_conid, requests=requests, max_workers=4)
         else:
             market_history_responses = {}
-            for symbol, request in requests.items():
+            for key, request in requests.items():
                 try:
-                    market_history_responses[symbol] = self.marketdata_history_by_conid(**request['kwargs'])
+                    market_history_responses[key] = self.marketdata_history_by_conid(**request['kwargs'])
                 except Exception as e:
-                    market_history_responses[symbol] = e
+                    market_history_responses[key] = e
 
         results = cleanup_market_history_responses(market_history_responses, raise_on_error=raise_on_error)
 
