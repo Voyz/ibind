@@ -688,6 +688,17 @@ class IbkrWsClient(WsClient):
         return self._queue_accessor(ibkr_ws_key).empty()
 
     def tic(self):
+        """
+        Sends a tic request to the IBKR WebSocket server and waits for the response.
+
+        This method sends a 'tic' message to the server and waits for the server to update
+        the internal tic message with a new timestamp. It uses the 'lastAccessed' field
+        to detect when a fresh response has been received.
+
+        Returns:
+            dict: The tic message dictionary containing server response data, or None if
+                  the send operation failed or the response timed out.
+        """
         ts = self._tic_message.get('lastAccessed', 0)
         ret = self.send('tic')
 
