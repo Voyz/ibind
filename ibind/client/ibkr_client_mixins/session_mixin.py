@@ -12,6 +12,13 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
+def _parse_auth_status(auth_status):
+    authenticated = auth_status['authenticated']
+    competing = auth_status['competing']
+    connected = auth_status['connected']
+
+    return authenticated and (not competing) and connected
+
 class SessionMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
@@ -97,9 +104,37 @@ class SessionMixin:
             raise AttributeError(f'Health check requests returns invalid data: {result}')
 
         auth_status = result.data['iserver']['authStatus']
+        return _parse_auth_status(auth_status)
 
-        authenticated = auth_status['authenticated']
-        competing = auth_status['competing']
-        connected = auth_status['connected']
+    def check_auth_status(self: 'IbkrClient') -> bool:
+        """
+        Verifies the health and authentication status of the IBKR Gateway server.
 
-        return authenticated and (not competing) and connected
+        This method checks if the Gateway server is alive and whether the user is authenticated.
+        It also checks for any competing connections and the connection status.
+
+        Returns:
+            bool: True if the Gateway server is authenticated, not competing, and connected, False otherwise.
+
+        Raises:
+            AttributeError: If the Gateway health check request returns invalid data.
+
+        Note:
+            - This method returns a boolean directly without the `Result` dataclass.
+        """
+        try:
+            result = self.authentication_status()
+        except Exception as e:
+            if isinstance(e, ExternalBrokerError) and e.status_code == 401:
+                _LOGGER.info('Gateway session is not authenticated.')
+            elif isinstance(e, ConnectTimeout):
+                _LOGGER.error(
+                    'ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.'
+                )
+            else:
+                _LOGGER.error(f'Auth status request failed: {e}')
+            return False
+
+        if result.data.get('authenticated', None) is None:
+            raise AttributeError(f'Health check requests returns invalid data: {result}')
+        return _parse_auth_status(result.data)

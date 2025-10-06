@@ -1,5 +1,7 @@
 import importlib.util
 import os
+import time
+import warnings
 from typing import Union, Optional, TYPE_CHECKING, cast
 
 from ibind import var
@@ -261,20 +263,37 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         self.stop_tickler()
         self.logout()
 
+    def handle_health_status(self, raise_exceptions: bool = False) -> bool:
+        warnings.warn("'handle_health_status' is deprecated. Calling it on a frequent basis is not recommended as IBKR expects /tickle call at most every 60 seconds. Use 'handle_auth_status' which utilises authentication_status() instead of tickle(), and use Tickler or manually ensure you call tickle() on a 60-second interval.", DeprecationWarning, stacklevel=2)
 
-    def handle_health_status(self) -> bool:
+        return self._attempt_health_check(self.check_health, raise_exceptions)
+
+    def handle_auth_status(self, raise_exceptions: bool = False) -> bool:
         """
-        Handles the health status of the IBKR connection.
+        Handles the authentication status of the IBKR connection.
 
         If the connection is not healthy, it attempts to re-establish OAuth authentication.
+
+        Args:
+            raise_exceptions (bool): Whether to raise exceptions if the connection is not healthy.
 
         Returns:
             bool: True if the connection is healthy, False otherwise.
         """
-        healthy = self.check_health()
-        if healthy:
-            # All good, do nothing.
-            return True
+        return self._attempt_health_check(self.check_auth_status, raise_exceptions)
+
+    def _attempt_health_check(self, method: callable, raise_exceptions: bool = False) -> bool:
+        max_attempts = 3
+        for attempt in range(max_attempts):
+
+            healthy = method()
+            if healthy:
+                # All good, do nothing.
+                return True
+
+            if attempt < max_attempts - 1:
+                _LOGGER.warning(f'IBKR connection is not healthy. Retrying health check attempt {attempt + 2}/{max_attempts}.')
+                time.sleep(1)
 
         if not self._use_oauth:
             # Do nothing; wait for a reconnection either from IBeam or manually.
@@ -301,6 +320,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                 _LOGGER.error(f'OAuth 410 gone: recreate a new live session token, or try a different server, eg. "1.api.ibkr.com", "2.api.ibkr.com", etc.')
             else:
                 _LOGGER.error(f'Unknown error checking IBKR connection during reauthentication: {exception_to_string(e)}')
+
+            if raise_exceptions:
+                raise
         except Exception as e: # pragma: no cover
             _LOGGER.error(f'Error reauthenticating OAuth during reauthentication: {exception_to_string(e)}')
+            if raise_exceptions:
+                raise
         return False
