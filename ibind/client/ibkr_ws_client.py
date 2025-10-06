@@ -315,6 +315,7 @@ class IbkrWsClient(WsClient):
         self._last_heartbeat = 0
         self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
         self._queue_accessors: Dict[IbkrWsKey, QueueAccessor] = {}
+        self._tic_message = {}
 
         if start:
             self.start()
@@ -485,6 +486,9 @@ class IbkrWsClient(WsClient):
         elif topic is None:
             # in general most message should carry a topic, other than for few exceptions
             self._handle_message_without_topic(message)
+
+        elif topic == 'tic':
+            self._tic_message = message
 
         elif topic == 'system':
             if 'hb' in message:
@@ -682,3 +686,18 @@ class IbkrWsClient(WsClient):
             - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
         """
         return self._queue_accessor(ibkr_ws_key).empty()
+
+    def tic(self):
+        ts = self._tic_message.get('lastAccessed', 0)
+        ret = self.send('tic')
+
+        if not ret:
+            return None
+
+        def ts_changed():
+            return self._tic_message.get('lastAccessed', 0) != ts
+
+        if not wait_until(ts_changed, f'tic timeout, ts={ts}', timeout=5):
+            return None
+
+        return self._tic_message
