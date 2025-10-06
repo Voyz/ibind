@@ -19,16 +19,21 @@ def _parse_auth_status(auth_status):
 
     return authenticated and (not competing) and connected
 
+
 class SessionMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
     """
 
-    def authentication_status(self: 'IbkrClient') -> Result:  # pragma: no cover
+    def authentication_status(self: 'IbkrClient', log: bool = True) -> Result:  # pragma: no cover
         """
         Current Authentication status to the Brokerage system. Market Data and Trading is not possible if not authenticated, e.g. authenticated shows false.
+
+        Args:
+            log (bool, optional): Log the authentication status request. Defaults to True.
+
         """
-        return self.post('iserver/auth/status')
+        return self.post('iserver/auth/status', log=log)
 
     def initialize_brokerage_session(self: 'IbkrClient', compete: bool = True) -> Result:  # pragma: no cover
         """
@@ -123,7 +128,7 @@ class SessionMixin:
             - This method returns a boolean directly without the `Result` dataclass.
         """
         try:
-            result = self.authentication_status()
+            result = self.authentication_status(log=False)
         except Exception as e:
             if isinstance(e, ExternalBrokerError) and e.status_code == 401:
                 _LOGGER.info('Gateway session is not authenticated.')
