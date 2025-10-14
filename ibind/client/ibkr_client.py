@@ -53,6 +53,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         timeout: float = 10,
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
+        auto_recreate_session: bool = True,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         log_responses: bool = var.IBIND_LOG_RESPONSES,
         use_oauth: bool = var.IBIND_USE_OAUTH,
@@ -74,6 +75,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_recreate_session (bool, optional): Whether to automatically recreate the session on connection errors. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
             oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
@@ -100,6 +102,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             timeout=timeout,
             max_retries=max_retries,
             use_session=use_session,
+            auto_recreate_session=auto_recreate_session,
             auto_register_shutdown=auto_register_shutdown,
             log_responses=log_responses,
         )

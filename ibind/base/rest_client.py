@@ -1,6 +1,7 @@
 import atexit
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
@@ -82,6 +83,7 @@ class RestClient:
         timeout: float = 10,
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
+        auto_recreate_session: bool = True,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         log_responses: bool = var.IBIND_LOG_RESPONSES,
     ) -> None:
@@ -93,6 +95,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_recreate_session (bool, optional): Whether to automatically recreate the session on connection errors. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
         """
 
@@ -113,6 +116,7 @@ class RestClient:
         self._make_logger()
 
         self.use_session = use_session
+        self._auto_recreate_session = auto_recreate_session
 
         if use_session:
             self.make_session()
@@ -263,7 +267,9 @@ class RestClient:
                 msg = f'{self}: Connection error detected, retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
                 self.logger.warning(msg)
                 _LOGGER.warning(msg)
-                if self.use_session:
+                time.sleep(1.5 * (attempt + 1))  # small back-off before retry
+
+                if self.use_session and self._auto_recreate_session:
                     self.close_session()
                     self.make_session()  # Recreate session automatically
                 continue  # Retry the request with a fresh session
