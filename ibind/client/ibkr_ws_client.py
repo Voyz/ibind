@@ -606,7 +606,7 @@ class IbkrWsClient(WsClient):
             bool: True if the subscription was successful, False otherwise.
         """
         if channel[:2] == 'or':
-            if not wait_until(self._ibkr_client.check_health, 'IbkrClient not healthy before subscribing to orders', timeout=15):
+            if not wait_until(self._ibkr_client.check_health, 'IbkrClient not healthy before subscribing to orders', timeout=15, sleep=3):
                 return False
             self._ibkr_client.receive_brokerage_accounts()
             time.sleep(0.25)
