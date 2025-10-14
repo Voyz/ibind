@@ -770,7 +770,7 @@ def cleanup_market_history_responses(
                     'low': record['l'],
                     'close': record['c'],
                     'volume': record['v'],
-                    'date': datetime.datetime.fromtimestamp(record['t'] / 1000, tz=datetime.UTC),
+                    'date': datetime.datetime.fromtimestamp(record['t'] / 1000, tz=datetime.timezone.utc),
                 }
             )
         results[symbol] = records
