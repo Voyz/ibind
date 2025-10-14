@@ -145,7 +145,7 @@ class TestIbkrClientI(TestCase):
                 'low': data['l'],
                 'close': data['c'],
                 'volume': data['v'],
-                'date': datetime.datetime.utcfromtimestamp(data['t'] / 1000),
+                'date': datetime.datetime.fromtimestamp(data['t'] / 1000, tz=datetime.timezone.utc),
             }
             expected_results[query.symbol] = output
 
