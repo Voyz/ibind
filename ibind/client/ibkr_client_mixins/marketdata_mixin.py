@@ -71,6 +71,7 @@ class MarketdataMixin:
 
                 for key, value in entry.items():
                     if key not in snapshot_by_id:
+                        result[key] = value
                         continue
 
                     result[snapshot_by_id[key]] = value
