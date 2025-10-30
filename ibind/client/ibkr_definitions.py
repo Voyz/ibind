@@ -63,7 +63,7 @@ snapshot_by_key = {
     'ema_20': '7677',  # EMA(20) - Exponential moving average (N=20).
     'price_to_ema_200_percent': '7678',  # Price/EMA(200) - Price to Exponential moving average (N=200) ratio -1, displayed in percents.
     'price_to_ema_100_percent': '7679',  # Price/EMA(100) - Price to Exponential moving average (N=100) ratio -1, displayed in percents.
-    'price_to_ema_50_percent': '7680',  # Price/EMA(50) - Price to Exponential moving average (N=50) ratio -1, displayed in percents.
+    'price_to_ema_50_percent': '7724',  # Price/EMA(50) - Price to Exponential moving average (N=50) ratio -1, displayed in percents.
     'price_to_ema_20_percent': '7681',  # Price/EMA(20) - Price to Exponential moving average (N=20) ratio -1, displayed in percents.
 
     # Portfolio
@@ -106,6 +106,7 @@ snapshot_by_key = {
     'bid_yield': '7699',  # Bid Yield - Implied yield of the bond if it is purchased at the current bid price. Bid yield is calculated using the Ask on all possible call dates. It is assumed that prepayment occurs if the bond has call or put provisions and the issuer can offer a lower coupon rate based on current market rates. The yield to worst will be the lowest of the yield to maturity or yield to call (if the bond has prepayment provisions). Yield to worse may be the same as yield to maturity but never higher.
     'futures_open_interest': '7697',  # Futures Open Interest - Total number of outstanding futures contracts
     'shortable_shares': '7636',  # Number of shares available for shorting.
+    'shortable_fee_rate_percent': '7637',  # Shortable Fee Rate % - The fee rate charged for shorting the security, expressed as an annualized percentage.
     'put_call_interest': '7085',  # Put/Call Interest - Put option open interest/call option open interest for the trading day.
     'put_call_volume': '7086',  # Put/Call Volume - Put option volume/call option volume for the trading day.
     'option_implied_vol_percent': '7283',  # Option Implied Vol. % - A prediction of how volatile an underlying will be in the future. At the market volatility estimated for a maturity thirty calendar days forward of the current trading day, and based on option prices from two consecutive expiration months. To query the Implied Vol. % of a specific strike refer to field 7633.
