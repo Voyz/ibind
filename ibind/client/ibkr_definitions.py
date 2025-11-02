@@ -13,12 +13,12 @@ snapshot_by_key = {
     'underlying_conid': '6457',  # Underlying Conid. Use /trsrv/secdef to get more information about the security
     'market_data_availability': '6509',  # Market Data Availability. The field may contain three chars. First char defines: R = RealTime, D = Delayed, Z = Frozen, Y = Frozen Delayed, N = Not Subscribed. Second char defines: P = Snapshot, p = Consolidated. Third char defines: B = Book
     'conid_exchange': '7094',  # Conid + Exchange
+    'contract_description': '7219',  # Contract Description
+    'contract_description_alt': '7220',  # Contract Description (alternative)
 
-    ##Regulator snapshot
+    # Regulator snapshot
     'ask_codes': '7057',  # Returns the series of character codes for the Ask exchange.
-
     'bid_codes': '7068',  # Returns the series of character codes for the Bid exchange.
-
     'last_exch_codes': '7058',  # Returns the series of character codes for the Last exchange.
 
     # Price and Volume
@@ -63,7 +63,7 @@ snapshot_by_key = {
     'ema_20': '7677',  # EMA(20) - Exponential moving average (N=20).
     'price_to_ema_200_percent': '7678',  # Price/EMA(200) - Price to Exponential moving average (N=200) ratio -1, displayed in percents.
     'price_to_ema_100_percent': '7679',  # Price/EMA(100) - Price to Exponential moving average (N=100) ratio -1, displayed in percents.
-    'price_to_ema_50_percent': '7680',  # Price/EMA(50) - Price to Exponential moving average (N=50) ratio -1, displayed in percents.
+    'price_to_ema_50_percent': '7724',  # Price/EMA(50) - Price to Exponential moving average (N=50) ratio -1, displayed in percents.
     'price_to_ema_20_percent': '7681',  # Price/EMA(20) - Price to Exponential moving average (N=20) ratio -1, displayed in percents.
 
     # Portfolio
@@ -92,6 +92,7 @@ snapshot_by_key = {
     'issue_date': '7715',  # Issue Date
     'organization_type': '7704',  # Organization Type
     'debt_class': '7705',  # Debt Class
+    'text': '58',  # Text
 
     # Options and Futures
     'opt_volume': '7089',  # Opt. Volume - Option Volume
@@ -104,8 +105,10 @@ snapshot_by_key = {
     'profit_probability': '7703',  # Profit Probability - Customer implied probability of any gain.
     'last_yield': '7698',  # Last Yield - Implied yield of the bond if it is purchased at the current last price. Last yield is calculated using the Last price on all possible call dates. It is assumed that prepayment occurs if the bond has call or put provisions and the issuer can offer a lower coupon rate based on current market rates. The yield to worst will be the lowest of the yield to maturity or yield to call (if the bond has prepayment provisions). Yield to worse may be the same as yield to maturity but never higher.
     'bid_yield': '7699',  # Bid Yield - Implied yield of the bond if it is purchased at the current bid price. Bid yield is calculated using the Ask on all possible call dates. It is assumed that prepayment occurs if the bond has call or put provisions and the issuer can offer a lower coupon rate based on current market rates. The yield to worst will be the lowest of the yield to maturity or yield to call (if the bond has prepayment provisions). Yield to worse may be the same as yield to maturity but never higher.
+    'ask_yield': '7720',  # Ask Yield - Implied yield of the bond if it is purchased at the current offer. Ask yield is calculated using the Bid on all possible call dates. It is assumed that prepayment occurs if the bond has call or put provisions and the issuer can offer a lower coupon rate based on current market rates. The yield to worst will be the lowest of the yield to maturity or yield to call (if the bond has prepayment provisions). Yield to worse may be the same as yield to maturity but never higher.
     'futures_open_interest': '7697',  # Futures Open Interest - Total number of outstanding futures contracts
     'shortable_shares': '7636',  # Number of shares available for shorting.
+    'shortable_fee_rate_percent': '7637',  # Shortable Fee Rate % - The fee rate charged for shorting the security, expressed as an annualized percentage.
     'put_call_interest': '7085',  # Put/Call Interest - Put option open interest/call option open interest for the trading day.
     'put_call_volume': '7086',  # Put/Call Volume - Put option volume/call option volume for the trading day.
     'option_implied_vol_percent': '7283',  # Option Implied Vol. % - A prediction of how volatile an underlying will be in the future. At the market volatility estimated for a maturity thirty calendar days forward of the current trading day, and based on option prices from two consecutive expiration months. To query the Implied Vol. % of a specific strike refer to field 7633.
@@ -114,6 +117,8 @@ snapshot_by_key = {
     'theta': '7310',  # Theta - A measure of the rate of decline the value of an option due to the passage of time.
     'vega': '7311',  # Vega - The amount that the price of an option changes compared to a 1% change in the volatility.
     'implied_vol_percent': '7633',  # Implied Vol. % - The implied volatility for the specific strike of the option in percentage. To query the Option Implied Vol. % from the underlying refer to field 7283.
+    'opt_volume_change_percent': '7607',  # Opt. Volume Change % - Today's option volume as a percentage of the average option volume.
+    'right': '201',  # Right - Returns the right of the instrument, such as P for Put or C for Call.
 
     # Wall Street Horizon
     'upcoming_event': '7683',  # Upcoming Event - Shows the next major company event. Requires Wall Street Horizon subscription.
@@ -124,8 +129,14 @@ snapshot_by_key = {
     'recent_analyst_meeting': '7688',  # Recent Analyst Meeting - The date and time of the most recent analyst meeting. Requires Wall Street Horizon subscription.
     'recent_earnings': '7689',  # Recent Earnings - The date and time of the most recent earnings/earning call event. Requires Wall Street Horizon subscription.
     'recent_misc_event': '7690',  # Recent Misc Event - The date and time of the most recent shareholder meeting, presentation, or other event. Requires Wall Street Horizon subscription.
+    'morningstar_rating': '7655',  # Morningstar Rating - Displays Morningstar Rating provided value. Requires Morningstar subscription.
+
+    # Dividends
+    'dividends': '7671',  # Dividends - This value is the total of the expected dividend payments over the next twelve months per share.
+    'dividends_ttm': '7672',  # Dividends TTM - This value is the total of the expected dividend payments over the last twelve months per share.
 
     # Miscellaneous
+    'can_be_traded': '7184',  # canBeTraded - If contract is a trade-able instrument. Returns 1(true) or 0(false).
     'shortable': '7644',  # Shortable - Describes the level of difficulty with which the security can be sold short.
     'service_params': '6508',  # Service Params.
     'market_data_marker': '6119',  # Marker for market data delivery method (similar to request id)
