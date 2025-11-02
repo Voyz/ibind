@@ -132,11 +132,11 @@ class DailyRotatingFileHandler(logging.FileHandler):
         self.stream = None
         super().__init__(*args, **kwargs)
 
-    def get_timestamp(self):
+    def get_timestamp(self):  # pragma: no cover
         now = datetime.datetime.now(datetime.timezone.utc)
         return now.strftime(self.date_format)
 
-    def get_filename(self, timestamp):
+    def get_filename(self, timestamp):  # pragma: no cover
         return f'{self.baseFilename}__{timestamp}.txt'
 
     def _open(self):
