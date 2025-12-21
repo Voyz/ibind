@@ -6,7 +6,8 @@ import traceback
 from pathlib import Path
 from typing import List, TypeVar
 
-from ibind.support.py_utils import make_clean_stack
+from ibind.support.logs import get_logger_children
+from ibind.support.py_utils import make_clean_stack, OneOrMany, UNDEFINED
 
 _NAME_TO_LEVEL = logging.getLevelNamesMapping()
 
@@ -19,29 +20,6 @@ def accepts_kwargs(func):
         if param.kind == inspect.Parameter.VAR_KEYWORD:
             return True
     return False
-
-UNDEFINED = object()
-
-S = TypeVar('S')
-OneOrMany = S | List[S]
-
-def get_logger_children(main_logger) -> List[logging.Logger]:
-    """
-    Gets child loggers. Added as a support compat for Python version 3.11 and below.
-    Source: https://github.com/python/cpython/blob/3.12/Lib/logging/__init__.py#L1831
-    """
-    if hasattr(main_logger, 'getChildren'):
-        return list(main_logger.getChildren())
-
-    def _hierlevel(logger):
-        if logger is logger.manager.root:
-            return 0
-        return 1 + logger.name.count('.')
-
-    d = main_logger.manager.loggerDict
-    return [item for item in d.values()
-            if isinstance(item, logging.Logger) and item.parent is main_logger and
-            _hierlevel(item) == 1 + _hierlevel(item.parent)]
 
 # --- Logging Utilities ---
 
