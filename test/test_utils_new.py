@@ -127,7 +127,12 @@ class CaptureLogsContext:
         def new_log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
             if extra is None:
                 extra = {}
-            extra['manual_trace'] = make_clean_stack(extra_filters=[os.path.join('support', 'slog.py')])[:-2]
+            # Check if make_clean_stack accepts extra_filters
+            if 'extra_filters' in inspect.signature(make_clean_stack).parameters:
+                extra['manual_trace'] = make_clean_stack(extra_filters=[os.path.join('support', 'slog.py')])[:-2]
+            else:
+                extra['manual_trace'] = make_clean_stack()[:-2]
+
             return original_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
 
         logger.__old_log_method__ = original_log
