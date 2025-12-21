@@ -257,11 +257,13 @@ def exception_to_string(excp) -> str:  # pragma: no cover
     return excp_str
 
 
-def make_clean_stack() -> [traceback.FrameSummary]:  # pragma: no cover
+def make_clean_stack(extra_filters: List[str] = None) -> [traceback.FrameSummary]:  # pragma: no cover
+    default_filters = ['JetBrains', os.path.join('Lib', 'unittest'), os.path.join('Lib', 'logging')]
+    all_filters = default_filters + (extra_filters or [])
     return [
         s
         for s in traceback.extract_stack()
-        if all(substring not in s.filename for substring in ['JetBrains', os.path.join('Lib', 'unittest'), os.path.join('Lib', 'logging')])
+        if all(substring not in s.filename for substring in all_filters)
     ][:-2]
 
 

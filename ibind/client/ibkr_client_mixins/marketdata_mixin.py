@@ -285,7 +285,7 @@ class MarketdataMixin:
         )
 
     @ensure_list_arg('conids')
-    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> List[Result]:
+    def marketdata_unsubscribe(self: 'IbkrClient', conids: OneOrMany[str]) -> Dict[str, Union[Result, Exception]]:
         """
         Cancel market data for given conid(s).
 
@@ -293,15 +293,8 @@ class MarketdataMixin:
             conids (OneOrMany[str]): Enter the contract identifier to cancel the market data feed. This can clear all standing market data feeds to invalidate your cache and start fresh.
         """
         # we unsubscribe from all conids simultaneously
-        unsubscribe_requests = {conid: {'args': ['iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
+        unsubscribe_requests = {str(conid): {'args': ['iserver/marketdata/unsubscribe'], 'kwargs': {'params': {'conid': int(conid)}}} for conid in conids}
         results = execute_in_parallel(self.post, unsubscribe_requests)
-
-        for conid, result in results.items():
-            if isinstance(result, Exception):
-                # 404 means that no such subscription was found in first place, which we ignore
-                if isinstance(result, ExternalBrokerError) and result.status_code == 404:
-                    continue
-                raise result
 
         return results
 
