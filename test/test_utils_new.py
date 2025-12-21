@@ -127,7 +127,8 @@ class CaptureLogsContext:
         def new_log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
             if extra is None:
                 extra = {}
-            # Check if make_clean_stack accepts extra_filters
+            # Check if make_clean_stack accepts extra_filters. This is necessary
+            # because the signature of make_clean_stack is unstable.
             if 'extra_filters' in inspect.signature(make_clean_stack).parameters:
                 extra['manual_trace'] = make_clean_stack(extra_filters=[os.path.join('support', 'slog.py')])[:-2]
             else:
