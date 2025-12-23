@@ -14,35 +14,56 @@ from test.integration.client import ibkr_responses
 from test.test_utils_new import CaptureLogsContext
 
 
+_URL = 'https://localhost:5000'
+_TIMEOUT = 8
+_MAX_RETRIES = 4
+_DEFAULT_PATH = '/test/api/route'
+_ACCOUNT_ID = 'TEST_ACCOUNT_ID'
+
+
 @pytest.fixture
-def client_fixture(mocker):
+def client():
     ibind_logs_initialize(log_to_console=True)
-    mocker.patch('ibind.base.rest_client.requests')
-    url = 'https://localhost:5000'
-    account_id = 'TEST_ACCOUNT_ID'
-    timeout = 8
-    max_retries = 4
-    client = IbkrClient(
-        url=url,
-        account_id=account_id,
-        timeout=timeout,
-        max_retries=max_retries,
+    return IbkrClient(
+        url=_URL,
+        account_id=_ACCOUNT_ID,
+        timeout=_TIMEOUT,
+        max_retries=_MAX_RETRIES,
         use_session=False,
     )
-    data = {'Test key': 'Test value'}
+
+
+@pytest.fixture
+def data():
+    return {'Test key': 'Test value'}
+
+
+@pytest.fixture
+def response(data):
     response = MagicMock()
     response.json.return_value = data
-    default_path = '/test/api/route'
-    default_url = f'{url}/{default_path}'
-    result = Result(data=data, request={'url': default_url})
-    return client, response, default_path, default_url, result, timeout, max_retries
+    return response
 
 
-def test_get_conids(client_fixture, mocker):
-    # Arrange
-    client, response, _, _, _, _, _ = client_fixture
+@pytest.fixture(autouse=True)
+def requests_mock(mocker, response):
     requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = response
+    return requests_mock
+
+
+@pytest.fixture
+def default_url():
+    return f'{_URL}/{_DEFAULT_PATH}'
+
+
+@pytest.fixture
+def result(data, default_url):
+    return Result(data=data, request={'url': default_url})
+
+
+def test_get_conids(client, response):
+    # Arrange
     response.json.return_value = ibkr_responses.responses['stocks']
 
     queries = [
@@ -69,11 +90,8 @@ def test_get_conids(client_fixture, mocker):
         assert conid == ibkr_responses.responses['filtered_conids'][symbol]
 
 
-def test_get_conids_exception(client_fixture, mocker):
+def test_get_conids_exception(client, response):
     # Arrange
-    client, response, _, _, _, _, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
-    requests_mock.request.return_value = response
     response.json.return_value = ibkr_responses.responses['stocks']
 
     symbol = 'AAPL'
@@ -91,9 +109,8 @@ def test_get_conids_exception(client_fixture, mocker):
                                  f'\nInstruments returned:\n{pformat(instruments)}'
 
 
-def test_get_live_orders_no_filters(client_fixture):
+def test_get_live_orders_no_filters(client, result):
     # Arrange
-    client, _, _, _, result, _, _ = client_fixture
     client.get = MagicMock(return_value=result)
 
     # Act
@@ -103,9 +120,8 @@ def test_get_live_orders_no_filters(client_fixture):
     client.get.assert_called_with('iserver/account/orders', params=None)
 
 
-def test_get_live_orders_with_valid_filters(client_fixture):
+def test_get_live_orders_with_valid_filters(client, result):
     # Arrange
-    client, _, _, _, result, _, _ = client_fixture
     client.get = MagicMock(return_value=result)
     filters = ['inactive', 'filled']
 
@@ -116,9 +132,8 @@ def test_get_live_orders_with_valid_filters(client_fixture):
     client.get.assert_called_with('iserver/account/orders', params={'filters': 'inactive,filled'})
 
 
-def test_get_live_orders_with_single_filter(client_fixture):
+def test_get_live_orders_with_single_filter(client, result):
     # Arrange
-    client, _, _, _, result, _, _ = client_fixture
     client.get = MagicMock(return_value=result)
 
     # Act
@@ -128,9 +143,8 @@ def test_get_live_orders_with_single_filter(client_fixture):
     client.get.assert_called_with('iserver/account/orders', params={'filters': 'submitted'})
 
 
-def test_get_live_orders_with_incorrect_filter_type(client_fixture):
+def test_get_live_orders_with_incorrect_filter_type(client, result):
     # Arrange
-    client, _, _, _, result, _, _ = client_fixture
     client.get = MagicMock(return_value=result)
 
     # Act and Assert
@@ -151,10 +165,8 @@ def _marketdata_request(method, url, *args, **kwargs):
         return MagicMock(json=lambda: history_by_conid[conid])
 
 
-def test_marketdata_history_by_symbols(client_fixture, mocker):
+def test_marketdata_history_by_symbols(client, requests_mock):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.side_effect = _marketdata_request
 
     queries = [
@@ -207,11 +219,9 @@ def test_marketdata_history_by_symbols(client_fixture, mocker):
         assert result['date'] == expected['date']
 
 
-def test_check_health_authenticated_and_connected(client_fixture, mocker):
+def test_check_health_authenticated_and_connected(client, default_url, requests_mock):
     # Arrange
-    client, _, _, default_url, _, _, _ = client_fixture
     response_data = {'iserver': {'authStatus': {'authenticated': True, 'competing': False, 'connected': True}}}
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = MagicMock(json=lambda: response_data)
     client.tickle = MagicMock(return_value=Result(data=response_data, request={'url': default_url}))
 
@@ -223,11 +233,9 @@ def test_check_health_authenticated_and_connected(client_fixture, mocker):
     client.tickle.assert_called_once()
 
 
-def test_check_health_not_authenticated(client_fixture, mocker):
+def test_check_health_not_authenticated(client, default_url, requests_mock):
     # Arrange
-    client, _, _, default_url, _, _, _ = client_fixture
     response_data = {'iserver': {'authStatus': {'authenticated': False, 'competing': False, 'connected': True}}}
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = MagicMock(json=lambda: response_data)
     client.tickle = MagicMock(return_value=Result(data=response_data, request={'url': default_url}))
 
@@ -238,11 +246,9 @@ def test_check_health_not_authenticated(client_fixture, mocker):
     assert health_status is False
 
 
-def test_check_health_competing_connection(client_fixture, mocker):
+def test_check_health_competing_connection(client, default_url, requests_mock):
     # Arrange
-    client, _, _, default_url, _, _, _ = client_fixture
     response_data = {'iserver': {'authStatus': {'authenticated': True, 'competing': True, 'connected': True}}}
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = MagicMock(json=lambda: response_data)
     client.tickle = MagicMock(return_value=Result(data=response_data, request={'url': default_url}))
 
@@ -253,10 +259,8 @@ def test_check_health_competing_connection(client_fixture, mocker):
     assert health_status is False
 
 
-def test_check_health_connection_error(client_fixture, mocker):
+def test_check_health_connection_error(client, requests_mock):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.side_effect = ConnectTimeout
     client.tickle = MagicMock(side_effect=ConnectTimeout)
 
@@ -274,10 +278,8 @@ def test_check_health_connection_error(client_fixture, mocker):
     assert 'ConnectTimeout raised when communicating with the Gateway' in cm.output[0]
 
 
-def test_check_health_external_broker_error_unauthenticated(client_fixture, mocker):
+def test_check_health_external_broker_error_unauthenticated(client, requests_mock):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.side_effect = ExternalBrokerError(status_code=401)
     client.tickle = MagicMock(side_effect=ExternalBrokerError(status_code=401))
 
@@ -290,11 +292,9 @@ def test_check_health_external_broker_error_unauthenticated(client_fixture, mock
     assert 'Gateway session is not authenticated.' in cm.output[0]
 
 
-def test_check_health_invalid_data(client_fixture, mocker):
+def test_check_health_invalid_data(client, default_url, requests_mock):
     # Arrange
-    client, _, _, default_url, _, _, _ = client_fixture
     response_data = {}  # Invalid data format
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = MagicMock(json=lambda: response_data)
     client.tickle = MagicMock(return_value=Result(data=response_data, request={'url': default_url}))
 
@@ -304,9 +304,8 @@ def test_check_health_invalid_data(client_fixture, mocker):
     assert 'Health check requests returns invalid data' in str(excinfo.value)
 
 
-def test_marketdata_unsubscribe_success(client_fixture, mocker):
+def test_marketdata_unsubscribe_success(client, mocker):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
     conids = [12345, 67890]
 
     def post_side_effect(url, *args, **kwargs):
@@ -327,9 +326,8 @@ def test_marketdata_unsubscribe_success(client_fixture, mocker):
         assert result.data['success'] is True
 
 
-def test_marketdata_unsubscribe_with_error(client_fixture, mocker):
+def test_marketdata_unsubscribe_with_error(client, mocker):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
     conids = [12345, 67890]
 
     def post_side_effect(url, *args, **kwargs):
@@ -350,9 +348,8 @@ def test_marketdata_unsubscribe_with_error(client_fixture, mocker):
     assert isinstance(results[12345], ExternalBrokerError)
 
 
-def test_marketdata_unsubscribe_raises_exception_on_failure(client_fixture, mocker):
+def test_marketdata_unsubscribe_raises_exception_on_failure(client, mocker):
     # Arrange
-    client, _, _, _, _, _, _ = client_fixture
     conids = [12345]
     client.post = MagicMock(side_effect=ExternalBrokerError(status_code=500), __name__='client_post_mock')
 

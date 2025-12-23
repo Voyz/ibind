@@ -14,108 +14,115 @@ from ibind.support.logs import ibind_logs_initialize
 from test.test_utils_new import CaptureLogsContext
 
 
+_URL = 'https://localhost:5000'
+_TIMEOUT = 8
+_MAX_RETRIES = 4
+_DEFAULT_PATH = 'test/api/route'
+
+
 @pytest.fixture
-def client_fixture():
+def client():
     ibind_logs_initialize(log_to_console=True)
-    url = 'https://localhost:5000'
-    timeout = 8
-    max_retries = 4
-    client = RestClient(
-        url=url,
-        timeout=timeout,
-        max_retries=max_retries,
+    return RestClient(
+        url=_URL,
+        timeout=_TIMEOUT,
+        max_retries=_MAX_RETRIES,
         use_session=False,
     )
-    data = {'Test key': 'Test value'}
+
+
+@pytest.fixture
+def data():
+    return {'Test key': 'Test value'}
+
+
+@pytest.fixture
+def response(data):
     response = MagicMock()
     response.json.return_value = data
-    default_path = 'test/api/route'
-    default_url = f'{url}/{default_path}'
-    result = Result(data=data, request={'url': default_url})
-    return client, response, default_path, default_url, result, timeout, max_retries
+    return response
 
 
-def test_default_rest_get(client_fixture, mocker):
-    # Arrange
-    client, response, default_path, default_url, result, timeout, _ = client_fixture
+@pytest.fixture(autouse=True)
+def requests_mock(mocker, response):
     requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.return_value = response
+    return requests_mock
 
+
+@pytest.fixture
+def default_url():
+    return f'{_URL}/{_DEFAULT_PATH}'
+
+
+@pytest.fixture
+def result(data, default_url):
+    return Result(data=data, request={'url': default_url})
+
+
+def test_default_rest_get(client, default_url, result, requests_mock):
+    # Arrange
     # Act
-    rv = client.get(default_path)
+    rv = client.get(_DEFAULT_PATH)
 
     # Assert
     assert result == rv
-    requests_mock.request.assert_called_with('GET', default_url, verify=False, headers={}, timeout=timeout)
+    requests_mock.request.assert_called_with('GET', default_url, verify=False, headers={}, timeout=_TIMEOUT)
 
 
-def test_default_rest_post(client_fixture, mocker):
+def test_default_rest_post(client, default_url, result, requests_mock):
     # Arrange
-    client, response, default_path, default_url, result, timeout, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
-    requests_mock.request.return_value = response
     test_post_kwargs = {'field1': 'value1', 'field2': 'value2'}
     test_json = {'json': {**test_post_kwargs}}
 
     # Act
-    rv = client.post(default_path, params=test_post_kwargs)
+    rv = client.post(_DEFAULT_PATH, params=test_post_kwargs)
 
     # Assert
     assert result.copy(request={'url': default_url, **test_json}) == rv
-    requests_mock.request.assert_called_with('POST', default_url, verify=False, headers={}, timeout=timeout, **test_json)
+    requests_mock.request.assert_called_with('POST', default_url, verify=False, headers={}, timeout=_TIMEOUT, **test_json)
 
 
-def test_default_rest_delete(client_fixture, mocker):
+def test_default_rest_delete(client, default_url, result, requests_mock):
     # Arrange
-    client, response, default_path, default_url, result, timeout, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
-    requests_mock.request.return_value = response
-
     # Act
-    rv = client.delete(default_path)
+    rv = client.delete(_DEFAULT_PATH)
 
     # Assert
     assert result == rv
-    requests_mock.request.assert_called_with('DELETE', default_url, verify=False, headers={}, timeout=timeout)
+    requests_mock.request.assert_called_with('DELETE', default_url, verify=False, headers={}, timeout=_TIMEOUT)
 
 
-def test_request_retries(client_fixture, mocker):
+def test_request_retries(client, default_url, requests_mock):
     # Arrange
-    client, _, default_path, default_url, _, _, max_retries = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
     requests_mock.request.side_effect = ReadTimeout()
 
     # Act
     with CaptureLogsContext('ibind.rest_client', level='INFO') as cm, pytest.raises(TimeoutError) as excinfo:
-        client.get(default_path)
+        client.get(_DEFAULT_PATH)
 
     # Assert
-    for i in range(max_retries):
-        assert f'RestClient: Timeout for GET {default_url} {{}}, retrying attempt {i + 1}/{max_retries}' in cm.output
+    for i in range(_MAX_RETRIES):
+        assert f'RestClient: Timeout for GET {default_url} {{}}, retrying attempt {i + 1}/{_MAX_RETRIES}' in cm.output
 
-    assert f'RestClient: Reached max retries ({max_retries}) for GET {default_url} {{}}' == str(excinfo.value)
+    assert f'RestClient: Reached max retries ({_MAX_RETRIES}) for GET {default_url} {{}}' == str(excinfo.value)
 
 
-def test_response_raise_timeout(client_fixture, mocker):
+def test_response_raise_timeout(client, requests_mock):
     # Arrange
-    client, response, default_path, _, _, timeout, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
-    requests_mock.request.return_value = response
-    response.raise_for_status.side_effect = Timeout()
+    requests_mock.request.return_value.raise_for_status.side_effect = Timeout()
 
     # Act
     with pytest.raises(ExternalBrokerError) as excinfo:
-        client.get(default_path)
+        client.get(_DEFAULT_PATH)
 
     # Assert
-    assert f'RestClient: Timeout error ({timeout}S)' == str(excinfo.value)
+    assert f'RestClient: Timeout error ({_TIMEOUT}S)' == str(excinfo.value)
 
 
-def test_response_raise_generic(client_fixture, mocker):
+def test_response_raise_generic(client, result, requests_mock):
     # Arrange
-    client, response, default_path, _, result, _, _ = client_fixture
-    requests_mock = mocker.patch('ibind.base.rest_client.requests')
-    requests_mock.request.return_value = response
+    response = requests_mock.request.return_value
     response.status_code = 400
     response.reason = 'Test reason'
     response.text = 'Test text'
@@ -123,7 +130,7 @@ def test_response_raise_generic(client_fixture, mocker):
 
     # Act
     with pytest.raises(ExternalBrokerError) as excinfo:
-        client.get(default_path)
+        client.get(_DEFAULT_PATH)
 
     # Assert
     assert f'RestClient: response error {result.copy(data=None)} :: {response.status_code} :: {response.reason} :: {response.text}' == str(excinfo.value)
