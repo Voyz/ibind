@@ -90,7 +90,7 @@ The following files need to be migrated. Each file can be worked on independentl
 
 ---
 
-### 2. [] `test/integration/base/test_websocket_client_i.py`
+### 2. [✔] `test/integration/base/test_websocket_client_i.py`
 
 - **Migration Steps:**
     1.  Create a new file: `test/integration/base/test_websocket_client_i_new.py`.
@@ -113,7 +113,7 @@ The following files need to be migrated. Each file can be worked on independentl
 
 ---
 
-### 4. [ ] `test/integration/client/test_ibkr_utils_i.py`
+### 4. [✔] `test/integration/client/test_ibkr_utils_i.py`
 
 - **Migration Steps:**
     1.  Create a new file: `test/integration/client/test_ibkr_utils_i_new.py`.
@@ -124,7 +124,7 @@ The following files need to be migrated. Each file can be worked on independentl
 
 ---
 
-### 5. [ ] `test/integration/client/test_ibkr_ws_client_i.py`
+### 5. [✔] `test/integration/client/test_ibkr_ws_client_i.py`
 
 - **Migration Steps:**
     1.  Create a new file: `test/integration/client/test_ibkr_ws_client_i_new.py`.
@@ -135,7 +135,7 @@ The following files need to be migrated. Each file can be worked on independentl
 
 ---
 
-### 6. [ ] `test/unit/support/test_py_utils_u.py`
+### 6. [✔] `test/unit/support/test_py_utils_u.py`
 
 - **Migration Steps:**
     1.  Create a new file: `test/unit/support/test_py_utils_u_new.py`.

@@ -1,0 +1,32 @@
+---------- coverage: platform win32, python 3.13.11-final-0 ----------
+Name                                                  Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------------------------
+ibind\__init__.py                                        13      0   100%
+ibind\base\__init__.py                                    0      0   100%
+ibind\base\queue_controller.py                           18      0   100%
+ibind\base\rest_client.py                               152     35    77%   103, 110, 235, 240, 252, 265-275, 280-284, 296-297, 306-308, 311, 334-337, 340-346, 355
+ibind\base\subscription_controller.py                   125     33    74%   65, 67-69, 74-75, 86, 89, 92, 100-101, 154, 173-191, 211, 283, 286, 289-292, 326, 334, 358
+ibind\base\ws_client.py                                 217     38    82%   64, 90, 95, 118-120, 124-129, 151, 155-156, 168-169, 190, 196-198, 202-204, 238, 247, 254-256, 317-322, 363, 439-440, 457, 470
+ibind\client\__init__.py                                  0      0   100%
+ibind\client\ibkr_client.py                             119     69    42%   87-91, 116-119, 132-135, 143-149, 163-164, 195-218, 234-237, 250-251, 254-256, 265-267, 270-272, 286, 289-333
+ibind\client\ibkr_client_mixins\__init__.py               0      0   100%
+ibind\client\ibkr_client_mixins\accounts_mixin.py         4      0   100%
+ibind\client\ibkr_client_mixins\contract_mixin.py        25      0   100%
+ibind\client\ibkr_client_mixins\marketdata_mixin.py      61     29    52%   54-85, 226, 236-241, 303
+ibind\client\ibkr_client_mixins\order_mixin.py           22     12    45%   102-110, 175-183
+ibind\client\ibkr_client_mixins\portfolio_mixin.py        5      0   100%
+ibind\client\ibkr_client_mixins\scanner_mixin.py          5      0   100%
+ibind\client\ibkr_client_mixins\session_mixin.py         39     13    67%   105, 130-145
+ibind\client\ibkr_client_mixins\watchlist_mixin.py        4      0   100%
+ibind\client\ibkr_definitions.py                          6      0   100%
+ibind\client\ibkr_utils.py                              226     42    81%   222, 310-313, 316, 440-441, 446, 603-606, 617-620, 639-642, 645-657, 666-672, 684-689
+ibind\client\ibkr_ws_client.py                          238     65    73%   274, 277-281, 321, 326-328, 331, 351, 384, 390-394, 403-416, 422-423, 431-442, 447-460, 480, 484, 488, 491, 504, 517, 535, 538, 551, 702-714
+ibind\oauth\__init__.py                                  26     26     0%   1-58
+ibind\oauth\oauth1a.py                                  164    164     0%   1-466
+ibind\support\__init__.py                                 0      0   100%
+ibind\support\errors.py                                   4      0   100%
+ibind\support\logs.py                                    82     57    30%   20-29, 75-96, 121-141, 150-153, 156-157, 160, 163-168, 171-175
+ibind\support\py_utils.py                                87     25    71%   143, 153-156, 169, 308, 324-332, 336-354
+ibind\var.py                                             88      4    95%   24-25, 36-37
+-----------------------------------------------------------------------------------
+TOTAL                                                  1730    612    65%
