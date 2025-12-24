@@ -53,23 +53,23 @@ class LoggingWatcher:
         """Assert that all expected messages appear in the captured logs."""
         found, missing_expected = self._process_logs(expected_messages, lambda x, y: x == y)
         if len(missing_expected) > 0:
-            raise AssertionError(f"Expected exact log(s) not found:\n\t{'\n\t'.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
+            raise AssertionError(f"Expected exact log(s) not found:\n    {'\n    '.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
 
     def partial_log(self, expected_messages: OneOrMany[str]):
         """Assert that each expected message is a substring of at least one captured log message."""
         found, missing_expected = self._process_logs(expected_messages, lambda x, y: x in y)
         if len(missing_expected) > 0:
-            raise AssertionError(f"Expected partial log(s) not found:\n\t{'\n\t'.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
+            raise AssertionError(f"Expected partial log(s) not found:\n    {'\n    '.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
 
     def log_excludes(self, expected_messages: OneOrMany[str]):
         """Assert that none of the expected messages appear in any captured log message."""
         found, _ = self._process_logs(expected_messages, lambda x, y: x in y)
         if found:
-            raise AssertionError(f"Unexpected log(s) found:\n\t{'\n\t'.join(found)}\n\nCurrent logs:\n{self.format_logs()}\n")
+            raise AssertionError(f"Unexpected log(s) found:\n    {'    '.join(found)}\n\nCurrent logs:\n{self.format_logs()}\n")
 
     def format_logs(self):
         """Return a formatted string of all captured log messages."""
-        return f"\n{self} captured {len(self.output)} logs:\n[\n\t{'\n\t'.join(self.output)}\n]"
+        return f"\n{self} captured {len(self.output)} logs:\n[\n    {'\n    '.join(self.output)}\n]"
 
     def count_occurrences(self, msg: str):
         """Count the number of occurrences of a message in the captured logs."""
