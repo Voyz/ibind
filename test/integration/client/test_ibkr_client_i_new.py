@@ -10,8 +10,8 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import StockQuery, filter_stocks
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import ibind_logs_initialize
-from test.integration.client import ibkr_responses
-from test.test_utils_new import CaptureLogsContext
+from integration.client import ibkr_responses
+from test_utils_new import CaptureLogsContext
 
 
 _URL = 'https://localhost:5000'

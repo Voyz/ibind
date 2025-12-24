@@ -9,8 +9,8 @@ import requests
 from ibind import Result
 from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_ws_client import IbkrWsClient, IbkrSubscriptionProcessor, IbkrWsKey
-from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
-from test.test_utils_new import capture_logs
+from integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
+from test_utils_new import capture_logs
 
 _URL_WS = 'wss://localhost:5000/v1/api/ws'
 _URL_REST = 'https://localhost:5000'

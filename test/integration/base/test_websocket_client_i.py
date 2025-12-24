@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 from ibind.base.ws_client import WsClient
 from ibind.support.py_utils import tname
-from test.integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
+from integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
 from test_utils import RaiseLogsContext, exact_log
 
 
