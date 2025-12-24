@@ -101,7 +101,7 @@ class CaptureLogsContext:
 
     def __init__(
         self,
-        logger='slog',
+        logger='ibind',
         level='DEBUG',
         logger_level: str = None,
         error_level='WARNING',
