@@ -1,337 +1,394 @@
 from pprint import pformat
-from unittest import TestCase
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call
+
+import pytest
 
 from ibind.base.rest_client import Result
-from ibind.client.ibkr_utils import StockQuery, filter_stocks, find_answer, QuestionType, handle_questions, question_type_to_message_id, OrderRequest, parse_order_request
-from ibind.support.logs import project_logger
+from ibind.client.ibkr_utils import (
+    StockQuery,
+    filter_stocks,
+    find_answer,
+    QuestionType,
+    handle_questions,
+    question_type_to_message_id,
+    OrderRequest,
+    parse_order_request,
+)
 from test.integration.client import ibkr_responses
-from test_utils import verify_log
+from test.test_utils_new import CaptureLogsContext
 
 
-class TestIbkrUtilsI(TestCase):
-    def setUp(self):
-        self.instruments = ibkr_responses.responses['stocks']
-        self.result = Result(data=self.instruments)
-        self.maxDiff = None
+# --------------------------------------------------------------------------------------
+# Stock filtering
+# --------------------------------------------------------------------------------------
 
-    def test_filter_stocks(self):
-        queries = [
-            StockQuery(symbol='AAPL', contract_conditions={'isUS': False}, name_match='APPLE'),
-            StockQuery(symbol='BBVA', contract_conditions={'exchange': 'NYSE'}),
-            StockQuery(symbol='CDN', contract_conditions={'isUS': True}),
-            StockQuery(symbol='CFC', contract_conditions={}),
-            StockQuery(symbol='GOOG', contract_conditions={'isUS': False}, instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'}),
-            'HUBS',
-            StockQuery(symbol='META', name_match='meta ', contract_conditions={'isUS': False}, instrument_conditions={}),
-            StockQuery(symbol='MSFT', contract_conditions={'exchange': 'NASDAQ'}),
-            StockQuery(symbol='SAN', name_match='SANTANDER'),
-            StockQuery(symbol='SCHW', contract_conditions={'exchange': 'NASDAQ'}),
-            StockQuery(symbol='TEAM', name_match='ATLASSIAN'),
-            StockQuery(symbol='INVALID_SYMBOL')
-        ]  # fmt: skip
-        with self.assertLogs(project_logger(), level='INFO') as cm:
-            rv = filter_stocks(queries, Result(data=self.instruments), default_filtering=False)
 
-        verify_log(
-            self, cm, [f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {self.result}. Skipping query={queries[-1]}.']
-        )  # fmt: skip
+@pytest.fixture
+def instruments():
+    return ibkr_responses.responses['stocks']
 
-        # pprint(rv)
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x82F9;&#x679C;&#x516C;&#x53F8;',
-                    'contracts': [
-                        {'conid': 38708077, 'exchange': 'MEXI', 'isUS': False},
-                        {'conid': 273982664, 'exchange': 'EBS', 'isUS': False},
-                    ],
-                    'name': 'APPLE INC',
-                },
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x82F9;&#x679C;&#x516C;&#x53F8;',
-                    'contracts': [{'conid': 532640894, 'exchange': 'AEQLIT', 'isUS': False}],
-                    'name': 'APPLE INC-CDR',
-                },
+@pytest.fixture
+def instruments_result(instruments):
+    return Result(data=instruments)
+
+
+def test_filter_stocks(instruments, instruments_result):
+    """Filters instruments for multiple stock queries and logs missing symbols."""
+    ## Arrange
+    queries = [
+        StockQuery(symbol='AAPL', contract_conditions={'isUS': False}, name_match='APPLE'),
+        StockQuery(symbol='BBVA', contract_conditions={'exchange': 'NYSE'}),
+        StockQuery(symbol='CDN', contract_conditions={'isUS': True}),
+        StockQuery(symbol='CFC', contract_conditions={}),
+        StockQuery(
+            symbol='GOOG',
+            contract_conditions={'isUS': False},
+            instrument_conditions={'chineseName': 'Alphabet&#x516C;&#x53F8;'},
+        ),
+        'HUBS',
+        StockQuery(symbol='META', name_match='meta ', contract_conditions={'isUS': False}, instrument_conditions={}),
+        StockQuery(symbol='MSFT', contract_conditions={'exchange': 'NASDAQ'}),
+        StockQuery(symbol='SAN', name_match='SANTANDER'),
+        StockQuery(symbol='SCHW', contract_conditions={'exchange': 'NASDAQ'}),
+        StockQuery(symbol='TEAM', name_match='ATLASSIAN'),
+        StockQuery(symbol='INVALID_SYMBOL'),
+    ]  # fmt: skip
+
+    ## Act
+    with CaptureLogsContext('ibind', level='INFO', error_level='CRITICAL', attach_stack=False) as cm:
+        rv = filter_stocks(queries, instruments_result, default_filtering=False)
+
+    ## Assert
+    expected_error = (
+        f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {instruments_result}. '
+        f'Skipping query={queries[-1]}.'
+    )
+    assert expected_error in cm.output
+
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x82F9;&#x679C;&#x516C;&#x53F8;',
+            'contracts': [
+                {'conid': 38708077, 'exchange': 'MEXI', 'isUS': False},
+                {'conid': 273982664, 'exchange': 'EBS', 'isUS': False},
             ],
-            rv.data['AAPL'],
-        )
+            'name': 'APPLE INC',
+        },
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x82F9;&#x679C;&#x516C;&#x53F8;',
+            'contracts': [{'conid': 532640894, 'exchange': 'AEQLIT', 'isUS': False}],
+            'name': 'APPLE INC-CDR',
+        },
+    ] == rv.data['AAPL']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x897F;&#x73ED;&#x7259;&#x5BF9;&#x5916;&#x94F6;&#x884C;',
-                    'contracts': [{'conid': 4815, 'exchange': 'NYSE', 'isUS': True}],
-                    'name': 'BANCO BILBAO VIZCAYA-SP ADR',
-                },
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x897F;&#x73ED;&#x7259;&#x5BF9;&#x5916;&#x94F6;&#x884C;',
+            'contracts': [{'conid': 4815, 'exchange': 'NYSE', 'isUS': True}],
+            'name': 'BANCO BILBAO VIZCAYA-SP ADR',
+        },
+    ] == rv.data['BBVA']
+
+    assert [] == rv.data['CDN']
+
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': None,
+            'contracts': [{'conid': 42001300, 'exchange': 'IBIS', 'isUS': False}],
+            'name': 'UET UNITED ELECTRONIC TECHNO',
+        }
+    ] == rv.data['CFC']
+
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': 'Alphabet&#x516C;&#x53F8;',
+            'contracts': [
+                {'conid': 210810667, 'exchange': 'MEXI', 'isUS': False},
             ],
-            rv.data['BBVA'],
-        )
+            'name': 'ALPHABET INC-CL C',
+        },
+        {
+            'assetClass': 'STK',
+            'chineseName': 'Alphabet&#x516C;&#x53F8;',
+            'contracts': [{'conid': 532638805, 'exchange': 'AEQLIT', 'isUS': False}],
+            'name': 'ALPHABET INC - CDR',
+        },
+    ] == rv.data['GOOG']
 
-        self.assertEqual([], rv.data['CDN'])
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': 'HubSpot&#x516C;&#x53F8;',
+            'contracts': [{'conid': 169544810, 'exchange': 'NYSE', 'isUS': True}],
+            'name': 'HUBSPOT INC',
+        }
+    ] == rv.data['HUBS']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': None,
-                    'contracts': [{'conid': 42001300, 'exchange': 'IBIS', 'isUS': False}],
-                    'name': 'UET UNITED ELECTRONIC TECHNO',
-                }
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': 'Meta&#x5E73;&#x53F0;&#x80A1;&#x4EFD;&#x6709;&#x9650;&#x516C;&#x53F8;',
+            'contracts': [
+                {'conid': 114922621, 'exchange': 'MEXI', 'isUS': False},
             ],
-            rv.data['CFC'],
-        )
+            'name': 'META PLATFORMS INC-CLASS A',
+        },
+        {
+            'assetClass': 'STK',
+            'chineseName': 'Meta&#x5E73;&#x53F0;&#x80A1;&#x4EFD;&#x6709;&#x9650;&#x516C;&#x53F8;',
+            'contracts': [{'conid': 530091499, 'exchange': 'AEQLIT', 'isUS': False}],
+            'name': 'META PLATFORMS INC-CDR',
+        },
+    ] == rv.data['META']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': 'Alphabet&#x516C;&#x53F8;',
-                    'contracts': [
-                        {'conid': 210810667, 'exchange': 'MEXI', 'isUS': False},
-                    ],
-                    'name': 'ALPHABET INC-CL C',
-                },
-                {
-                    'assetClass': 'STK',
-                    'chineseName': 'Alphabet&#x516C;&#x53F8;',
-                    'contracts': [{'conid': 532638805, 'exchange': 'AEQLIT', 'isUS': False}],
-                    'name': 'ALPHABET INC - CDR',
-                },
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x5FAE;&#x8F6F;&#x516C;&#x53F8;',
+            'contracts': [
+                {'conid': 272093, 'exchange': 'NASDAQ', 'isUS': True},
             ],
-            rv.data['GOOG'],
-        )
+            'name': 'MICROSOFT CORP',
+        },
+    ] == rv.data['MSFT']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': 'HubSpot&#x516C;&#x53F8;',
-                    'contracts': [{'conid': 169544810, 'exchange': 'NYSE', 'isUS': True}],
-                    'name': 'HUBSPOT INC',
-                }
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x6851;&#x5766;&#x5FB7;',
+            'contracts': [
+                {'conid': 38708867, 'exchange': 'MEXI', 'isUS': False},
+                {'conid': 385055564, 'exchange': 'WSE', 'isUS': False},
             ],
-            rv.data['HUBS'],
-        )
+            'name': 'BANCO SANTANDER SA',
+        },
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x6851;&#x5766;&#x5FB7;',
+            'contracts': [{'conid': 12442, 'exchange': 'NYSE', 'isUS': True}],
+            'name': 'BANCO SANTANDER SA-SPON ADR',
+        },
+        {
+            'assetClass': 'STK',
+            'chineseName': '&#x6851;&#x5766;&#x5FB7;&#x82F1;&#x56FD;&#x516C;&#x5171;&#x6709;&#x9650;&#x516C;&#x53F8;',
+            'contracts': [{'conid': 80993135, 'exchange': 'LSE', 'isUS': False}],
+            'name': 'SANTANDER UK PLC',
+        },
+    ] == rv.data['SAN']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': 'Meta&#x5E73;&#x53F0;&#x80A1;&#x4EFD;&#x6709;&#x9650;&#x516C;&#x53F8;',
-                    'contracts': [
-                        {'conid': 114922621, 'exchange': 'MEXI', 'isUS': False},
-                    ],
-                    'name': 'META PLATFORMS INC-CLASS A',
-                },
-                {
-                    'assetClass': 'STK',
-                    'chineseName': 'Meta&#x5E73;&#x53F0;&#x80A1;&#x4EFD;&#x6709;&#x9650;&#x516C;&#x53F8;',
-                    'contracts': [{'conid': 530091499, 'exchange': 'AEQLIT', 'isUS': False}],
-                    'name': 'META PLATFORMS INC-CDR',
-                },
-            ],
-            rv.data['META'],
-        )
+    assert [] == rv.data['SCHW']
 
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x5FAE;&#x8F6F;&#x516C;&#x53F8;',
-                    'contracts': [
-                        {'conid': 272093, 'exchange': 'NASDAQ', 'isUS': True},
-                    ],
-                    'name': 'MICROSOFT CORP',
-                },
-            ],
-            rv.data['MSFT'],
-        )
-
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x6851;&#x5766;&#x5FB7;',
-                    'contracts': [
-                        {'conid': 38708867, 'exchange': 'MEXI', 'isUS': False},
-                        {'conid': 385055564, 'exchange': 'WSE', 'isUS': False},
-                    ],
-                    'name': 'BANCO SANTANDER SA',
-                },
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x6851;&#x5766;&#x5FB7;',
-                    'contracts': [{'conid': 12442, 'exchange': 'NYSE', 'isUS': True}],
-                    'name': 'BANCO SANTANDER SA-SPON ADR',
-                },
-                {
-                    'assetClass': 'STK',
-                    'chineseName': '&#x6851;&#x5766;&#x5FB7;&#x82F1;&#x56FD;&#x516C;&#x5171;&#x6709;&#x9650;&#x516C;&#x53F8;',
-                    'contracts': [{'conid': 80993135, 'exchange': 'LSE', 'isUS': False}],
-                    'name': 'SANTANDER UK PLC',
-                },
-            ],
-            rv.data['SAN'],
-        )
-
-        self.assertEqual([], rv.data['SCHW'])
-
-        self.assertEqual(
-            [
-                {
-                    'assetClass': 'STK',
-                    'chineseName': None,
-                    'contracts': [{'conid': 589316251, 'exchange': 'NASDAQ', 'isUS': True}],
-                    'name': 'ATLASSIAN CORP-CL A',
-                },
-            ],
-            rv.data['TEAM'],
-        )
-
-    def test_question_type_to_message_id_successful(self):
-        question_type = QuestionType.PRICE_PERCENTAGE_CONSTRAINT
-        message_id = question_type_to_message_id(question_type)
-        self.assertEqual(message_id, 'o163')
+    assert [
+        {
+            'assetClass': 'STK',
+            'chineseName': None,
+            'contracts': [{'conid': 589316251, 'exchange': 'NASDAQ', 'isUS': True}],
+            'name': 'ATLASSIAN CORP-CL A',
+        },
+    ] == rv.data['TEAM']
 
 
-class TestFindAnswer(TestCase):
-    def setUp(self):
-        # Setup Answers dictionary here
-        self.answers = {QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True}
+def test_question_type_to_message_id_successful():
+    """Maps a QuestionType to its expected IBKR message id."""
+    ## Arrange
+    question_type = QuestionType.PRICE_PERCENTAGE_CONSTRAINT
 
-    def test_valid_question(self):
-        question = f'Some {QuestionType.PRICE_PERCENTAGE_CONSTRAINT} specific question'
-        answer = find_answer(question, self.answers)
-        self.assertTrue(answer)
+    ## Act
+    message_id = question_type_to_message_id(question_type)
 
-    def test_invalid_question(self):
-        question = 'Nonexistent question type'
-        with self.assertRaises(ValueError):
-            find_answer(question, self.answers)
+    ## Assert
+    assert message_id == 'o163'
 
 
-class TestHandleQuestionsI(TestCase):
-    def setUp(self):
-        self.original_result = Result(
-            data=[{'id': '12345', 'message': ['price exceeds the Percentage constraint of 3%.']}], request={'url': 'test_url'}
-        )
-        self.answers = {QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True}
-        self.reply_callback = MagicMock()
+# --------------------------------------------------------------------------------------
+# Finding answers
+# --------------------------------------------------------------------------------------
 
-    @patch('ibind.client.ibkr_utils.QuestionType')
-    def test_successful_handling(self, question_type_mock):
-        # Mocking the QuestionType enum
-        question_type_mock.PRICE_PERCENTAGE_CONSTRAINT.__str__.return_value = 'price exceeds the Percentage constraint of 3%.'
-        question_type_mock.ADDITIONAL_QUESTION_TYPE.__str__.return_value = 'This is an additional question.'
 
-        self.answers = {question_type_mock.PRICE_PERCENTAGE_CONSTRAINT: True, question_type_mock.ADDITIONAL_QUESTION_TYPE: True}
+@pytest.fixture
+def answers():
+    return {QuestionType.PRICE_PERCENTAGE_CONSTRAINT: True}
 
-        # Mock reply_callback to simulate the sequence of question-answer interactions
-        replies = [
-            Result(data=[{'id': '12346', 'message': ['This is an additional question.']}], request={'url': 'another_question_url'}),
-            Result(data=[{'id': '12347'}], request={'url': 'final_url'}),  # No more questions
-        ]
-        self.reply_callback.side_effect = replies
 
-        result = handle_questions(self.original_result, self.answers, self.reply_callback)
-        self.assertEqual(result.request['url'], self.original_result.request['url'])
-        self.assertEqual(len(self.reply_callback.call_args_list), 2)
-        # Expected calls to self.reply_callback
-        expected_calls = [
-            call(
-                self.original_result.data[0]['id'], self.answers[question_type_mock.PRICE_PERCENTAGE_CONSTRAINT]
-            ),  # First call with question ID '12346' and reply True
-            call(
-                replies[0].data[0]['id'], self.answers[question_type_mock.ADDITIONAL_QUESTION_TYPE]
-            ),  # Second call with question ID '12347' and reply True
-        ]
+def test_valid_question(answers):
+    """Returns True when a known question type is found in the question string."""
+    ## Arrange
+    question = f'Some {QuestionType.PRICE_PERCENTAGE_CONSTRAINT} specific question'
 
-        # Check if the calls to self.reply_callback are as expected
-        self.assertEqual(expected_calls, self.reply_callback.call_args_list)
+    ## Act
+    answer = find_answer(question, answers)
 
-    def test_too_many_questions(self):
-        # Simulate repetitive questions to exceed the question limit
-        self.reply_callback.side_effect = [self.original_result] * 21
+    ## Assert
+    assert answer is True
 
-        with self.assertRaises(RuntimeError) as cm_err:
-            handle_questions(self.original_result, self.answers, self.reply_callback)
 
-        self.assertIn('Too many questions', str(cm_err.exception))
+def test_invalid_question(answers):
+    """Raises when no answer matches the provided question string."""
+    ## Arrange
+    question = 'Nonexistent question type'
 
-    def test_negative_reply(self):
-        # Set a negative answer
-        self.answers[QuestionType.PRICE_PERCENTAGE_CONSTRAINT] = False
+    ## Act & Assert
+    with pytest.raises(ValueError):
+        find_answer(question, answers)
 
-        with self.assertRaises(RuntimeError) as cm_err:
-            handle_questions(self.original_result, self.answers, self.reply_callback)
-        self.assertEqual(
-            f'A question was not given a positive reply. Question: "{self.original_result.data[0]["message"][0]}". Answers: \n{self.answers}\n. Request: {self.original_result.request}',
-            str(cm_err.exception),
-        )
 
-    def test_multiple_orders_returned(self):
-        # Simulate multiple orders in the data
-        self.original_result.data = [
-            {'id': '12345', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT)]},
-            {'id': '12346', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT)]},
-        ]
-        self.reply_callback.return_value = self.original_result.copy(data=[{}])
+# --------------------------------------------------------------------------------------
+# Handling interactive questions
+# --------------------------------------------------------------------------------------
 
-        with self.assertLogs(project_logger(), level='INFO') as cm:
-            handle_questions(self.original_result, self.answers, self.reply_callback)
 
-        verify_log(self, cm, ['While handling questions multiple orders were returned: ' + pformat(self.original_result.data)])
+@pytest.fixture
+def original_result():
+    return Result(
+        data=[{'id': '12345', 'message': ['price exceeds the Percentage constraint of 3%.']}],
+        request={'url': 'test_url'},
+    )
 
-    def test_multiple_messages_returned(self):
-        # Simulate a single order with multiple messages
-        self.original_result.data = [{'id': '12345', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT), 'Message 2']}]
-        self.reply_callback.return_value = self.original_result.copy(data=[{}])
 
-        with self.assertLogs(project_logger(), level='INFO') as cm:
-            handle_questions(self.original_result, self.answers, self.reply_callback)
+@pytest.fixture
+def reply_callback():
+    return MagicMock()
 
-        verify_log(self, cm, ['While handling questions multiple messages were returned: ' + pformat(self.original_result.data[0]['message'])])
 
-class TestParseOrderRequestI(TestCase):
-    def test_parse_both_with_conidex(self):
+def test_successful_handling(mocker, original_result, reply_callback):
+    """Replies to a sequence of questions and returns the final result."""
+    ## Arrange
+    question_type_mock = mocker.patch('ibind.client.ibkr_utils.QuestionType')
+
+    question_type_mock.PRICE_PERCENTAGE_CONSTRAINT.__str__.return_value = 'price exceeds the Percentage constraint of 3%.'
+    question_type_mock.ADDITIONAL_QUESTION_TYPE.__str__.return_value = 'This is an additional question.'
+
+    answers = {question_type_mock.PRICE_PERCENTAGE_CONSTRAINT: True, question_type_mock.ADDITIONAL_QUESTION_TYPE: True}
+
+    replies = [
+        Result(data=[{'id': '12346', 'message': ['This is an additional question.']}], request={'url': 'another_question_url'}),
+        Result(data=[{'id': '12347'}], request={'url': 'final_url'}),
+    ]
+    reply_callback.side_effect = replies
+
+    ## Act
+    result = handle_questions(original_result, answers, reply_callback)
+
+    ## Assert
+    assert result.request['url'] == original_result.request['url']
+    assert len(reply_callback.call_args_list) == 2
+
+    expected_calls = [
+        call(original_result.data[0]['id'], answers[question_type_mock.PRICE_PERCENTAGE_CONSTRAINT]),
+        call(replies[0].data[0]['id'], answers[question_type_mock.ADDITIONAL_QUESTION_TYPE]),
+    ]
+
+    assert expected_calls == reply_callback.call_args_list
+
+
+def test_too_many_questions(original_result, answers, reply_callback):
+    """Raises when the question loop exceeds the maximum number of attempts."""
+    ## Arrange
+    reply_callback.side_effect = [original_result] * 21
+
+    ## Act & Assert
+    with pytest.raises(RuntimeError) as cm_err:
+        handle_questions(original_result, answers, reply_callback)
+
+    assert 'Too many questions' in str(cm_err.value)
+
+
+def test_negative_reply(original_result, answers, reply_callback):
+    """Raises when a question is answered negatively."""
+    ## Arrange
+    answers[QuestionType.PRICE_PERCENTAGE_CONSTRAINT] = False
+
+    ## Act & Assert
+    with pytest.raises(RuntimeError) as cm_err:
+        handle_questions(original_result, answers, reply_callback)
+
+    assert (
+        f'A question was not given a positive reply. Question: "{original_result.data[0]["message"][0]}". Answers: \n{answers}\n. Request: {original_result.request}'
+        == str(cm_err.value)
+    )
+
+
+def test_multiple_orders_returned(original_result, answers, reply_callback):
+    """Logs a message when multiple orders are returned while handling questions."""
+    ## Arrange
+    original_result.data = [
+        {'id': '12345', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT)]},
+        {'id': '12346', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT)]},
+    ]
+    reply_callback.return_value = original_result.copy(data=[{}])
+
+    expected = 'While handling questions multiple orders were returned: ' + pformat(original_result.data)
+
+    ## Act & Assert
+    with CaptureLogsContext('ibind', level='INFO', expected_errors=[expected], attach_stack=False):
+        handle_questions(original_result, answers, reply_callback)
+
+
+def test_multiple_messages_returned(original_result, answers, reply_callback):
+    """Logs a message when multiple messages are returned for a single order."""
+    ## Arrange
+    original_result.data = [{'id': '12345', 'message': [str(QuestionType.PRICE_PERCENTAGE_CONSTRAINT), 'Message 2']}]
+    reply_callback.return_value = original_result.copy(data=[{}])
+
+    expected = 'While handling questions multiple messages were returned: ' + pformat(original_result.data[0]['message'])
+
+    ## Act & Assert
+    with CaptureLogsContext('ibind', level='INFO', expected_errors=[expected], attach_stack=False):
+        handle_questions(original_result, answers, reply_callback)
+
+
+# --------------------------------------------------------------------------------------
+# Order request parsing
+# --------------------------------------------------------------------------------------
+
+
+def test_parse_both_with_conidex():
+    """Parses OrderRequest with conid=None and conidex set into API payload."""
+    ## Arrange
+    order_request = OrderRequest(
+        conid=None,
+        side='BUY',
+        quantity=321,
+        order_type='MKT',
+        acct_id='DU1234567',
+        conidex='33333',
+    )
+
+    ## Act
+    d = parse_order_request(order_request)
+
+    ## Assert
+    assert {
+        'side': 'BUY',
+        'quantity': 321,
+        'orderType': 'MKT',
+        'acctId': 'DU1234567',
+        'conidex': '33333',
+        'tif': 'GTC',
+    } == d
+
+
+def test_raise_with_conid_and_conidex():
+    """Raises when both conid and conidex are provided."""
+    ## Arrange
+
+    ## Act & Assert
+    with pytest.raises(ValueError) as cm_err:
         order_request = OrderRequest(
-            conid=None,
+            conid=123,
             side='BUY',
             quantity=321,
             order_type='MKT',
             acct_id='DU1234567',
-            conidex='33333' # should cause exception
+            conidex='33333',
         )
 
-        d = parse_order_request(order_request)
+        parse_order_request(order_request)
 
-        self.assertEqual({
-            'side': 'BUY',
-            'quantity': 321,
-            'orderType': 'MKT',
-            'acctId': 'DU1234567',
-            'conidex': '33333',
-            'tif': 'GTC'
-        }, d)
-
-    def test_raise_with_conid_and_conidex(self):
-        with self.assertRaises(ValueError) as cm_err:
-            order_request = OrderRequest(
-                conid=123,
-                side='BUY',
-                quantity=321,
-                order_type='MKT',
-                acct_id='DU1234567',
-                conidex='33333' # should cause exception
-            )
-
-            parse_order_request(order_request)
-
-        self.assertEqual("Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.", str(cm_err.exception))
-
-
+    assert "Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`." == str(cm_err.value)
