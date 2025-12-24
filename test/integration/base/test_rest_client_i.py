@@ -11,7 +11,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.support.errors import ExternalBrokerError
 from ibind.base.rest_client import Result, RestClient
 from ibind.support.logs import ibind_logs_initialize
-from test.test_utils_new import CaptureLogsContext
+from test.test_utils import CaptureLogsContext
 
 
 _URL = 'https://localhost:5000'

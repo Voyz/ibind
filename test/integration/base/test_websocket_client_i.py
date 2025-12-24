@@ -7,7 +7,7 @@ import pytest
 from ibind.base.ws_client import WsClient
 from ibind.support.py_utils import tname
 from integration.base.websocketapp_mock import create_wsa_mock, init_wsa_mock
-from test_utils_new import capture_logs
+from test_utils import capture_logs
 
 _URL = 'wss://localhost:5000/v1/api/ws'
 _MAX_RECONNECT_ATTEMPTS = 4

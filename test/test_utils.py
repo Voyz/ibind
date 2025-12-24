@@ -1,284 +1,303 @@
 import functools
+import inspect
 import logging
-import sys
+import os
 import traceback
-import types
-import unittest
-from unittest import TestCase
-from unittest._log import _CapturingHandler, _AssertLogsContext
+from pathlib import Path
+from typing import List, TypeVar
 
-from ibind.support.py_utils import make_clean_stack
+from ibind.support.logs import get_logger_children
+from ibind.support.py_utils import make_clean_stack, OneOrMany, UNDEFINED
 
+_NAME_TO_LEVEL = logging.getLevelNamesMapping()
 
-def raise_from_context(cm, level='WARNING'):
-    for record in cm.records:
-        if record.levelno >= getattr(logging, level):
-            raise RuntimeError(record.message)
+# --- New Functions and Types ---
 
+def accepts_kwargs(func):
+    """Returns True if func accepts **kwargs, else False."""
+    sig = inspect.signature(func)
+    for param in sig.parameters.values():
+        if param.kind == inspect.Parameter.VAR_KEYWORD:
+            return True
+    return False
 
-def verify_log(test_case: TestCase, cm, expected_messages, comparison: callable = lambda x, y: x == y):
-    messages = [record.msg for record in cm.records]
-    missing_expected = expected_messages.copy()
-    for i, expected_msg in enumerate(expected_messages):
-        for msg in messages:
-            if comparison(expected_msg, msg):
-                missing_expected.remove(expected_msg)
-                break
+# --- Logging Utilities ---
 
-    if missing_expected:
-        test_case.fail('Expected log(s) not found:\n\t{}'.format('\n\t'.join(missing_expected)))
+class LoggingWatcher:
+    """Helper class for capturing and asserting logs during testing."""
 
+    def __init__(self, logger):
+        self.logger = logger
+        self.records = []
+        self.output = []
 
-def verify_log_simple(test_self, cm, expected_messages):
-    for i, msg in enumerate(expected_messages):
-        test_self.assertEqual(msg, cm.records[i].msg)
+    def _process_logs(self, expected_messages: OneOrMany[str], comparison: callable = lambda x, y: x == y):
+        if not isinstance(expected_messages, list):
+            expected_messages = [expected_messages]
 
+        if not self.output:
+            return [], expected_messages
 
-def exact_log(test_case, cm, expected_messages):
-    test_case.assertEqual(expected_messages, [record.msg for record in cm.records])
+        messages = [msg for msg in self.output]
+        missing_expected = expected_messages.copy()
+        found = []
+        for i, expected_msg in enumerate(expected_messages):
+            for msg in messages:
+                if comparison(expected_msg, msg):
+                    found.append(msg)
+                    missing_expected.remove(expected_msg)
+                    break
+        return found, missing_expected
 
+    def exact_log(self, expected_messages: OneOrMany[str]):
+        """Assert that all expected messages appear in the captured logs."""
+        found, missing_expected = self._process_logs(expected_messages, lambda x, y: x == y)
+        if len(missing_expected) > 0:
+            raise AssertionError(f"Expected exact log(s) not found:\n\t{'\n\t'.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
 
-class SafeAssertLogs(_AssertLogsContext):
-    """
-    The self.assertLogs context manager, that sets log level on the handler instead of logger.
+    def partial_log(self, expected_messages: OneOrMany[str]):
+        """Assert that each expected message is a substring of at least one captured log message."""
+        found, missing_expected = self._process_logs(expected_messages, lambda x, y: x in y)
+        if len(missing_expected) > 0:
+            raise AssertionError(f"Expected partial log(s) not found:\n\t{'\n\t'.join(missing_expected)}\n\nActual logs:\n{self.format_logs()}\n")
 
-    Original docstring:
-    A context manager used to implement TestCase.assertLogs().
-    """
+    def log_excludes(self, expected_messages: OneOrMany[str]):
+        """Assert that none of the expected messages appear in any captured log message."""
+        found, _ = self._process_logs(expected_messages, lambda x, y: x in y)
+        if found:
+            raise AssertionError(f"Unexpected log(s) found:\n\t{'\n\t'.join(found)}\n\nCurrent logs:\n{self.format_logs()}\n")
 
-    def __init__(self, *args, logger_level: str = None, **kwargs):
-        if sys.version_info < (3, 10, 0) and 'no_logs' in kwargs:
-            del kwargs['no_logs']
+    def format_logs(self):
+        """Return a formatted string of all captured log messages."""
+        return f"\n{self} captured {len(self.output)} logs:\n[\n\t{'\n\t'.join(self.output)}\n]"
 
-        super().__init__(*args, **kwargs)
-        self.logger_level = logger_level
+    def count_occurrences(self, msg: str):
+        """Count the number of occurrences of a message in the captured logs."""
+        return sum(1 for log in self.output if msg in log)
 
-    def __enter__(self, include_original_handlers: bool = False):
-        if isinstance(self.logger_name, logging.Logger):
-            logger = self.logger = self.logger_name
-        else:
-            logger = self.logger = logging.getLogger(self.logger_name)
-        formatter = logging.Formatter(self.LOGGING_FORMAT)
-        handler = _CapturingHandler()
-        handler.setFormatter(formatter)
-        self.watcher = handler.watcher
-        self.old_handlers = logger.handlers[:]
-        self.old_level = logger.level
-        self.old_propagate = logger.propagate
-        logger.handlers = [handler]
-        handler.setLevel(self.level)  # this one line is different, originally was `logger.setLevel`
-        logger.propagate = False
-        if self.logger_level is not None:
-            logger.setLevel(getattr(logging, self.logger_level))
+    def print(self):
+        """Print the formatted logs."""
+        print(self.format_logs())
 
-        if include_original_handlers:
-            logger.handlers += self.old_handlers
-            logger.propagate = True
-        return handler.watcher
+    def __str__(self):
+        return f'LoggingWatcher({self.logger.name})'
 
+class _CapturingHandler(logging.Handler):
+    """A logging handler capturing all (raw and formatted) logging output."""
+    def __init__(self, logger):
+        logging.Handler.__init__(self)
+        self.watcher = LoggingWatcher(logger)
 
-def get_logger_children(main_logger) -> list[logging.Logger]:
-    """
-    Gets child loggers. Added as a support compat for Python version 3.11 and below.
-    Source: https://github.com/python/cpython/blob/3.12/Lib/logging/__init__.py#L1831
-    """
+    def flush(self):
+        pass
 
-    def _hierlevel(logger):
-        if logger is logger.manager.root:
-            return 0
-        return 1 + logger.name.count('.')
+    def emit(self, record):
+        self.watcher.records.append(record)
+        msg = self.format(record)
+        self.watcher.output.append(msg)
 
-    d = main_logger.manager.loggerDict
-    # exclude PlaceHolders - the last check is to ensure that lower-level
-    # descendants aren't returned - if there are placeholders, a logger's
-    # parent field might point to a grandparent or ancestor thereof.
-    return [
-        item
-        for item in d.values()
-        if isinstance(item, logging.Logger) and item.parent is main_logger and _hierlevel(item) == 1 + _hierlevel(item.parent)
-    ]
-
-
-class RaiseLogsContext:
-    """
-    Captures log messages at or above a specified level and raises unexpected ones as exceptions.
-
-    This context manager monitors log messages from a specified logger. Any log messages
-    at or above the given logging level are recorded. If a message is not explicitly
-    expected, a `RuntimeError` is raised, including the stack trace of the log call. It ensures
-    loggers are restored to their original state after use.
-
-    Note:
-        - When used in conjunction with `self.assertLogs` or `SafeAssertLogs`, ensure this context manager is defined last to properly assert log expectations.
-
-    Args:
-        test_case (TestCase): The test case instance, typically from `unittest.TestCase`.
-        logger_name (str | None): The name of the logger to monitor. Defaults to the root logger.
-        level (str): The logging level threshold (e.g., 'ERROR', 'WARNING'). Logs at or above this level are captured.
-        expected_errors (list[str] | None): A list of log messages that are expected and should not trigger an exception.
-        comparison (Callable[[str, str], bool]): A function to compare expected errors with log messages.
-            Defaults to an exact string match (`lambda x, y: x == y`).
-
-    Example Usage:
-        >>> with RaiseLogsContext(self, logger_name='my_logger', level='WARNING', expected_errors=['My expected warning']):
-        ...     logging.getLogger('my_logger').warning('My expected warning')  # No error
-        ...     logging.getLogger('my_logger').error('Unexpected issue')  # Raises RuntimeError
-    """
+class CaptureLogsContext:
+    LOGGING_FORMAT = "%(message)s"
 
     def __init__(
         self,
-        test_case: TestCase,
-        logger_name=None,
-        level='ERROR',
-        expected_errors: [str] = None,
-        comparison: callable = lambda x, y: x == y,
+        logger='ibind',
+        level='DEBUG',
+        logger_level: str = None,
+        error_level='WARNING',
+        no_logs=UNDEFINED,
+        expected_errors=None,
+        partial_match=False,
+        attach_stack=True,
     ):
-        self._test_case = test_case
-        self._logger_name = logger_name
-        self._level = level
-        self._level_no = getattr(logging, level)
-        if expected_errors is None:
-            expected_errors = []
-        self._expected_errors = expected_errors
-        self._comparison = comparison
+        self._logger = logger
+        self.level = getattr(logging, level) if isinstance(level, str) else level
+        self.logger_level = getattr(logging, logger_level) if isinstance(logger_level, str) else logger_level
+        self.no_logs = no_logs
+        self.expected_errors = expected_errors or []
+        self.partial_match = partial_match
+        self.comparison = (lambda x, y: x in y) if partial_match else (lambda x, y: x == y)
+        self.attach_stack = attach_stack
+        self.error_level = getattr(logging, error_level) if isinstance(error_level, str) else (error_level if error_level is not None else self.level)
+        if not isinstance(self.expected_errors, list):
+            self.expected_errors = [self.expected_errors]
 
-    def monkey_patch_log(self, original_method):
-        """Wraps a logger method to attach a manually captured stack trace to log records."""
+    def _monkey_patch_log(self, logger):
+        original_log = logger._log
+        def new_log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+            if extra is None:
+                extra = {}
+            extra['manual_trace'] = make_clean_stack()[:-2]
 
-        def new_method(msg, *args, **kwargs):
-            # Store the manually captured stack trace in the log record
-            stack = make_clean_stack()
-            if 'extra' not in kwargs:
-                kwargs['extra'] = {}
-            kwargs['extra']['manual_trace'] = stack
+            return original_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
 
-            # Call the original logging method with the modified arguments
-            return original_method(msg, *args, **kwargs)
+        logger.__old_log_method__ = original_log
+        logger._log = new_log
 
-        return new_method
-
-    def monkey_patch_loggers(self, loggers):
-        """Monkey-patches loggers to attach a stack trace to warning and error messages."""
+    def _monkey_patch_loggers(self, loggers):
         for logger in loggers:
-            if self._level_no <= logging.ERROR:
-                logger.__old_error_method__ = logger.error
-                logger.error = self.monkey_patch_log(logger.error)
+            self._monkey_patch_log(logger)
 
-            if self._level_no <= logging.WARNING:
-                logger.__old_warning_method__ = logger.warning
-                logger.warning = self.monkey_patch_log(logger.warning)
-
-    def restore_loggers(self, loggers):
-        """Restores the original error and warning logging methods after patching."""
+    def _restore_loggers(self, loggers):
         for logger in loggers:
-            if self._level_no <= logging.ERROR:
-                logger.error = logger.__old_error_method__  # Restore the original error method
+            if hasattr(logger, '__old_log_method__'):
+                logger._log = logger.__old_log_method__
 
-            if self._level_no <= logging.WARNING:
-                logger.warning = logger.__old_warning_method__  # Restore the original warning method
+    def logger_name(self):
+        return self._logger.name if isinstance(self._logger, logging.Logger) else self._logger
 
-    def __enter__(self):
-        """
-        Initializes the logging context by patching loggers and setting up a log watcher.
+    def acquire(self) -> LoggingWatcher:
+        self.logger = logging.getLogger(self.logger_name())
+        self.old_handlers = self.logger.handlers[:]
+        self.old_level = self.logger.level
+        self.old_propagate = self.logger.propagate
 
-        This method ensures that logs at the specified level are captured and asserts
-        that unexpected log messages are raised as errors.
-        """
+        formatter = logging.Formatter(self.LOGGING_FORMAT, datefmt='%H:%M:%S')
+        handler = _CapturingHandler(self.logger)
+        handler.setFormatter(formatter)
+        self.watcher = handler.watcher
+        self.logger.handlers = [handler]
+        handler.setLevel(self.level)
+        self.logger.propagate = False
+        if self.logger_level is not None:
+            self.logger.setLevel(self.logger_level)
 
-        self._logger = logging.getLogger(self._logger_name)
-        loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
-        self.monkey_patch_loggers(loggers_to_be_patched)  # Apply monkey-patching to attach stack traces to logged messages
+        if self.attach_stack:
+            loggers_to_patch = [self.logger] + get_logger_children(self.logger)
+            self._monkey_patch_loggers(loggers_to_patch)
+            self._loggers_to_patch = loggers_to_patch
+        else:
+            self._loggers_to_patch = []
 
-        # Initialize SafeAssertLogs, a helper to capture and assert log records
-        self._context_manager = SafeAssertLogs(self._test_case, self._logger, level=self._level, no_logs=False)
+        return self.watcher
 
-        # Enter the SafeAssertLogs context, starting log capture and returning the watcher
-        self._watcher = self._context_manager.__enter__(include_original_handlers=True)
-        return self._watcher
+    def _raise_unexpected_log(self, record):
+        if hasattr(record, 'manual_trace'):
+            raise RuntimeError(f'\n{"".join(traceback.format_list(record.manual_trace))}Logger {self.logger} logged an unexpected message:\n{record.msg}')
+        raise RuntimeError(f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}')
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Restores original logger methods and verifies captured log messages.
-
-        This method is called when exiting the context manager. It ensures that:
-        - Monkey-patched loggers are restored to their original state.
-        - If an exception occurred inside the `with` block, it is propagated normally.
-        - If no exception occurred, all captured log messages are checked against expected errors.
-        - Unexpected log messages result in a `RuntimeError`.
-        """
-
-        # Restore original logging methods that were monkey-patched
-        loggers_to_be_patched = [self._logger] + get_logger_children(self._logger)
-        self.restore_loggers(loggers_to_be_patched)
-
-        # If an exception occurred inside the 'with' block, return False to let Python re-raise it
-        if exc_type is not None:
-            return False
-
-        # If no logs were captured return True to indicate that no errors were encountered and that the context exited cleanly
-        if len(self._watcher.records) == 0:
+    def _process_exit_logs(self):
+        records = self.watcher.records
+        if self.no_logs is not UNDEFINED and self.no_logs:
+            if records:
+                self._raise_unexpected_log(records[0])
             return True
 
-        for record in self._watcher.records:
-            found = False
+        if self.no_logs is not UNDEFINED and not records:
+            raise AssertionError(f"no logs of level {logging.getLevelName(self.level)} or higher triggered on {self.logger.name}")
 
-            # Check if the log message matches any of the expected error messages
-            for expected_error in self._expected_errors:
-                if self._comparison(expected_error, record.msg):
-                    found = True
-                    break
-
-            # If the message is expected, move on to the next record
-            if found:
+        for record in records:
+            if record.levelno < self.error_level:
                 continue
+            if any(self.comparison(expected, record.msg) for expected in self.expected_errors):
+                continue
+            self._raise_unexpected_log(record)
 
-            # If the log record has a manually stored traceback, raise an error with that traceback
-            if hasattr(record, 'manual_trace'):
-                raise RuntimeError(
-                    '\n' + ''.join(traceback.format_list(record.manual_trace)) + f'Logger {self._logger} logged an unexpected message:\n{record.msg}'
-                )
+        if self.partial_match:
+            self.watcher.partial_log(self.expected_errors)
+        else:
+            self.watcher.exact_log(self.expected_errors)
 
-            # Otherwise, raise an error using the log record's location
-            raise RuntimeError(f'\n...\nFile "{record.pathname}", line {record.lineno} in {record.funcName}\n{record.msg}')
+    def release(self, exc_type=None, exc_val=None, exc_tb=None):
+        self.logger.handlers = self.old_handlers
+        self.logger.propagate = self.old_propagate
+        self.logger.setLevel(self.old_level)
+        if self._loggers_to_patch:
+            self._restore_loggers(self._loggers_to_patch)
+        self._process_exit_logs()
+        return exc_type is None
 
+    def __enter__(self) -> LoggingWatcher:
+        return self.acquire()
 
-def raise_logs(level='ERROR', logger_name=None):
-    def _wrapper(fn):
-        @functools.wraps(fn)
-        def wrapper(self, *args, **kwargs):
-            with RaiseLogsContext(self, level=level, logger_name=logger_name):
-                return fn(self, *args, **kwargs)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self.release(exc_type, exc_val, exc_tb)
 
+def capture_logs(**ctx_kwargs):
+    def decorator(test_func):
+        @functools.wraps(test_func)
+        def wrapper(*args, **kwargs):
+            capture_log_context = CaptureLogsContext(**ctx_kwargs)
+            logger_name = f'_cm_{capture_log_context.logger_name()}'
+            fn_exc = None
+            log_exc = None
+
+            cm = capture_log_context.acquire()
+            if accepts_kwargs(test_func):
+                kwargs[logger_name] = cm
+
+            try:
+                rv = test_func(*args, **kwargs)
+            except Exception as e:
+                rv = None
+                fn_exc = e
+
+            try:
+                capture_log_context.release()
+            except Exception as e2:
+                log_exc = e2
+
+            if fn_exc is not None:
+                if log_exc is not None:
+                    print('Unexpected log found in test:')
+                    traceback.print_exception(log_exc)
+                raise fn_exc
+            elif log_exc is not None:
+                raise log_exc
+
+            return rv
         return wrapper
+    return decorator
 
-    return _wrapper
+# --- Time Mocking Utilities ---
 
+class MockTimeController:
+    def __init__(self, target_module, time_sequence=None, start_time=0.0):
+        self.target_module = target_module
+        if time_sequence is not None:
+            self.time_sequence = list(time_sequence)
+            self.call_index = 0
+        else:
+            self.time_sequence = None
+            self.current_time = start_time
+        self.original_time_module = None
 
-def decorate_methods(decorator, starts_with=''):
-    class DecorateMethods(type):
-        """Decorate all methods of the class with the decorator provided"""
+    def advance_time(self, seconds):
+        if self.time_sequence is not None:
+            raise ValueError("Cannot advance time when using time_sequence.")
+        self.current_time += seconds
 
-        def __new__(cls, name, bases, attrs, **kwargs):
-            exclude = kwargs.get('exclude', [])
+    def set_time(self, time_value):
+        if self.time_sequence is not None:
+            raise ValueError("Cannot set time when using time_sequence.")
+        self.current_time = time_value
 
-            for attr_name, attr_value in attrs.items():
-                if (
-                    isinstance(attr_value, types.FunctionType)
-                    and attr_name.startswith(starts_with)
-                    and attr_name not in exclude
-                    and not hasattr(attr_value, '__exclude_decorator__')
-                    and not attr_name.startswith('__')
-                ):
-                    attrs[attr_name] = decorator(attr_value)
+    def mock_time(self):
+        if self.time_sequence is not None:
+            if self.call_index < len(self.time_sequence):
+                time_value = self.time_sequence[self.call_index]
+                self.call_index += 1
+                return time_value
+            else:
+                return self.time_sequence[-1]
+        else:
+            return self.current_time
 
-            return super(DecorateMethods, cls).__new__(cls, name, bases, attrs)
+    def __enter__(self):
+        target_module_obj = __import__(self.target_module, fromlist=[''])
+        self.original_time_module = target_module_obj.time
+        class MockTimeModule:
+            def __init__(self, original_module, mock_time_func):
+                self.original_module = original_module
+                self.time = mock_time_func
+            def __getattr__(self, name):
+                return getattr(self.original_module, name)
+        target_module_obj.time = MockTimeModule(self.original_time_module, self.mock_time)
+        self.target_module_obj = target_module_obj
+        return self
 
-    return DecorateMethods
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.target_module_obj.time = self.original_time_module
 
-
-class TestCaseWithRaiseLogs(unittest.TestCase, metaclass=decorate_methods(raise_logs(logger_name='ibind'), starts_with='test')): ...
-
-
-def exclude_decorator(fn):
-    fn.__exclude_decorator__ = True
-    return fn
+def mock_module_time(target_module, time_sequence=None, start_time=0.0):
+    return MockTimeController(target_module, time_sequence=time_sequence, start_time=start_time)

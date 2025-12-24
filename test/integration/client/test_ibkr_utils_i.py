@@ -15,7 +15,7 @@ from ibind.client.ibkr_utils import (
     parse_order_request,
 )
 from test.integration.client import ibkr_responses
-from test.test_utils_new import CaptureLogsContext
+from test.test_utils import CaptureLogsContext
 
 
 # --------------------------------------------------------------------------------------
