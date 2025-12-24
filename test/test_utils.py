@@ -9,7 +9,6 @@ from typing import List, TypeVar
 from ibind.support.logs import get_logger_children
 from ibind.support.py_utils import make_clean_stack, OneOrMany, UNDEFINED
 
-_NAME_TO_LEVEL = logging.getLevelNamesMapping()
 
 # --- New Functions and Types ---
 
