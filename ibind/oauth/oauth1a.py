@@ -61,16 +61,16 @@ class OAuth1aConfig(OAuthConfig):
     dh_prime: str = var.IBIND_OAUTH1A_DH_PRIME
     """ The hex representation of the Diffie-Hellman prime. """
 
-    encryption_key_fp: str = var.IBIND_OAUTH1A_ENCRYPTION_KEY_FP
+    encryption_key_fp: Optional[str] = var.IBIND_OAUTH1A_ENCRYPTION_KEY_FP
     """ The path to the private OAuth 1.0a encryption key. """
 
-    encryption_key: Optional[str] = None
+    encryption_key: Optional[str] = var.IBIND_OAUTH1A_ENCRYPTION_KEY
     """ The private OAuth 1.0a encryption key content (alternative to encryption_key_fp). """
 
-    signature_key_fp: str = var.IBIND_OAUTH1A_SIGNATURE_KEY_FP
+    signature_key_fp: Optional[str] = var.IBIND_OAUTH1A_SIGNATURE_KEY_FP
     """ The path to the private OAuth 1.0a signature key. """
 
-    signature_key: Optional[str] = None
+    signature_key: Optional[str] = var.IBIND_OAUTH1A_SIGNATURE_KEY
     """ The private OAuth 1.0a signature key content (alternative to signature_key_fp). """
 
     dh_generator: str = var.IBIND_OAUTH1A_DH_GENERATOR
@@ -267,7 +267,7 @@ def read_private_key(private_key_fp: Optional[str] = None, private_key_content: 
     Raises:
         ValueError: If neither private_key_fp nor private_key_content is provided.
     """
-    if private_key_content is not None:
+    if private_key_content:
         # Use the content directly
         private_key = RSA.importKey(private_key_content)
     elif private_key_fp is not None:
