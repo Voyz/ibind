@@ -148,8 +148,14 @@ IBIND_OAUTH1A_DH_PRIME = os.getenv('IBIND_OAUTH1A_DH_PRIME', None)
 IBIND_OAUTH1A_ENCRYPTION_KEY_FP = os.getenv('IBIND_OAUTH1A_ENCRYPTION_KEY_FP', None)
 """ The path to the private OAuth 1.0a encryption key. """
 
+IBIND_OAUTH1A_ENCRYPTION_KEY = os.getenv('IBIND_OAUTH1A_ENCRYPTION_KEY', None)
+""" The private OAuth 1.0a encryption key content (alternative to IBIND_OAUTH1A_ENCRYPTION_KEY_FP). """
+
 IBIND_OAUTH1A_SIGNATURE_KEY_FP = os.getenv('IBIND_OAUTH1A_SIGNATURE_KEY_FP', None)
 """ The path to the private OAuth 1.0a signature key. """
+
+IBIND_OAUTH1A_SIGNATURE_KEY = os.getenv('IBIND_OAUTH1A_SIGNATURE_KEY', None)
+""" The private OAuth 1.0a signature key content (alternative to IBIND_OAUTH1A_SIGNATURE_KEY_FP). """
 
 IBIND_OAUTH1A_DH_GENERATOR = int(os.getenv('IBIND_OAUTH1A_DH_GENERATOR', 2))
 """ The Diffie-Hellman generator value. """
