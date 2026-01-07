@@ -162,7 +162,7 @@ class CaptureLogsContext:
         level: str = 'DEBUG',
         logger_level: str = None,
         error_level: str = 'WARNING',
-        no_logs: Union[bool, UNDEFINED] = UNDEFINED,
+        no_logs: Union[bool, object] = UNDEFINED,
         expected_errors: List[str] = None,
         partial_match: bool = False,
         attach_stack: bool = True,
