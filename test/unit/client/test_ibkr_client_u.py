@@ -5,7 +5,7 @@ from ibind.client.ibkr_client import IbkrClient
 @pytest.fixture
 def client():
     # Minimal config for IbkrClient, mock dependencies
-    c = IbkrClient(use_oauth=False)
+    c = IbkrClient(use_oauth=False, auto_register_shutdown=False)
     c.check_auth_status = MagicMock()
     c.stop_tickler = MagicMock()
     c.oauth_init = MagicMock()

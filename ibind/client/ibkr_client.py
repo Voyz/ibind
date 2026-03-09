@@ -365,7 +365,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             elif 'An attempt was made to access a socket in a way forbidden by its access permissions' in str(e):
                 _LOGGER.error('Connection to IBKR servers blocked during reauthentication. Check that nothing is blocking connectivity of the application')
             elif e.status_code == 410 and 'gone' in str(e):
-                _LOGGER.error(f'OAuth 410 gone: recreate a new live session token, or try a different server, eg. "1.api.ibkr.com", "2.api.ibkr.com", etc.')
+                _LOGGER.error('OAuth 410 gone: recreate a new live session token, or try a different server, eg. "1.api.ibkr.com", "2.api.ibkr.com", etc.')
             else:
                 _LOGGER.error(f'Unknown error checking IBKR connection during reauthentication: {exception_to_string(e)}')
 
