@@ -12,16 +12,28 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
+def _parse_auth_status(auth_status):
+    authenticated = auth_status['authenticated']
+    competing = auth_status['competing']
+    connected = auth_status['connected']
+
+    return authenticated and (not competing) and connected
+
+
 class SessionMixin:
     """
     https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
     """
 
-    def authentication_status(self: 'IbkrClient') -> Result:  # pragma: no cover
+    def authentication_status(self: 'IbkrClient', log: bool = True) -> Result:  # pragma: no cover
         """
         Current Authentication status to the Brokerage system. Market Data and Trading is not possible if not authenticated, e.g. authenticated shows false.
+
+        Args:
+            log (bool, optional): Log the authentication status request. Defaults to True.
+
         """
-        return self.post('iserver/auth/status')
+        return self.post('iserver/auth/status', log=log)
 
     def initialize_brokerage_session(self: 'IbkrClient', compete: bool = True) -> Result:  # pragma: no cover
         """
@@ -42,11 +54,14 @@ class SessionMixin:
         """
         return self.post('logout')
 
-    def tickle(self: 'IbkrClient') -> Result:  # pragma: no cover
+    def tickle(self: 'IbkrClient', log: bool = False) -> Result:  # pragma: no cover
         """
         If the gateway has not received any requests for several minutes an open session will automatically timeout. The tickle endpoint pings the server to prevent the session from ending. It is expected to call this endpoint approximately every 60 seconds to maintain the connection to the brokerage session.
+
+        Args:
+            log (bool, optional): Log the tickle request. Defaults to False.
         """
-        return self.post('tickle', log=False)
+        return self.post('tickle', log=log)
 
     def reauthenticate(self: 'IbkrClient') -> Result:  # pragma: no cover
         """
@@ -94,9 +109,37 @@ class SessionMixin:
             raise AttributeError(f'Health check requests returns invalid data: {result}')
 
         auth_status = result.data['iserver']['authStatus']
+        return _parse_auth_status(auth_status)
 
-        authenticated = auth_status['authenticated']
-        competing = auth_status['competing']
-        connected = auth_status['connected']
+    def check_auth_status(self: 'IbkrClient') -> bool:
+        """
+        Verifies the health and authentication status of the IBKR Gateway server.
 
-        return authenticated and (not competing) and connected
+        This method checks if the Gateway server is alive and whether the user is authenticated.
+        It also checks for any competing connections and the connection status.
+
+        Returns:
+            bool: True if the Gateway server is authenticated, not competing, and connected, False otherwise.
+
+        Raises:
+            AttributeError: If the Gateway health check request returns invalid data.
+
+        Note:
+            - This method returns a boolean directly without the `Result` dataclass.
+        """
+        try:
+            result = self.authentication_status(log=False)
+        except Exception as e:
+            if isinstance(e, ExternalBrokerError) and e.status_code == 401:
+                _LOGGER.info('Gateway session is not authenticated.')
+            elif isinstance(e, ConnectTimeout):
+                _LOGGER.error(
+                    'ConnectTimeout raised when communicating with the Gateway. This could indicate that the Gateway is not running or other connectivity issues.'
+                )
+            else:
+                _LOGGER.error(f'Auth status request failed: {e}')
+            return False
+
+        if result.data.get('authenticated', None) is None:
+            raise AttributeError(f'Health check requests returns invalid data: {result}')
+        return _parse_auth_status(result.data)

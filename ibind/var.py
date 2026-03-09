@@ -29,7 +29,15 @@ def to_bool(value):
     return bool(strtobool(str(value)))
 
 
-# TODO: we could load .env vars here if dotenv is importable
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(os.getenv('IBIND_ENV_FILE', None))
+    """ Path to the .env file. """
+except ImportError:
+    # dotenv not installed, skip loading
+    pass
 
 ##### GENERAL #####
 
@@ -38,6 +46,9 @@ IBIND_USE_SESSION = to_bool(os.environ.get('IBIND_USE_SESSION', True))
 
 IBIND_AUTO_REGISTER_SHUTDOWN = to_bool(os.environ.get('IBIND_AUTO_REGISTER_SHUTDOWN', True))
 """ Whether to automatically register the shutdown handler. """
+
+IBIND_LOG_RESPONSES = to_bool(os.environ.get('IBIND_LOG_RESPONSES', False))
+""" Whether to log responses coming from the broker. """
 
 ##### LOGS #####
 
@@ -55,6 +66,9 @@ LOG_FORMAT = os.getenv('IBIND_LOG_FORMAT', '%(asctime)s|%(levelname)-.1s| %(mess
 
 LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 """ Directory of file logs produced. """
+
+PRINT_FILE_LOGS = to_bool(os.getenv('IBIND_PRINT_FILE_LOGS', False))
+""" Whether file logs should also be output into terminal. """
 
 ##### IBKR #####
 
@@ -105,6 +119,9 @@ IBIND_MAINTAIN_OAUTH = to_bool(os.environ.get('IBIND_MAINTAIN_OAUTH', True))
 IBIND_SHUTDOWN_OAUTH = to_bool(os.environ.get('IBIND_SHUTDOWN_OAUTH', True))
 """ Whether OAuth should be automatically stopped on termination. """
 
+IBIND_TICKLER_INTERVAL = int(os.environ.get('IBIND_TICKLER_INTERVAL', 60))
+""" The interval at which Tickler should call the `tickle` endpoint. """
+
 ##### OAuth 1.0a #####
 
 IBIND_OAUTH1A_REST_URL = os.getenv('IBIND_OAUTH1A_REST_URL', 'https://api.ibkr.com/v1/api/')
@@ -131,8 +148,14 @@ IBIND_OAUTH1A_DH_PRIME = os.getenv('IBIND_OAUTH1A_DH_PRIME', None)
 IBIND_OAUTH1A_ENCRYPTION_KEY_FP = os.getenv('IBIND_OAUTH1A_ENCRYPTION_KEY_FP', None)
 """ The path to the private OAuth 1.0a encryption key. """
 
+IBIND_OAUTH1A_ENCRYPTION_KEY = os.getenv('IBIND_OAUTH1A_ENCRYPTION_KEY', None)
+""" The private OAuth 1.0a encryption key content (alternative to IBIND_OAUTH1A_ENCRYPTION_KEY_FP). """
+
 IBIND_OAUTH1A_SIGNATURE_KEY_FP = os.getenv('IBIND_OAUTH1A_SIGNATURE_KEY_FP', None)
 """ The path to the private OAuth 1.0a signature key. """
+
+IBIND_OAUTH1A_SIGNATURE_KEY = os.getenv('IBIND_OAUTH1A_SIGNATURE_KEY', None)
+""" The private OAuth 1.0a signature key content (alternative to IBIND_OAUTH1A_SIGNATURE_KEY_FP). """
 
 IBIND_OAUTH1A_DH_GENERATOR = int(os.getenv('IBIND_OAUTH1A_DH_GENERATOR', 2))
 """ The Diffie-Hellman generator value. """

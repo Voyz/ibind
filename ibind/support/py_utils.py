@@ -265,7 +265,7 @@ def make_clean_stack() -> [traceback.FrameSummary]:  # pragma: no cover
     ][:-2]
 
 
-def wait_until(condition: callable, timeout_message: str = None, timeout: float = 5) -> bool:
+def wait_until(condition: callable, timeout_message: str = None, timeout: float = 5, sleep: float = 0.1) -> bool:
     """
      Pauses program execution until a specified condition becomes True or a timeout is reached.
 
@@ -273,6 +273,7 @@ def wait_until(condition: callable, timeout_message: str = None, timeout: float 
          condition (callable): A callable that returns a boolean value. The function waits until this callable returns True.
          timeout_message (str, optional): A message to log as an error if the timeout is reached. If None, no message is logged. Defaults to None.
          timeout (float, optional): The maximum time to wait for the condition to become True, in seconds. Defaults to 5 seconds.
+         sleep (float, optional): The delay between condition reattempts.
 
      Returns:
          bool: True if the condition becomes True within the timeout period, False otherwise.
@@ -282,7 +283,7 @@ def wait_until(condition: callable, timeout_message: str = None, timeout: float 
     while time.time() < deadline:
         if condition():
             return True
-        time.sleep(0.1)
+        time.sleep(sleep)
 
     if timeout_message is not None:
         _LOGGER.error(timeout_message)

@@ -39,7 +39,8 @@ OAuth2Config class as the 'oauth_config' parameter to the IbkrClient constructor
 This is especially useful if managing the PEM key via environment variables is cumbersome.
 
 Example of dynamic configuration:
-from ibind import IbkrClient, OAuth2Config
+from ibind import IbkrClient
+from ibind.oauth.oauth2 import OAuth2Config
 
 oauth_cfg = OAuth2Config(
     client_id='your_client_id',
@@ -54,78 +55,19 @@ This example assumes environment variables are set for simplicity.
 """
 
 import os
+
 from ibind import IbkrClient, ibind_logs_initialize
 from ibind.oauth.oauth2 import OAuth2Config
 
-# Initialize IBind logs (optional, but good for seeing what's happening)
 ibind_logs_initialize()
 
-cacert = os.getenv('IBIND_CACERT', False)  # Standard cacert, though OAuth usually implies HTTPS
+client = IbkrClient(
+    cacert=os.getenv('IBIND_CACERT', False),
+    use_oauth=True,
+    oauth_config=OAuth2Config(),
+)
 
-# --- Essential OAuth 2.0 Environment Variables ---
-# These must be set for the example to run using environment-based configuration.
-required_env_vars = [
-    'IBIND_OAUTH2_CLIENT_ID',
-    'IBIND_OAUTH2_CLIENT_KEY_ID',
-    'IBIND_OAUTH2_PRIVATE_KEY_PEM',
-    'IBIND_OAUTH2_USERNAME',
-    'IBIND_USE_OAUTH' # Ensure this is also set, typically to "True"
-]
-
-missing_vars = [var_name for var_name in required_env_vars if not os.getenv(var_name)]
-
-client = None
-if missing_vars:
-    print("Missing required OAuth 2.0 environment variables for this example:")
-    for var_name in missing_vars:
-        print(f"  - {var_name}")
-    print("Please set them to run this example, or configure OAuth2Config dynamically (see docstring).")
-    print("Exiting example.")
-else:
-    if os.getenv('IBIND_USE_OAUTH', '').lower() != 'true':
-        print("Warning: IBIND_USE_OAUTH is not set to 'True'.")
-        print("         The client might not attempt OAuth 2.0 as expected by this example.")
-        # Proceeding anyway, as IbkrClient might still be configured via oauth_config directly below
-
-    print("Found required OAuth 2.0 environment variables. Initializing IbkrClient...")
-    # IbkrClient will use OAuth2Config by default if use_oauth=True and relevant OAuth2 env vars are present.
-    # Passing an explicit OAuth2Config() ensures it uses OAuth2 and loads from env vars.
-    try:
-        client = IbkrClient(cacert=cacert, use_oauth=True, oauth_config=OAuth2Config())
-        print("IbkrClient initialized for OAuth 2.0.")
-    except Exception as e:
-        print(f"Error initializing IbkrClient: {e}")
-        client = None
-
-if client:
-    print("\nAttempting a simple API call to confirm OAuth 2.0 authentication...")
-    try:
-        tickle_result = client.tickle()
-        if tickle_result and tickle_result.data and tickle_result.data.get('session') == 'authenticated': # Or other relevant check
-            print("Tickle successful! OAuth 2.0 authentication appears to be working.")
-            # Optionally print some part of tickle_result.data for confirmation
-            # print(f"Tickle data: {tickle_result.data}")
-        elif tickle_result and tickle_result.data: # Successful call but maybe not the expected auth confirmation
-            print("Tickle call successful, but session status might not be 'authenticated' or as expected.")
-            print(f"Tickle data: {tickle_result.data}")
-        else:
-            print("Tickle call failed or did not return expected data.")
-            if tickle_result:
-                print(f"Tickle result status: {tickle_result.status_code}, Raw response: {tickle_result.raw_response}")
-            else:
-                print("Tickle call returned no result object.")
-
-    except Exception as e:
-        print(f"\nAn error occurred during the API call: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        if hasattr(client, 'close'):
-            print("\nClosing client session.")
-            client.close()
-else:
-    # This part is reached if client initialization failed earlier (e.g. missing env vars)
-    # The message about missing env vars or init error would have already been printed.
-    pass # No further action needed here, initial error messages suffice
-
-print("\nExample finished.")
+try:
+    print(client.tickle().data)
+finally:
+    client.close()

@@ -15,7 +15,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import extract_conid
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import TimeoutLock, UNDEFINED
+from ibind.support.py_utils import TimeoutLock, UNDEFINED, wait_until
 
 _LOGGER = project_logger(__file__)
 
@@ -227,6 +227,7 @@ class IbkrWsClient(WsClient):
         restart_on_critical: bool = True,
         max_connection_attempts: int = 10,
         cacert: Union[str, bool] = var.IBIND_CACERT,
+        recreate_subscriptions_on_reconnect: bool = True,
         # subscription controller
         subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
         subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
@@ -260,6 +261,7 @@ class IbkrWsClient(WsClient):
             max_ping_interval (int, optional): Maximum interval in seconds to wait for a ping response. Defaults to _DEFAULT_MAX_PING_INTERVAL.
             max_connection_attempts (int, optional): Maximum number of attempts for connecting to the WebSocket. Defaults to 10.
             cacert (Union[str, bool], optional): Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
+            recreate_subscriptions_on_reconnect (bool, optional): Flag to recreate subscriptions on reconnect. Defaults to True.
             subscription_retries (int, optional): Number of retries for subscription requests. Defaults to 5.
             subscription_timeout (float, optional): Timeout for subscription requests. Defaults to 2.
         """
@@ -303,6 +305,7 @@ class IbkrWsClient(WsClient):
             cacert=cacert,
             subscription_retries=subscription_retries,
             subscription_timeout=subscription_timeout,
+            recreate_subscriptions_on_reconnect=recreate_subscriptions_on_reconnect
         )
 
         self._operational_lock = TimeoutLock(60)
@@ -312,6 +315,7 @@ class IbkrWsClient(WsClient):
         self._last_heartbeat = 0
         self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
         self._queue_accessors: Dict[IbkrWsKey, QueueAccessor] = {}
+        self._tic_message = {}
 
         if start:
             self.start()
@@ -332,6 +336,7 @@ class IbkrWsClient(WsClient):
         return {'User-Agent': 'ClientPortalGW/1'} if self._use_oauth else None
 
     def _on_reconnect(self):
+        self._last_heartbeat = 0
         super()._on_reconnect()
 
     def _preprocess_market_data_message(self, message: dict):
@@ -380,12 +385,13 @@ class IbkrWsClient(WsClient):
 
     def _handle_account_update(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.ACCOUNT_UPDATES, message)
-        if 'accounts' not in data:
-            _LOGGER.error(f'{self}: Unknown account response: {message}')
-            return
-
-        if self._account_id not in data['accounts']:
+        if 'accounts' in data and self._account_id not in data['accounts']:
             _LOGGER.error(f'{self}: Account ID mismatch: expected={self._account_id}, received={data["accounts"]}')
+        elif 'acctProps' in data:  # expected account update that we ignore
+            pass
+        else:
+            _LOGGER.info(f'{self}: Account message: {data}')
+            return
 
     def _handle_authentication_status(self, message, data):
         self._handle_unsolicited_message(IbkrWsKey.AUTHENTICATION_STATUS, data)
@@ -398,10 +404,16 @@ class IbkrWsClient(WsClient):
             if data.get('competing') is False:
                 pass
             _LOGGER.error(f'{self}: Status competing: {data}')
-        elif data == {'message': ''}:
+        elif (  # expected status updates that we ignore
+                data == {'message': ''} or
+                data.get('fail', '') == '' or
+                'serverName' in data or
+                'serverVersion' in data or
+                'username' in data
+        ):
             pass
         else:
-            _LOGGER.info(f'{self}: Unknown status response: {message}')
+            _LOGGER.info(f'{self}: Status message: {data}')
 
     def _handle_bulletin(self, message):  # pragma: no cover
         self._handle_unsolicited_message(IbkrWsKey.BULLETINS, message)
@@ -474,6 +486,9 @@ class IbkrWsClient(WsClient):
         elif topic is None:
             # in general most message should carry a topic, other than for few exceptions
             self._handle_message_without_topic(message)
+
+        elif topic == 'tic':
+            self._tic_message = message
 
         elif topic == 'system':
             if 'hb' in message:
@@ -591,8 +606,10 @@ class IbkrWsClient(WsClient):
             bool: True if the subscription was successful, False otherwise.
         """
         if channel[:2] == 'or':
-            if not self._ibkr_client.check_health():
+            if not wait_until(self._ibkr_client.check_health, 'IbkrClient not healthy before subscribing to orders', timeout=15, sleep=3):
                 return False
+            self._ibkr_client.receive_brokerage_accounts()
+            time.sleep(0.25)
             self._ibkr_client.live_orders(force=True)
             self._ibkr_client.live_orders()
 
@@ -669,3 +686,29 @@ class IbkrWsClient(WsClient):
             - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
         """
         return self._queue_accessor(ibkr_ws_key).empty()
+
+    def tic(self):
+        """
+        Sends a tic request to the IBKR WebSocket server and waits for the response.
+
+        This method sends a 'tic' message to the server and waits for the server to update
+        the internal tic message with a new timestamp. It uses the 'lastAccessed' field
+        to detect when a fresh response has been received.
+
+        Returns:
+            dict: The tic message dictionary containing server response data, or None if
+                  the send operation failed or the response timed out.
+        """
+        ts = self._tic_message.get('lastAccessed', 0)
+        ret = self.send('tic')
+
+        if not ret:
+            return None
+
+        def ts_changed():
+            return self._tic_message.get('lastAccessed', 0) != ts
+
+        if not wait_until(ts_changed, f'tic timeout, ts={ts}', timeout=5):
+            return None
+
+        return self._tic_message

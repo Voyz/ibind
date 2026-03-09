@@ -1,12 +1,14 @@
 import atexit
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
 
 import requests
 from requests import ReadTimeout, Timeout
+from requests import ConnectionError as RequestsConnectionError
 from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
@@ -81,7 +83,9 @@ class RestClient:
         timeout: float = 10,
         max_retries: int = 3,
         use_session: bool = var.IBIND_USE_SESSION,
+        auto_recreate_session: bool = True,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
+        log_responses: bool = var.IBIND_LOG_RESPONSES,
     ) -> None:
         """
         Parameters:
@@ -91,6 +95,7 @@ class RestClient:
             timeout (float, optional): Timeout in seconds for the API requests. Defaults to 10.
             max_retries (int, optional): Maximum number of retries for failed API requests. Defaults to 3.
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
+            auto_recreate_session (bool, optional): Whether to automatically recreate the session on connection errors. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
         """
 
@@ -106,10 +111,12 @@ class RestClient:
 
         self._timeout = timeout
         self._max_retries = max_retries
+        self._log_responses = log_responses
 
         self._make_logger()
 
         self.use_session = use_session
+        self._auto_recreate_session = auto_recreate_session
 
         if use_session:
             self.make_session()
@@ -211,62 +218,70 @@ class RestClient:
         """
         Wrapper function which allows overriding the default request and error handling logic in the subclass.
         """
-        request_params = filter_none(kwargs)
-        attempt = 1
-        while attempt <= self._max_retries:
-            current_base_url = base_url if base_url is not None else self.base_url
-            request_url = f'{current_base_url}{endpoint.lstrip("/")}'
 
-            all_headers = self._get_headers(method, request_url) # Get base headers from subclass
-            if extra_headers:
-                all_headers.update(extra_headers) # Add/override with any specific extra_headers
+        base_url = base_url if base_url is not None else self.base_url
 
+        endpoint = endpoint.lstrip('/')
+        url = f'{base_url}{endpoint}'
+
+        headers = self._get_headers(request_method=method, request_url=url)
+        headers = {**headers, **(extra_headers or {})}
+
+        # we want to allow default values used by IBKR, so we remove all None parameters
+        kwargs = filter_none(kwargs)
+
+        # choose which function should be used to make a reqeust based on use_session field
+        if self.use_session and self._session is not None:
+            request_function = self._session.request
+        else:
+            request_function = requests.request
+
+        if request_function is None:
+            _LOGGER.warning(f'{self}: an attempt was made to create a request with no valid session.')
+
+        # we repeat the request attempts in case of ReadTimeouts up to max_retries
+        for attempt in range(self._max_retries + 1):
             if log:
-                self.logger.info(f'Attempt {attempt}: {method} {request_url} Headers: {all_headers} Kwargs: {request_params}')
-
-            result = Result(request={
-                'method': method,
-                'url': request_url,
-                'headers': all_headers,
-                'params': request_params
-            })
+                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
             try:
-                if self.use_session:
-                    response = self._session.request(
-                        method,
-                        request_url,
-                        headers=all_headers,
-                        timeout=self._timeout,
-                        verify=self.cacert,
-                        **request_params
-                    )
-                else:
-                    response = requests.request(
-                        method,
-                        request_url,
-                        headers=all_headers,
-                        timeout=self._timeout,
-                        verify=self.cacert,
-                        **request_params
-                    )
-                return self._process_response(response, result)
-            except (ReadTimeout, Timeout) as e:
-                self.logger.warning(f'Attempt {attempt} timed out for {method} {request_url}: {e}')
-                if attempt == self._max_retries:
-                    raise TimeoutError(f'{self}: Max retries reached for {method} {request_url}') from e
-                attempt += 1
-            except ChunkedEncodingError as e:
-                # Treat ChunkedEncodingError similar to a timeout for retry purposes
-                self.logger.warning(f'Attempt {attempt} failed with ChunkedEncodingError for {method} {request_url}: {e}')
-                if attempt == self._max_retries:
-                    raise ExternalBrokerError(f'{self}: Max retries reached for {method} {request_url} after ChunkedEncodingError') from e
-                attempt += 1
+                response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
+                result = Result(request={'url': url, **kwargs})
+                result = self._process_response(response, result)
+                if self._log_responses:
+                    self.logger.info(result)
+                return result
+
+            except ReadTimeout as e:
+                if attempt >= self._max_retries:
+                    raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
+                msg = f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}'
+                self.logger.info(msg)
+                _LOGGER.info(msg)
+
+                continue  # Continue to the next iteration for a retry
+
+            except (ConnectionError, RequestsConnectionError, ChunkedEncodingError) as e:
+                if attempt >= self._max_retries:
+                    raise ExternalBrokerError(f'{self}: Connection error {str(e)} for {method} {url} {kwargs}') from e
+                msg = f'{self}: Connection error detected, retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
+                self.logger.warning(msg)
+                _LOGGER.warning(msg)
+                time.sleep(1.5 * (attempt + 1))  # small back-off before retry
+
+                if self.use_session and self._auto_recreate_session:
+                    self.close_session()
+                    self.make_session()  # Recreate session automatically
+                continue  # Retry the request with a fresh session
+
+            except ExternalBrokerError:
+                raise
+
             except Exception as e:
-                self.logger.error(f'{self}: Request {method} {request_url} failed: {e}')
-                raise ExternalBrokerError(f'{self}: Request {method} {request_url} failed') from e
-        # This line should not be reached if logic is correct, but as a fallback:
-        raise ExternalBrokerError(f'{self}: Request {method} {request_url} failed after {self._max_retries} retries without specific exception.')
+                self.logger.exception(e)
+                raise ExternalBrokerError(f'{self}: request error: {str(e)}') from e
+
+        raise ExternalBrokerError(f'{self}: failed to complete request: {method} {url} {kwargs}')
 
     def _process_response(self, response, result: Result) -> Result:
         try:
@@ -286,11 +301,15 @@ class RestClient:
                 f'{self}: response error {result} :: {response.status_code} :: {response.reason} :: {response.text}', status_code=response.status_code
             ) from e
 
-    def close(self):
+    def close_session(self):
         """Closes the session to release resources."""
-        if hasattr(self, 'session'):
+        if hasattr(self, '_session') and self._session is not None:
             self._session.close()
             self._session = None
+
+    def close(self):
+        self.close_session()
+
 
     def register_shutdown_handler(self):
         """

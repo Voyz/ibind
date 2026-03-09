@@ -67,6 +67,25 @@ class PortfolioMixin:  # pragma: no cover
         params = params_dict({'acctIds': account_ids})
         return self.get('portfolio/allocation', params=params)
 
+    def combination_positions(self: 'IbkrClient', account_id: str = None, no_cache: bool = False) -> Result:
+        """
+        Provides all positions held in the account acquired as a combination, including values such as ratios, size, and market value.
+
+        Parameters:
+            account_id (str, optional): The account ID for which account should place the order.
+            nocache (bool, optional): Set if request should be made without caching. Defaults to false.
+        """
+
+        if account_id is None:
+            account_id = self.account_id
+
+        params = params_dict(
+            optional={
+                'nocache': no_cache,
+            }
+        )
+        return self.get(f'portfolio/{account_id}/combo/positions', params)
+
     def positions(
         self: 'IbkrClient',
         account_id: str = None,
@@ -197,8 +216,18 @@ class PortfolioMixin:  # pragma: no cover
         """
         return self.post('pa/performance', {'acctIds': account_ids, 'period': period})
 
+    @ensure_list_arg('account_ids')
+    def all_periods(self: 'IbkrClient', account_ids: OneOrMany[str]) -> Result:
+        """
+        Returns the performance across all available time periods for the given accounts, if more than one account is passed, the result is consolidated.
+
+        Parameters:
+            account_ids (OneOrMany[str]): Include each account ID to receive data for.
+        """
+        return self.post('pa/allperiods', {'acctIds': account_ids})
+
     @ensure_list_arg('account_ids', 'conids')
-    def transaction_history(self: 'IbkrClient', account_ids: OneOrMany[str], conids: OneOrMany[str], currency: str, days: str = None) -> Result:
+    def transaction_history(self: 'IbkrClient', account_ids: OneOrMany[str], conids: OneOrMany[str], currency: str, days: int = None) -> Result:
         """
         Transaction history for a given number of conids and accounts. Types of transactions include dividend payments, buy and sell transactions, transfers.
 

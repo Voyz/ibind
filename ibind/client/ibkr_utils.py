@@ -10,6 +10,7 @@ from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
+from ibind import var
 
 _LOGGER = project_logger(__file__)
 
@@ -94,7 +95,7 @@ def process_instruments(
             )
 
             # if no contracts are left, we don't need the instrument
-            if not len(filtered_contracts):
+            if not filtered_contracts:
                 continue
 
             # if all conditions are  met, accept the instrument and its contracts
@@ -148,16 +149,79 @@ class QuestionType(VerboseEnum):
     Enumeration of common warning messages encountered when submitting orders.
 
     This enum class represents different types of precautionary messages that may be returned by IBKR's API when placing an order. These warnings often require user confirmation before proceeding.
+
+    Note:
+        - Look for all suppressible message IDs in IBKR API documentation (https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#suppressible-id)
     """
 
     PRICE_PERCENTAGE_CONSTRAINT = 'price exceeds the Percentage constraint of 3%'
-    ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
     MISSING_MARKET_DATA = (
         'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades.'
     )
+    TICK_SIZE_LIMIT = 'exceeds the Tick Size Limit of'
+    ORDER_SIZE_LIMIT = 'size exceeds the Size Limit of'
+    TRIGGER_AND_FILL = 'This order will most likely trigger and fill immediately.'
+    ORDER_VALUE_LIMIT = 'exceeds the Total Value Limit of'
+    SIZE_MODIFICATION_LIMIT = 'size modification exceeds the size modification limit'
+    MANDATORY_CAP_PRICE = 'To avoid trading at a price that is not consistent with a fair and orderly market'
+    CASH_QUANTITY = 'Traders are responsible for understanding cash quantity details, which are provided on a best efforts basis only.'
+    CASH_QUANTITY_ORDER = 'Orders that express size using a monetary value (cash quantity) are provided on a non-guaranteed basis.'
     STOP_ORDER_RISKS = (
         'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
     )
+    MULTIPLE_ACCOUNTS = 'This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders.'
+    DISRUPTIVE_ORDERS = 'If your order is not immediately executable, our systems may, depending on market conditions, reject your order'
+    CLOSE_POSITION = 'Would you like to cancel all open orders and then place new closing order?'
+
+
+# FIXME: Fill in the remaining question types as we find out what they are
+_MESSAGE_ID_TO_QUESTION_TYPE = {
+    "o163": (QuestionType.PRICE_PERCENTAGE_CONSTRAINT, "The following order exceeds the price percentage limit"),
+    "o354": (QuestionType.MISSING_MARKET_DATA, "You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades. Are you sure you want to submit this order?"),
+    "o382": (QuestionType.TICK_SIZE_LIMIT, "The following value exceeds the tick size limit"),
+    "o383": (QuestionType.ORDER_SIZE_LIMIT, "The following order BUY 650 AAPL NASDAQ.NMS size exceeds the Size Limit of 500.\nAre you sure you want to submit this order?"),
+    "o403": (QuestionType.TRIGGER_AND_FILL, "This order will most likely trigger and fill immediately.\nAre you sure you want to submit this order?"),
+    "o451": (QuestionType.ORDER_VALUE_LIMIT, "The following order BUY 650 AAPL NASDAQ.NMS value estimate of 124,995.00 USD exceeds \nthe Total Value Limit of 100,000 USD.\nAre you sure you want to submit this order?"),
+    "o2136": (UNDEFINED, "Mixed allocation order warning"),
+    "o2137": (UNDEFINED, "Cross side order warning"),
+    "o2165": (UNDEFINED, "Warns that instrument does not support trading in fractions outside regular trading hours"),
+    "o10082": (UNDEFINED, "Called Bond warning"),
+    "o10138": (QuestionType.SIZE_MODIFICATION_LIMIT, "The following order size modification exceeds the size modification limit."),
+    "o10151": (UNDEFINED, "Warns about risks with Market Orders"),
+    "o10152": (UNDEFINED, "Warns about risks associated with stop orders once they become active"),
+    "o10153": (QuestionType.MANDATORY_CAP_PRICE, "<h4>Confirm Mandatory Cap Price</h4>To avoid trading at a price that is not consistent with a fair and orderly market, IB may set a cap (for a buy order) or sell order). THIS MAY CAUSE AN ORDER THAT WOULD OTHERWISE BE MARKETABLE TO NOT BE TRADED."),
+    "o10164": (QuestionType.CASH_QUANTITY, "Traders are responsible for understanding cash quantity details, which are provided on a best efforts basis only."),
+    "o10223": (QuestionType.CASH_QUANTITY_ORDER, "<h4>Cash Quantity Order Confirmation</h4>Orders that express size using a monetary value (cash quantity) are provided on a non-guaranteed basis. The system simulates the order by cancelling it once the specified amount is spent (for buy orders) or collected (for sell orders). In addition to the monetary value, the order uses a maximum size that is calculated using the Cash Quantity Estimate Factor, which you can modify in Presets."),
+    "o10288": (UNDEFINED, "Warns about risks associated with market orders for Crypto"),
+    "o10331": (QuestionType.STOP_ORDER_RISKS, "You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.\nAre you sure you want to submit this order?"),
+    "o10332": (UNDEFINED, "OSL Digital Securities LTD Crypto Order Warning"),
+    "o10333": (UNDEFINED, "Option Exercise at the Money warning"),
+    "o10334": (UNDEFINED, "Warns that order will be placed into current omnibus account instead of currently selected global account."),
+    "o10335": (UNDEFINED, "Serves internal Rapid Entry window."),
+    "p6": (QuestionType.MULTIPLE_ACCOUNTS, "This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders."),
+    "p12": (QuestionType.DISRUPTIVE_ORDERS, "If your order is not immediately executable, our systems may, depending on market conditions, reject your order if its limit price is more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace.\\nUse the Price Management Algo?"),
+}
+
+_QUESTION_TYPE_TO_MESSAGE_ID = {v[0]: k if v[0] is not UNDEFINED else 'undefined' for k, v in _MESSAGE_ID_TO_QUESTION_TYPE.items()}
+
+
+def question_type_to_message_id(question_type: QuestionType) -> str:
+    """
+    Converts a QuestionType to its corresponding message ID.
+
+    Parameters:
+        question_type (QuestionType): The QuestionType enum value.
+
+    Returns:
+        str: The corresponding message ID string.
+
+    Note:
+        - Look for all suppressible message IDs in IBKR API documentation (https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#suppressible-id)
+    """
+    if question_type not in _QUESTION_TYPE_TO_MESSAGE_ID:
+        raise ValueError(f'QuestionType {question_type} is not currently dynamically mapped to a message id. Please look the ID up manually.')
+
+    return _QUESTION_TYPE_TO_MESSAGE_ID[question_type]
 
 
 Answers = Dict[Union[QuestionType, str], bool]
@@ -243,10 +307,8 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
         data = result.data
 
         if 'error' in data:
-            order_tag = original_result.request['json']['orders'][0].get('cOID')
-            error_match = f"Order couldn't be submitted: Local order ID={order_tag} is already registered."
-            if error_match in data['error']:
-                raise ExternalBrokerError(f"Order couldn't be submitted. Order with order_tag/cOID {order_tag!r} is already registered.")
+            if "Order couldn't be submitted: Local order ID=" in data['error']:
+                raise ExternalBrokerError(f"Order couldn't be submitted. Orders are already registered: {original_result.request.get('json', {}).get('orders', {})}")
 
             raise ExternalBrokerError(f'While handling questions an error was returned: {pprint.pformat(data)}')
 
@@ -287,7 +349,7 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
 @dataclass
 class OrderRequest:
-    conid: int
+    conid: Optional[int]
     side: str
     quantity: float
     order_type: str
@@ -296,6 +358,8 @@ class OrderRequest:
     # optional
     price: Optional[float] = field(default=None)
     conidex: Optional[str] = field(default=None)
+    manual_indicator: Optional[bool] = field(default=None)
+    ext_operator: Optional[str] = field(default=None)
     sec_type: Optional[str] = field(default=None)
     coid: Optional[str] = field(default=None)
     parent_id: Optional[str] = field(default=None)
@@ -307,17 +371,24 @@ class OrderRequest:
     tif: Optional[str] = field(default='GTC')
     trailing_amt: Optional[float] = field(default=None)
     trailing_type: Optional[str] = field(default=None)
+    customer_account: Optional[str] = field(default=None)
+    is_pro_customer: Optional[bool] = field(default=None)
     referrer: Optional[str] = field(default=None)
     cash_qty: Optional[float] = field(default=None)
     fx_qty: Optional[float] = field(default=None)
     use_adaptive: Optional[bool] = field(default=None)
     is_ccy_conv: Optional[bool] = field(default=None)
     allocation_method: Optional[str] = field(default=None)
+    manual_order_time: Optional[int] = field(default=None)
+    deactivated: Optional[bool] = field(default=None)
     strategy: Optional[str] = field(default=None)
     strategy_parameters: Optional[dict] = field(default=None)
 
     # undocumented
     is_close: Optional[bool] = field(default=None)
+
+    # any additional fields that have not yet been mapped
+    custom_fields: Optional[dict] = field(default=None)
 
     def to_dict(self) -> dict:
         """Convert dataclass to a dictionary, excluding None values."""
@@ -333,6 +404,8 @@ _ORDER_REQUEST_MAPPING = {
     'coid': 'cOID',
     'acct_id': 'acctId',
     'conidex': 'conidex',
+    'manual_indicator': 'manualIndicator',
+    'ext_operator': 'extOperator',
     'sec_type': 'secType',
     'parent_id': 'parentId',
     'listing_exchange': 'listingExchange',
@@ -343,12 +416,16 @@ _ORDER_REQUEST_MAPPING = {
     'tif': 'tif',
     'trailing_amt': 'trailingAmt',
     'trailing_type': 'trailingType',
+    'customer_account': 'customerAccount',
+    'is_pro_customer': 'isProCustomer',
     'referrer': 'referrer',
     'cash_qty': 'cashQty',
     'fx_qty': 'fxQty',
     'use_adaptive': 'useAdaptive',
     'is_ccy_conv': 'isCcyConv',
     'allocation_method': 'allocationMethod',
+    'manual_order_time': 'manualOrderTime',
+    'deactivated': 'deactivated',
     'strategy': 'strategy',
     'strategy_parameters': 'strategyParameters',
     'is_close': 'isClose',
@@ -361,9 +438,17 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
 
     if isinstance(order_request, dict):
         _LOGGER.warning("Order request supplied as a dict. Use 'OrderRequest' dataclass instead.")
-        return order_request
+        d = order_request
     else:
-        return {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None}
+        d = {mapping[k]: v for k, v in order_request.to_dict().items() if v is not None and k != 'custom_fields'}
+
+        if order_request.custom_fields is not None:
+            d.update(order_request.custom_fields)
+
+    if 'conidex' in d and 'conid' in d:
+        raise ValueError("Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`.")
+
+    return d
 
 
 def make_order_request(
@@ -543,7 +628,7 @@ class Tickler:
     the session from expiring. This is essential for keeping the OAuth session active.
     """
 
-    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = 60):
+    def __init__(self, client: 'IbkrClient', interval: Union[int, float] = var.IBIND_TICKLER_INTERVAL):
         """
         Initializes the Tickler instance.
 
@@ -564,6 +649,8 @@ class Tickler:
             except KeyboardInterrupt:
                 _LOGGER.info('Tickler interrupted')
                 break
+            except TimeoutError:
+                _LOGGER.warning('Tickler encountered a timeout error. This could indicate the servers are restarting. Investigate further if you see this log repeat frequently.')
             except Exception as e:
                 _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
 
@@ -584,7 +671,7 @@ class Tickler:
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
 
-    def stop(self, timeout=None):
+    def stop(self, timeout:float=None):
         """
         Stops the Tickler thread.
 
@@ -659,6 +746,9 @@ def cleanup_market_history_responses(
     results = {}
     for symbol, entry in market_history_response.items():
         if isinstance(entry, Exception):  # pragma: no cover
+            if '"error":"No data."' in str(entry):
+                _LOGGER.info(f'"No data" error for {symbol} when fetching market data. Consider increasing period and bar sizes.')
+
             if raise_on_error:
                 _LOGGER.error(f'Error fetching market data for {symbol}')
                 raise entry
@@ -680,7 +770,7 @@ def cleanup_market_history_responses(
                     'low': record['l'],
                     'close': record['c'],
                     'volume': record['v'],
-                    'date': datetime.datetime.fromtimestamp(record['t'] / 1000),
+                    'date': datetime.datetime.fromtimestamp(record['t'] / 1000, tz=datetime.timezone.utc),
                 }
             )
         results[symbol] = records

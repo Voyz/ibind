@@ -1,58 +1,83 @@
-# Combined imports
-from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
-from ibind import var
-from ibind.oauth import OAuthConfig # For OAuth2Config parent
 import base64
 import json
+import logging
 import math
 import pprint
+from dataclasses import dataclass, field
+from typing import Optional, TYPE_CHECKING
+
 import requests
 import time
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
+
+from ibind import var
+from ibind.oauth import OAuthConfig
+from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-import logging
-from ibind.support.errors import ExternalBrokerError # Ensure this is imported
 
 _LOGGER = project_logger(__file__)
 
-# Forward declaration for type hint if IbkrClient is not fully imported
 if TYPE_CHECKING:
     from ibind.client.ibkr_client import IbkrClient
 
-# OAuth2Config class definition
+
 @dataclass
 class OAuth2Config(OAuthConfig):
     """
     Dataclass encapsulating OAuth 2.0 configuration parameters.
     """
 
-    # --- Core OAuth 2.0 Parameters ---
     client_id: str = var.IBIND_OAUTH2_CLIENT_ID
+    """ OAuth 2.0 Client ID. """
+
     client_key_id: str = var.IBIND_OAUTH2_CLIENT_KEY_ID
+    """ OAuth 2.0 Client Key ID. """
 
-    # --- Direct Credential Storage ---
     private_key_pem: Optional[str] = var.IBIND_OAUTH2_PRIVATE_KEY_PEM
+    """ OAuth 2.0 private key PEM content. """
+
+    private_key_path: Optional[str] = var.IBIND_OAUTH2_PRIVATE_KEY_PATH
+    """ Path to the OAuth 2.0 private key PEM file. """
+
     username: Optional[str] = var.IBIND_OAUTH2_USERNAME
+    """ IBKR username used for the OAuth 2.0 credential claim. """
 
-    # Optional: Pre-configured IP address. If None, will be auto-fetched.
     ip_address: Optional[str] = var.IBIND_OAUTH2_IP_ADDRESS
+    """ Public IP address for the OAuth 2.0 credential claim. """
 
-    # --- OAuth 2.0 Endpoints and Settings (with defaults) ---
     token_url: str = field(default=var.IBIND_OAUTH2_TOKEN_URL or 'https://api.ibkr.com/oauth2/api/v1/token')
+    """ OAuth 2.0 token endpoint URL. """
+
     sso_session_url: str = field(default=var.IBIND_OAUTH2_SSO_SESSION_URL or 'https://api.ibkr.com/gw/api/v1/sso-sessions')
+    """ OAuth 2.0 SSO session endpoint URL. """
+
     audience: str = field(default=var.IBIND_OAUTH2_AUDIENCE or '/token')
+    """ OAuth 2.0 JWT audience. """
+
     scope: str = field(default=var.IBIND_OAUTH2_SCOPE or 'sso-sessions.write')
+    """ OAuth 2.0 token scope. """
 
-    # --- IBKR API Base URL (after successful OAuth) ---
     oauth_rest_url: str = var.IBIND_OAUTH2_REST_URL or var.IBIND_REST_URL or 'https://api.ibkr.com/v1/api/'
-    oauth_ws_url: str = var.IBIND_OAUTH2_WS_URL or var.IBIND_WS_URL or 'wss://api.ibkr.com/v1/api/ws'
+    """ REST base URL for OAuth 2.0 authenticated requests. """
 
-    # --- Token Storage ---
+    oauth_ws_url: str = var.IBIND_OAUTH2_WS_URL or var.IBIND_WS_URL or 'wss://api.ibkr.com/v1/api/ws'
+    """ WebSocket base URL for OAuth 2.0 authenticated requests. """
+
     access_token: Optional[str] = field(default=None, init=False)
+    """ OAuth 2.0 access token returned by the token endpoint. """
+
     sso_bearer_token: Optional[str] = field(default=None, init=False)
+    """ SSO bearer token returned by the IBKR gateway. """
+
+    def __post_init__(self) -> None:
+        if self.private_key_pem is None and self.private_key_path:
+            try:
+                with open(self.private_key_path, 'r', encoding='utf-8') as file:
+                    self.private_key_pem = file.read()
+            except OSError as exc:
+                _LOGGER.error(f'Failed to load OAuth 2.0 private key from {self.private_key_path}: {exc}')
 
     def version(self):
         return 2.0

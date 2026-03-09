@@ -34,4 +34,7 @@ jobs:
     - name: Run Scanning
       run: |
         make scan
+    - name: Run Tests
+      run: |
+        make test
 
