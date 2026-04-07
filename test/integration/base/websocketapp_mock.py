@@ -50,7 +50,7 @@ def create_wsa_mock():
     wsa_mock = MagicMock()
 
     wsa_mock.send.side_effect = lambda *args, **kwargs: send(wsa_mock, *args, **kwargs)
-    wsa_mock.close.side_effect = lambda status=None: close(wsa_mock, status)
+    wsa_mock.close.side_effect = lambda *args, **kwargs: close(wsa_mock, *args, **kwargs)
     wsa_mock.run_forever.side_effect = lambda *args, **kwargs: run_forever(wsa_mock, *args, **kwargs)
 
     return wsa_mock
