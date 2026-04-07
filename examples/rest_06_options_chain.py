@@ -50,8 +50,8 @@ print(str(strikes).replace("'put'", "\n'put'"))
 
 print('\n#### validate contract ####')
 """
-In order to query weekly options contracts, you need to first query the specific strike. 
-Modify the `nth_strike` variable to select the strike you want to query. 
+In order to query weekly options contracts, you need to first query the specific strike.
+Modify the `nth_strike` variable to select the strike you want to query.
 It is likely the first strike (default) will return a list with only one contract.
 Other strikes are likely to return a longer list of available weeklies.
 """
