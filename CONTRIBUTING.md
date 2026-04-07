@@ -112,7 +112,7 @@ Closing message template:
 ```
 Thanks for the contribution, however it appears to lack sufficient effort (eg. not consulting the documentation, stack trace, or method signatures) or contains unredacted AI generated code. To keep the issue/PR trackers focused and maintainable, we're closing this for now. Please review our contributing policies in the [CONTRIBUTING.md](https://github.com/Voyz/ibind/blob/master/CONTRIBUTING.md) file.
 
-If you revise the contribution - focusing on the minimal relevant code, confirming it aligns with the library's API and demonstrating your attempt to tackle it - we'll be happy to take another look. 
+If you revise the contribution - focusing on the minimal relevant code, confirming it aligns with the library's API and demonstrating your attempt to tackle it - we'll be happy to take another look.
 ```
 
 ## Code Style

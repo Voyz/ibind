@@ -62,7 +62,7 @@ def test_ensure_list_arg_with_keyword_arg_non_list():
 def test_ensure_list_arg_with_missing_arg():
     """Raises TypeError when the decorated arg is missing."""
     # Arrange
-    
+
     # Act / Assert
     with pytest.raises(TypeError):
         sample_function()
