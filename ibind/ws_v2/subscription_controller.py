@@ -140,6 +140,8 @@ class SubscriptionController:
             binding.attempts = 0
             return
 
+        binding.attempts += 1
+
         subscription = binding.subscription
 
         if binding.intent == BindingStatus.ACTIVE:

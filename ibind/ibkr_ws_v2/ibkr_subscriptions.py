@@ -141,11 +141,8 @@ class MarketDataSubscription(IbkrSubscription):
 
 
 class MarketHistorySubscription(IbkrSubscription):
+    key: IbkrWsKey = IbkrWsKey.MARKET_HISTORY
     conid: str
-
-    @property
-    def key(self) -> IbkrWsKey:
-        return IbkrWsKey.MARKET_HISTORY
 
     def subscribe_payload(self) -> str:
         ...

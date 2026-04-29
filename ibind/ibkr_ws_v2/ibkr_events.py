@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Any
 
+from pydantic import Field
+
 from ws_v2.events import WsEvent
 
 
@@ -142,7 +144,7 @@ class MarketData(WsEvent):
     key: IbkrWsKey = IbkrWsKey.MARKET_DATA
     conid: str
     data: dict = {}
-    fields: dict[str, Any] = {}
+    fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class MarketHistory(WsEvent):
@@ -158,6 +160,9 @@ class Orders(WsEvent):
 
 class PriceLadder(WsEvent):
     key: IbkrWsKey = IbkrWsKey.PRICE_LADDER
+    account_id: str
+    conid: str
+    exchange: str
     data: dict
 
 
