@@ -11,11 +11,10 @@ Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and
 """
 
 import os
-import signal
 import time
 
-from ibind import IbkrWsKey, IbkrWsClient, ibind_logs_initialize
-from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription
+from ibind import ibind_logs_initialize
+from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PriceLadderSubscription, PnlSubscription, TradesSubscription
 from ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
 
 ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
@@ -37,13 +36,24 @@ ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id)
 
 ws_client.start()
 
-md_sub = MarketDataSubscription(conid='265598')
-or_sub = OrdersSubscription()
+as_sub = AccountSummarySubscription(account_id=account_id)
 al_sub = AccountLedgerSubscription(account_id=account_id)
+md_sub = MarketDataSubscription(conid='265598', fields=("31", "84", "86"))
+or_sub = OrdersSubscription()
+# pl_sub = PriceLadderSubscription(conid='265598', account_id=account_id, exchange='SMART')
+pnl_sub = PnlSubscription()
+tr_sub = TradesSubscription()
+subs = [
+    as_sub,
+    al_sub,
+    md_sub,
+    or_sub,
+    pnl_sub,
+    tr_sub
+]
 
-ws_client.subscribe(md_sub)
-ws_client.subscribe(or_sub)
-ws_client.subscribe(al_sub)
+for sub in subs:
+    ws_client.subscribe(sub)
 
 try:
     while ws_client.is_running():
@@ -51,9 +61,9 @@ try:
 except KeyboardInterrupt:
     print('Interrupt')
 
-ws_client.unsubscribe(md_sub)
-ws_client.unsubscribe(or_sub)
-ws_client.unsubscribe(al_sub)
+for sub in subs:
+    ws_client.unsubscribe(sub)
+# time.sleep(5)
 ws_client.shutdown()
 
 # requests = [

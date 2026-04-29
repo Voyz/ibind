@@ -5,11 +5,10 @@ import var
 from ibind import ExternalBrokerError, IbkrClient
 from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
-from ibkr_ws_v2.ibkr_subscriptions import event_to_subscription
+from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
 from support.logs import project_logger
-from ws_v2 import events
 from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router
-from ws_v2.subscription_controller import Subscription
+from ws_v2.subscription_controller import Subscription, SubscriptionResolver
 from ws_v2.ws_runtime import WsRuntime, WsState
 
 _LOGGER = project_logger(__file__)
@@ -33,6 +32,7 @@ class IbkrWsClientV2():
         recreate_subscriptions_on_reconnect: bool = True,
         sink: EventSink = None,
         router: Router = None,
+        subscription_resolver: SubscriptionResolver = None,
     ):
         self._account_id = account_id
 
@@ -69,6 +69,9 @@ class IbkrWsClientV2():
         if router is None:
             router = IbkrRouter()
 
+        if subscription_resolver is None:
+            subscription_resolver = IbkrSubscriptionResolver(account_id)
+
         self._runtime = WsRuntime(
             url=url,
             cycle_interval=cycle_interval,
@@ -76,27 +79,13 @@ class IbkrWsClientV2():
             cacert=cacert,
             sink=sink,
             router=router,
+            subscription_resolver=subscription_resolver,
             get_cookie=self._get_cookie,
             get_header=self._get_header,
         )
 
-        # self._subscription_controller = SubscriptionController(
-        #     send_payload=self._runtime.send,
-        #     is_running=self._runtime.is_running,
-        # )
-
     def _register_internal_callbacks(self):
         self._internal_sink.on(ibkr_events.AuthenticationStatus, self._on_authentication_status)
-
-        self._internal_sink.on(ibkr_events.Unsubscription, self._on_unsubscription_confirmation)
-
-        self._internal_sink.on(ibkr_events.AccountSummary, self._on_subscription_confirmation)
-        self._internal_sink.on(ibkr_events.AccountLedger, self._on_subscription_confirmation)
-        self._internal_sink.on(ibkr_events.MarketData, self._on_subscription_confirmation)
-        self._internal_sink.on(ibkr_events.MarketHistory, self._on_subscription_confirmation)
-        self._internal_sink.on(ibkr_events.Pnl, self._on_subscription_confirmation)
-        self._internal_sink.on(ibkr_events.Trades, self._on_subscription_confirmation)
-
         self._internal_sink.on(ibkr_events.WaitingForSession, self._set_unauthenticated)
 
     def _set_unauthenticated(self, _):
@@ -110,13 +99,6 @@ class IbkrWsClientV2():
 
         self._runtime.set_authenticated(event.authenticated)
 
-    def _on_subscription_confirmation(self, event: events.WsEvent):
-        subscription = event_to_subscription(event)
-        self._runtime.subscription_controller.set_subscription_active(subscription)
-
-    def _on_unsubscription_confirmation(self, event: events.WsEvent):
-        subscription = event_to_subscription(event)
-        self._runtime.subscription_controller.set_subscription_unsubscribed(subscription)
 
     def _get_cookie(self):
         try:

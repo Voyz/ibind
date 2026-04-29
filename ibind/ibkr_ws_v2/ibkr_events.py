@@ -48,6 +48,24 @@ class IbkrWsKey(Enum):
         raise ValueError(f"No enum member associated with channel '{channel}'")
 
 
+    @property
+    def channel(self):
+        """
+        Gets the solicited channel string associated with the enum member.
+
+        Returns:
+            str: The channel string corresponding to the enum member.
+        """
+        return {
+            IbkrWsKey.ACCOUNT_SUMMARY: 'sd',
+            IbkrWsKey.ACCOUNT_LEDGER: 'ld',
+            IbkrWsKey.MARKET_DATA: 'md',
+            IbkrWsKey.MARKET_HISTORY: 'mh',
+            IbkrWsKey.PRICE_LADDER: 'bd',
+            IbkrWsKey.ORDERS: 'or',
+            IbkrWsKey.PNL: 'pl',
+            IbkrWsKey.TRADES: 'tr',
+        }[self]
 
 class ParsedIbkrMessage(WsEvent):
     key: str = IbkrWsKey.UNCLASSIFIED
@@ -110,6 +128,7 @@ class Unsubscription(WsEvent):
 
 class AccountSummary(WsEvent):
     key: IbkrWsKey = IbkrWsKey.ACCOUNT_SUMMARY
+    account_id: str
     data: dict
 
 

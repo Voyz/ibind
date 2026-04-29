@@ -68,7 +68,7 @@ class IbkrRouter():
 
         return ibkr_events.MarketHistory(conid=str(data['conid']), data=data)
 
-    def _preprocess_account_leger(self, data):
+    def _preprocess_account_ledger(self, data):
         events = []
         for entry in data['result']:
             if 'acctCode' not in entry:
@@ -76,6 +76,30 @@ class IbkrRouter():
             event = ibkr_events.AccountLedger(data=entry, account_id=entry['acctCode'])
             events.append(event)
         return events
+
+    def _preprocess_account_summary(self, data):
+        summary = {}
+        timestamp = data['result'][0]['timestamp']
+        for entry in data['result']:
+            key = entry.pop('key')
+            entry.pop('timestamp')
+
+            if entry == {}:
+                continue
+
+            summary[key] = entry
+
+        if summary == {}:
+            return []
+
+        if 'AccountCode' not in summary or 'value' not in summary['AccountCode']:
+            _LOGGER.error(f'{self}: Account code not found in account summary: {summary}')
+            return []
+        account_id = summary['AccountCode']['value']
+        summary['timestamp'] = timestamp
+
+        event = ibkr_events.AccountSummary(data=summary, account_id=account_id)
+        return event
 
     def _handle_subscribed_message(self, channel: str, data: dict) -> OneOrMany[WsEvent] | None:
         try:
@@ -85,9 +109,9 @@ class IbkrRouter():
             return None
 
         if ibkr_ws_key == IbkrWsKey.ACCOUNT_SUMMARY:
-            return ibkr_events.AccountSummary(data=data)
+            return self._preprocess_account_summary(data)
         elif ibkr_ws_key == IbkrWsKey.ACCOUNT_LEDGER:
-            return self._preprocess_account_leger(data)
+            return self._preprocess_account_ledger(data)
         elif ibkr_ws_key == IbkrWsKey.MARKET_DATA:
             return self._preprocess_market_data_message(data)
         elif ibkr_ws_key == IbkrWsKey.MARKET_HISTORY:
