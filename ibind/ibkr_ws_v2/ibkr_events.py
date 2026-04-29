@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Any
 
+from pydantic import Field
+
 from ws_v2.events import WsEvent
 
 
@@ -47,7 +49,6 @@ class IbkrWsKey(Enum):
             return channel_to_key[channel]
         raise ValueError(f"No enum member associated with channel '{channel}'")
 
-
     @property
     def channel(self):
         """
@@ -67,7 +68,8 @@ class IbkrWsKey(Enum):
             IbkrWsKey.TRADES: 'tr',
         }[self]
 
-class ParsedIbkrMessage(WsEvent):
+
+class GenericIbkrEvent(WsEvent):
     key: str = IbkrWsKey.UNCLASSIFIED
     message: dict | None
     topic: str | None = None
@@ -141,8 +143,8 @@ class AccountLedger(WsEvent):
 class MarketData(WsEvent):
     key: IbkrWsKey = IbkrWsKey.MARKET_DATA
     conid: str
-    data: dict = {}
-    fields: dict[str, Any] = {}
+    data: dict = Field(default_factory=dict)
+    fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class MarketHistory(WsEvent):
@@ -158,6 +160,9 @@ class Orders(WsEvent):
 
 class PriceLadder(WsEvent):
     key: IbkrWsKey = IbkrWsKey.PRICE_LADDER
+    account_id: str
+    conid: str
+    exchange: str
     data: dict
 
 

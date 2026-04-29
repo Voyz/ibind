@@ -140,6 +140,8 @@ class SubscriptionController:
             binding.attempts = 0
             return
 
+        binding.attempts += 1
+
         subscription = binding.subscription
 
         if binding.intent == BindingStatus.ACTIVE:
@@ -158,7 +160,7 @@ class SubscriptionController:
 
     def parse_bindings(self):
         with self._operational_lock:
-            for subscription, binding in self._bindings.items():
+            for binding in self._bindings.values():
                 if binding.status == binding.intent:
                     continue
 

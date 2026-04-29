@@ -151,6 +151,8 @@ class WsTransport():
         except Exception as e:
             _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
             self._event_callback(TransportCritical(wsa=self._wsa, exception=e))
+        finally:
+            self._wsa = None
 
         _LOGGER.debug(f'{self}: Transport thread stopped ({tname()})')
 

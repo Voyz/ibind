@@ -101,6 +101,10 @@ class LogSink:
     def emit(self, event: WsEvent) -> None:
         _LOGGER.debug(f'{event.key}: {str(event)}')
 
+class NoopSink:
+    def emit(self, event: WsEvent) -> None:
+        pass
+
 
 class CallbackSink:
     def __init__(self):

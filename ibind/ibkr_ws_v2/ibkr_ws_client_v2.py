@@ -7,7 +7,7 @@ from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
 from support.logs import project_logger
-from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router
+from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, NoopSink
 from ws_v2.subscription_controller import Subscription, SubscriptionResolver
 from ws_v2.ws_runtime import WsRuntime, WsState
 
@@ -60,7 +60,8 @@ class IbkrWsClientV2():
             # self._queue_controller.register_queues(['CLIENT_INTERNAL', 'IBKR'])
             # sink = QueueSink(queue_controller=self._queue_controller)
 
-            sink = LogSink()
+            # sink = LogSink()
+            sink = NoopSink()
 
         self._internal_sink = CallbackSink()
         self._register_internal_callbacks()

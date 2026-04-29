@@ -9,7 +9,7 @@ from typing import Union, List, Dict, Callable, Literal
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
 
 from support.logs import project_logger
-from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock
+from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany
 from ws_v2 import events
 from ws_v2.events import WsEvent, EventSink, Router
 from ws_v2.subscription_controller import SubscriptionController, SubscriptionResolver
@@ -62,6 +62,7 @@ class WsRuntime():
 
         self._state = WsState.STOPPED
         self._authenticated = False
+        self._running = False
 
         self._transport_thread = None
         self._runtime_thread = None
@@ -90,13 +91,13 @@ class WsRuntime():
 
     @property
     def state(self):
-        _LOGGER.debug(f'{self}: State: {self._state.value}')
+        _LOGGER.info(f'{self}: State: {self._state.value}')
         with self._state_lock:
             return self._state
 
     @state.setter
     def state(self, value):
-        _LOGGER.debug(f'{self}: {self._state.value} -> {value.value}')
+        _LOGGER.info(f'{self}: {self._state.value} -> {value.value}')
         with self._state_lock:
             self._state = value
 
@@ -105,7 +106,7 @@ class WsRuntime():
 
     def set_authenticated(self, value: bool):
         if value != self._authenticated:
-            _LOGGER.debug(f'{self}: Authenticated: {value}')
+            _LOGGER.info(f'{self}: Authenticated: {value}')
         self._authenticated = value
 
         if value and self._state == WsState.OPEN:
@@ -157,13 +158,15 @@ class WsRuntime():
         self.state = WsState.STOPPING
         try:
             self._transport.disconnect()
-            self._transport_thread.join(self._connection_timeout)
+            if self._transport_thread is not None:
+                self._transport_thread.join(self._connection_timeout)
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to disconnect: {e}')
             # TODO: decide what to do if transport disconnect fails
 
         self._running = False
-        self._runtime_thread.join(self._connection_timeout)
+        if self._runtime_thread is not None:
+            self._runtime_thread.join(self._connection_timeout)
 
         self.state = WsState.STOPPED
 
@@ -204,7 +207,7 @@ class WsRuntime():
             return
 
         if self._transport_thread is None or not self._transport_thread.is_alive():
-            _LOGGER.debug(f'{self}: Starting new transport thread')
+            _LOGGER.info(f'{self}: Starting new transport thread')
             self.state = WsState.CONNECTING
             self._new_transport_thread()
 
@@ -215,23 +218,23 @@ class WsRuntime():
         self.subscription_controller.parse_bindings()
 
     def _cycle(self):
-        _LOGGER.debug(f'{self}: Runtime thread started ({tname()})')
+        _LOGGER.info(f'{self}: Runtime thread started ({tname()})')
         while self._running:
             self._maintain_transport()
             self._maintain_subscriptions()
 
-            self.process_transport_queue()
+            self._process_transport_queue()
 
             self._wait_event.clear()
             self._wait_event.wait(self._cycle_interval)
 
         # final pass through the router queue to flush any remaining events
-        self.process_transport_queue()
+        self._process_transport_queue()
         # final pass through the subscription controller to carry out final unsubscribe events
         self.subscription_controller.parse_bindings()
-        _LOGGER.debug(f'{self}: Runtime thread stopped ({tname()})')
+        _LOGGER.info(f'{self}: Runtime thread stopped ({tname()})')
 
-    def process_transport_queue(self):
+    def _process_transport_queue(self):
         while not self._transport_queue.empty():
             te = self._transport_queue.get()
             try:
@@ -256,7 +259,7 @@ class WsRuntime():
             _LOGGER.error(f'{self}: Unknown event type: {type(te)}: {te}')
 
     def _handle_on_message(self, wsa: WebSocketApp, message):  # pragma: no cover
-        events = self._router.route(message)
+        events: OneOrMany[WsEvent] = self._router.route(message)
 
         # Router decided to skip this message
         if events is None:

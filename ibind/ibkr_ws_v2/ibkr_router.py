@@ -5,7 +5,7 @@ from typing import Dict
 from client import ibkr_definitions
 from client.ibkr_utils import extract_conid
 from ibkr_ws_v2 import ibkr_events
-from ibkr_ws_v2.ibkr_events import ParsedIbkrMessage, IbkrWsKey
+from ibkr_ws_v2.ibkr_events import GenericIbkrEvent, IbkrWsKey
 from support.logs import project_logger
 from support.py_utils import UNDEFINED, OneOrMany
 from ws_v2.events import WsEvent
@@ -213,7 +213,7 @@ class IbkrRouter():
                 # return self.modify_subscription(f'ld+{self._account_id}', status=False)
 
         _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
-        return ParsedIbkrMessage(message=message)
+        return GenericIbkrEvent(message=message)
 
     def _preprocess_raw_message(self, raw_message: str):
         message = json.loads(raw_message)
@@ -274,12 +274,12 @@ class IbkrRouter():
             events = self._handle_subscribed_message(channel, message)
             if events is None:
                 _LOGGER.error(f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}')
-                events = ParsedIbkrMessage(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
+                events = GenericIbkrEvent(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
             return events
             # _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
 
         _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
-        return ParsedIbkrMessage(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
+        return GenericIbkrEvent(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
 
     # def route(self, raw_message) -> List[WsEvent]:
     # _LOGGER.debug(f'{self}: Routing message: {raw_message}')

@@ -141,11 +141,8 @@ class MarketDataSubscription(IbkrSubscription):
 
 
 class MarketHistorySubscription(IbkrSubscription):
+    key: IbkrWsKey = IbkrWsKey.MARKET_HISTORY
     conid: str
-
-    @property
-    def key(self) -> IbkrWsKey:
-        return IbkrWsKey.MARKET_HISTORY
 
     def subscribe_payload(self) -> str:
         ...
@@ -235,14 +232,14 @@ class PnlSubscription(IbkrSubscription):
 
 class TradesSubscription(IbkrSubscription):
     key: IbkrWsKey = IbkrWsKey.TRADES
-    realtime_updates_only: bool = False
-    days: int = 1
+    realtime_updates_only: bool | None = None
+    days: int | None = None
 
     def subscribe_payload(self) -> str:
         extra = {}
-        if self.realtime_updates_only:
+        if self.realtime_updates_only is not None:
             extra['realtime_updates_only'] = self.realtime_updates_only
-        if self.days:
+        if self.days is not None:
             extra['days'] = self.days
         extra_str = json.dumps(extra, separators=(',', ':'))
         return f'str+{extra_str}'
