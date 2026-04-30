@@ -8,7 +8,7 @@ from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
 from support.logs import project_logger
 from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, NoopSink
-from ws_v2.subscription_controller import Subscription, SubscriptionResolver
+from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
 from ws_v2.ws_runtime import WsRuntime, WsState
 
 _LOGGER = project_logger(__file__)
@@ -125,10 +125,10 @@ class IbkrWsClientV2():
     def hard_reset(self):
         self._runtime.hard_reset()
 
-    def subscribe(self, subscription: Subscription) -> bool:
+    def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
         return self._runtime.subscription_controller.subscribe(subscription)
 
-    def unsubscribe(self, subscription: Subscription) -> bool:
+    def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
         return self._runtime.subscription_controller.unsubscribe(subscription)
 
     def is_running(self) -> bool:

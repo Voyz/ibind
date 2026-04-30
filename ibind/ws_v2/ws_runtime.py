@@ -12,7 +12,7 @@ from support.logs import project_logger
 from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany
 from ws_v2 import events
 from ws_v2.events import WsEvent, EventSink, Router
-from ws_v2.subscription_controller import SubscriptionController, SubscriptionResolver
+from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
 from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportCritical, TransportReconnect
 
 _LOGGER = project_logger(__file__)
@@ -215,7 +215,7 @@ class WsRuntime():
         if self._state != self._ready_state:
             return
 
-        self.subscription_controller.parse_bindings()
+        self.subscription_controller.reconcile_bindings()
 
     def _cycle(self):
         _LOGGER.info(f'{self}: Runtime thread started ({tname()})')
@@ -231,7 +231,7 @@ class WsRuntime():
         # final pass through the router queue to flush any remaining events
         self._process_transport_queue()
         # final pass through the subscription controller to carry out final unsubscribe events
-        self.subscription_controller.parse_bindings()
+        self.subscription_controller.reconcile_bindings()
         _LOGGER.info(f'{self}: Runtime thread stopped ({tname()})')
 
     def _process_transport_queue(self):

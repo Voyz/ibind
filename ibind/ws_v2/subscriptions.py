@@ -1,12 +1,13 @@
 import copy
 import time
 from enum import Enum
+from threading import Condition, RLock
 from typing import Dict, Optional, Callable, Protocol, Tuple, Hashable, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import TimeoutLock, exception_to_string
+from ibind.support.py_utils import exception_to_string
 from ws_v2.events import WsEvent
 
 _LOGGER = project_logger(__file__)
@@ -70,6 +71,48 @@ class Binding(BaseModel):
     attempts: int = 0
     last_attempt: float = 0
 
+    @property
+    def done(self) -> bool:
+        return self.status == self.intent
+
+    def reset(self):
+        self.status = BindingStatus.NEW
+        self.attempts = 0
+        self.last_attempt = 0
+
+
+class SubscriptionHandle:
+    def __init__(self, controller: "SubscriptionController", subscription: Subscription):
+        self._controller = controller
+        self._subscription = subscription
+
+    @property
+    def binding_key(self) -> str:
+        return self._subscription.binding_key()
+
+    @property
+    def status(self) -> BindingStatus:
+        return self._controller.get_status(self.binding_key)
+
+    @property
+    def active(self) -> bool:
+        return self.status == BindingStatus.ACTIVE
+
+    @property
+    def unsubscribed(self) -> bool:
+        return self.status == BindingStatus.UNSUBSCRIBED
+
+    @property
+    def done(self) -> bool:
+        return self._controller.is_done(self.binding_key)
+
+    def wait(self, timeout: float | None = None) -> bool:
+        return self._controller.wait_for(self.binding_key, timeout=timeout)
+
+    def unsubscribe(self) -> "SubscriptionHandle":
+        self._controller.unsubscribe(self._subscription)
+        return self
+
 
 class SubscriptionController:
     """
@@ -98,7 +141,7 @@ class SubscriptionController:
         self._subscription_timeout = subscription_timeout
 
         self._bindings: Dict[str, Binding] = {}
-        self._operational_lock = TimeoutLock(60)
+        self._condition = Condition(RLock())
 
     def _send(self, payload) -> bool:
         try:
@@ -117,7 +160,7 @@ class SubscriptionController:
         if binding_key is None:
             return
 
-        with self._operational_lock:
+        with self._condition:
             if not self.has_subscription(binding_key):
                 _LOGGER.warning(f'{self}: Observed a binding_key "{binding_key}" that is missing a subscription. Event: {event}')
                 return
@@ -127,17 +170,18 @@ class SubscriptionController:
             else:
                 self._confirm_unsubscribed(binding_key)
 
-    def parse_binding(self, binding: Binding):
+    def reconcile_binding(self, binding: Binding):
         # wait until timeout has passed since last attempt
-        if binding.last_attempt + self._subscription_timeout > time.time():
+        if binding.last_attempt + self._subscription_timeout > time.monotonic():
             return
-        binding.last_attempt = time.time()
+        binding.last_attempt = time.monotonic()
 
         # if we've exceeded the number of retries, mark the subscription as failed
         if binding.attempts >= self._subscription_retries:
             _LOGGER.info(f'{self}: Subscription failed after {self._subscription_retries} attempts: {binding}')
             binding.status = BindingStatus.FAILED
             binding.attempts = 0
+            self._condition.notify_all()
             return
 
         binding.attempts += 1
@@ -158,37 +202,59 @@ class SubscriptionController:
                 _LOGGER.info(f'{self}: Unsubscribed: {payload} without confirmation.')
                 self._confirm_unsubscribed(subscription.binding_key())
 
-    def parse_bindings(self):
-        with self._operational_lock:
+    def reconcile_bindings(self):
+        with self._condition:
             for binding in self._bindings.values():
                 if binding.status == binding.intent:
                     continue
 
-                self.parse_binding(binding)
+                self.reconcile_binding(binding)
 
-    def subscribe(self, subscription: Subscription) -> bool:
-        with self._operational_lock:
-            if self.is_subscription_active(subscription.binding_key()):  # do nothing if subscription is present and active
-                return True
+    def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        binding_key = subscription.binding_key()
 
-            # store a new binding
-            if self.has_subscription(subscription.binding_key()):
-                return
+        with self._condition:
+            binding = self._bindings.get(binding_key)
 
-            self._bindings[subscription.binding_key()] = Binding(subscription=subscription, intent=BindingStatus.ACTIVE)
-            _LOGGER.info(f'{self}: Registered subscription intent: {subscription.binding_key()}')
+            if binding is None:
+                self._bindings[binding_key] = Binding(subscription=subscription, intent=BindingStatus.ACTIVE)
+                self._condition.notify_all()
+                _LOGGER.info(f'{self}: Registered subscription intent: {binding_key}')
 
-    def unsubscribe(self, subscription: Subscription) -> bool:
-        with self._operational_lock:
-            if self.has_subscription(subscription.binding_key()):
-                binding = self._bindings[subscription.binding_key()]
+            elif binding.intent != BindingStatus.ACTIVE:
+                binding.intent = BindingStatus.ACTIVE
+
+                # If it had previously completed unsubscribe, it now needs work again.
                 if binding.status == BindingStatus.UNSUBSCRIBED:
-                    return
-                self._bindings[subscription.binding_key()].intent = BindingStatus.UNSUBSCRIBED
-            else:
-                binding = Binding(subscription=subscription, intent=BindingStatus.UNSUBSCRIBED)
-                self._bindings[subscription.binding_key()] = binding
-            _LOGGER.info(f'{self}: Registered unsubscription intent: {subscription.binding_key()}')
+                    binding.reset()
+
+                self._condition.notify_all()
+                _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.ACTIVE.value}')
+
+            return SubscriptionHandle(self, subscription)
+
+    def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        binding_key = subscription.binding_key()
+
+        with self._condition:
+            binding = self._bindings.get(binding_key)
+
+            if binding is None:
+                self._bindings[binding_key] = Binding(subscription=subscription, intent=BindingStatus.UNSUBSCRIBED)
+                self._condition.notify_all()
+                _LOGGER.info(f'{self}: Registered unsubscription intent: {binding_key}')
+
+            elif binding.intent != BindingStatus.UNSUBSCRIBED:
+                binding.intent = BindingStatus.UNSUBSCRIBED
+
+                # If it had previously completed subscribe, it now needs work again.
+                if binding.status == BindingStatus.ACTIVE:
+                    binding.reset()
+
+                self._condition.notify_all()
+                _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
+
+            return SubscriptionHandle(self, subscription)
 
     def invalidate_subscriptions(self):
         for binding_key, binding in self._bindings.items():
@@ -196,24 +262,36 @@ class SubscriptionController:
                 binding.status = BindingStatus.DEGRADED
                 _LOGGER.info(f'{self}: Invalidated subscription: {binding}')
 
-    def is_subscription_active(self, binding_key: str) -> Optional[bool]:  # pragma: no cover
+    def is_subscription_active(self, binding_key: str) -> Optional[bool]:
         if not self.has_subscription(binding_key):
             return False
         return self._bindings[binding_key].status == BindingStatus.ACTIVE
 
-    def has_active_subscriptions(self) -> bool:  # pragma: no cover
-        with self._operational_lock:
+    def has_active_subscriptions(self) -> bool:
+        with self._condition:
             for subscription in self._bindings:
                 if self.is_subscription_active(subscription):
                     return True
         return False
 
-    def has_subscription(self, binding_key: str) -> bool:  # pragma: no cover
-        with self._operational_lock:
+    def has_subscription(self, binding_key: str) -> bool:
+        with self._condition:
             return binding_key in self._bindings
 
+    def get_status(self, binding_key: str) -> BindingStatus | None:
+        with self._condition:
+            if not self.has_subscription(binding_key):
+                return None
+            return self._bindings[binding_key].status
+
+    def is_done(self, binding_key: str) -> bool | None:
+        with self._condition:
+            if not self.has_subscription(binding_key):
+                return None
+            return self._bindings[binding_key].done
+
     def get_active_subscriptions(self):
-        with self._operational_lock:
+        with self._condition:
             return {
                 binding_key: copy.deepcopy(binding)
                 for binding_key, binding in self._bindings.items()
@@ -233,6 +311,7 @@ class SubscriptionController:
         binding.status = BindingStatus.ACTIVE
         binding.attempts = 0
         _LOGGER.info(f'{self}: Updated subscription status: {binding_key} -> {BindingStatus.ACTIVE.value}')
+        self._condition.notify_all()
 
     def _confirm_unsubscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):
@@ -247,6 +326,31 @@ class SubscriptionController:
         binding.status = BindingStatus.UNSUBSCRIBED
         binding.attempts = 0
         _LOGGER.info(f'{self}: Updated subscription status: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
+        self._condition.notify_all()
+
+    def wait_for(self, binding_key: str, timeout: float | None = None) -> bool:
+        deadline = None if timeout is None else time.monotonic() + timeout
+
+        with self._condition:
+            while True:
+                if not self.has_subscription(binding_key):
+                    return False
+
+                binding = self._bindings[binding_key]
+
+                if binding.done:
+                    return True
+
+                if binding.status == BindingStatus.FAILED:
+                    return False
+
+                remaining = None
+                if timeout is not None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return False
+
+                self._condition.wait(remaining)
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'

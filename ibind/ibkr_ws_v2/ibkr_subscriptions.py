@@ -2,7 +2,7 @@ import json
 from typing import Tuple
 
 from ibkr_ws_v2.ibkr_events import IbkrWsKey, AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary
-from ws_v2.subscription_controller import Subscription, SubscriptionResolver
+from ws_v2.subscriptions import Subscription, SubscriptionResolver
 
 
 def make_binding_key(
