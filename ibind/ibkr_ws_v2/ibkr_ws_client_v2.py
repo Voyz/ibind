@@ -7,6 +7,7 @@ from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
 from support.logs import project_logger
+from ws_v2 import events
 from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, NoopSink
 from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
 from ws_v2.ws_runtime import WsRuntime, WsState
@@ -60,8 +61,8 @@ class IbkrWsClientV2():
             # self._queue_controller.register_queues(['CLIENT_INTERNAL', 'IBKR'])
             # sink = QueueSink(queue_controller=self._queue_controller)
 
-            # sink = LogSink()
-            sink = NoopSink()
+            sink = LogSink()
+            # sink = NoopSink()
 
         self._internal_sink = CallbackSink()
         self._register_internal_callbacks()
@@ -88,6 +89,12 @@ class IbkrWsClientV2():
     def _register_internal_callbacks(self):
         self._internal_sink.on(ibkr_events.AuthenticationStatus, self._on_authentication_status)
         self._internal_sink.on(ibkr_events.WaitingForSession, self._set_unauthenticated)
+        self._internal_sink.on(ibkr_events.System, self._on_system)
+        # self._internal_sink.on(events.WsReconnect, self._on_open)
+        # self._internal_sink.on(events.WsOpen, self._on_open)
+
+    def _on_open(self, event: events.WsOpen):
+        _LOGGER.info(f'{self}: WSA opened, cookie: {self._get_cookie()}')
 
     def _set_unauthenticated(self, _):
         self._runtime.set_authenticated(False)
@@ -100,13 +107,21 @@ class IbkrWsClientV2():
 
         self._runtime.set_authenticated(event.authenticated)
 
+    def _on_system(self, event: ibkr_events.System):
+        if 'hb' in event.data:
+            self._runtime.set_last_heartbeat(int(event.data['hb']) / 1000)
 
     def _get_cookie(self):
-        try:
-            status = self._ibkr_client.tickle()
-        except ExternalBrokerError:
-            _LOGGER.warning('Acquiring session cookie failed, connection to the Gateway may be broken.')
-            return None
+        # try:
+        status = self._ibkr_client.tickle()
+        # except TimeoutError as e:
+        #     if 'Reached max retries' in str(e):
+        #         _LOGGER.warning(f'{self}: Acquiring session cookie timed out, connection to the Gateway may be broken.')
+        #         return None
+        #     raise
+        # except ExternalBrokerError:
+        #     _LOGGER.warning(f'{self}: Acquiring session cookie failed, connection to the Gateway may be broken.')
+        #     return None
         session_id = status.data['session']
         if self._use_oauth:
             return f'api={session_id}'

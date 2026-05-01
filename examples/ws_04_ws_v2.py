@@ -12,10 +12,12 @@ Assumes the Gateway is deployed at 'localhost:5000' and the IBIND_ACCOUNT_ID and
 
 import os
 import time
+from typing import List
 
 from ibind import ibind_logs_initialize
 from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PriceLadderSubscription, PnlSubscription, TradesSubscription
 from ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
+from ws_v2.subscriptions import SubscriptionHandle
 
 ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
 
@@ -52,8 +54,16 @@ subs = [
     tr_sub
 ]
 
+sub_handles: List[SubscriptionHandle] = []
 for sub in subs:
-    ws_client.subscribe(sub)
+    handle = ws_client.subscribe(sub)
+    handle.wait()
+    sub_handles.append(handle)
+
+for handle in sub_handles:
+    success = handle.wait(timeout=10)
+    if not success:
+        print('Subscription not active within 10 seconds')
 
 try:
     while ws_client.is_running():
@@ -61,8 +71,19 @@ try:
 except KeyboardInterrupt:
     print('Interrupt')
 
-for sub in subs:
-    ws_client.unsubscribe(sub)
+for handle in sub_handles:
+    unsub_handle = handle.unsubscribe()
+    success = unsub_handle.wait(timeout=10)
+    if not success:
+        print('Subscription not unsubscribed within 10 seconds')
+
+# unsub_handles = []
+# for sub in subs:
+#     handle = ws_client.unsubscribe(sub)
+#     unsub_handles.append(handle)
+#
+# for handle in unsub_handles:
+#     handle.wait()
 # time.sleep(5)
 ws_client.shutdown()
 

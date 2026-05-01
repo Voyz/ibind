@@ -15,7 +15,6 @@ _LOGGER = project_logger(__file__)
 
 def parse_raw_message(raw_message: str):
     message = json.loads(raw_message)
-    # print(message)
     topic = message.get('topic', UNDEFINED)
 
     if topic is UNDEFINED:
@@ -50,16 +49,13 @@ class IbkrRouter():
 
         if not self._unwrap_market_data:
             return ibkr_events.MarketData(conid=data['conid'], data=data)
-            # return {data['conid']: data}
 
-        # result = {'conid': data['conid'], '_updated': data['_updated'], 'topic': data['topic']}
         fields = {}
         for key, value in data.items():
             if key in ibkr_definitions.snapshot_by_id:
                 # result[ibkr_definitions.snapshot_by_id[key]] = value
                 fields[ibkr_definitions.snapshot_by_id[key]] = value
         return ibkr_events.MarketData(conid=str(data['conid']), fields=fields)
-        # return {data['conid']: result}
 
     def _preprocess_market_history_message(self, data: dict) -> OneOrMany[WsEvent]:
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
@@ -129,27 +125,11 @@ class IbkrRouter():
             return None
 
     def _handle_account_update(self, message, arguments) -> OneOrMany[WsEvent]:
-        # if 'accounts' in data and self._account_id not in data['accounts']:
-        #     _LOGGER.error(f'{self}: Account ID mismatch: expected={self._account_id}, received={data["accounts"]}')
-        # if 'acctProps' in data:  # expected account update that we ignore
-        #     return []
-
         _LOGGER.info(f'{self}: Account update: {arguments}')
         return ibkr_events.AccountUpdate(data=arguments)
 
     def _handle_authentication_status(self, message, arguments) -> OneOrMany[WsEvent]:
-        # if 'authenticated' in arguments:
-        #     if arguments.get('authenticated') is False:
-        #         _LOGGER.error(f'{self}: Status unauthenticated: {arguments}')
-        #
-        #     # TODO: this needs to be handled in IbkrWsClient or WsRuntime
-        #     # self.set_authenticated(data.get('authenticated'))
-        # elif 'competing' in arguments:
-        #     if arguments.get('competing') is False:
-        #         pass
-        #     _LOGGER.error(f'{self}: Authentication competing: {arguments}')
-
-        if 'authenticated' in arguments:
+        if 'authenticated' in arguments or 'competing' in arguments:
             _LOGGER.info(f'{self}: Authentication status: {arguments}')
             return ibkr_events.AuthenticationStatus(data=arguments, authenticated=arguments.get('authenticated'), competing=arguments.get('competing'))
         elif (  # expected status updates that we ignore
@@ -159,7 +139,7 @@ class IbkrRouter():
                 'serverVersion' in arguments or
                 'username' in arguments
         ):
-            _LOGGER.info(f'{self}: Authentication silenced: {arguments}')
+            # _LOGGER.info(f'{self}: Authentication silenced: {arguments}')
             pass
 
         return []
@@ -186,7 +166,6 @@ class IbkrRouter():
             _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}/conid={conid!r}.')
             if conid is not None:
                 return ibkr_events.Unsubscription(target_key=IbkrWsKey.MARKET_HISTORY, conid=conid)
-                # self.modify_subscription(f'mh+{conid}', status=False)
 
             _LOGGER.warning(f'{self}: Unknown conid={conid!r}. Cannot mark the subscription as unsubscribed.')
         else:
@@ -207,29 +186,12 @@ class IbkrRouter():
         elif 'result' in message:
             if message['result'] == 'unsubscribed from summary':
                 return ibkr_events.Unsubscription(target_key=IbkrWsKey.ACCOUNT_SUMMARY)
-                # return self.modify_subscription(f'sd+{self._account_id}', status=False)
             elif message['result'] == 'unsubscribed from ledger':
                 return ibkr_events.Unsubscription(target_key=IbkrWsKey.ACCOUNT_LEDGER)
-                # return self.modify_subscription(f'ld+{self._account_id}', status=False)
 
         _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
         return GenericIbkrEvent(message=message)
 
-    def _preprocess_raw_message(self, raw_message: str):
-        message = json.loads(raw_message)
-        # print(message)
-        topic = message.get('topic', UNDEFINED)
-
-        if topic is UNDEFINED:
-            return message, None, None, None, None
-
-        data = message.get('args', {})
-
-        # subscribed is the indicator of whether it was a subscription or unsubscription, defined by the first letter
-        # channel is the actual channel we received the information about
-        subscribed, channel = topic[0], topic[1:]
-
-        return message, topic, data, subscribed, channel
 
     def route(self, raw_message: str) -> OneOrMany[WsEvent]:
         if self._log_raw_messages:
@@ -244,11 +206,10 @@ class IbkrRouter():
             return self._handle_message_without_topic(message)
 
         elif topic == 'tic':
-            self._tic_message = message
+            # self._tic_message = message
+            return ibkr_events.System(data=message)
 
         elif topic == 'system':
-            if 'hb' in message:
-                self._last_heartbeat = message['hb']
             return ibkr_events.System(data=message)
 
         elif topic == 'act':
@@ -265,26 +226,14 @@ class IbkrRouter():
 
         elif topic == 'error':
             return self._handle_error(message)
-            # _LOGGER.error(f'{self}: Error message:  {message}')
 
-        # elif self.has_subscription(channel):
-        #     if not self.is_subscription_active(channel):
-        #         self.modify_subscription(channel, status=True)
         else:
             events = self._handle_subscribed_message(channel, message)
             if events is None:
                 _LOGGER.error(f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}')
                 events = GenericIbkrEvent(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
             return events
-            # _LOGGER.warning(f'{self}: Handled a channel "{channel}" message that is missing a subscription. Message: {message}')
 
-        _LOGGER.error(f'{self}: Topic "{topic}" unrecognised. Message: {message}')
-        return GenericIbkrEvent(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
-
-    # def route(self, raw_message) -> List[WsEvent]:
-    # _LOGGER.debug(f'{self}: Routing message: {raw_message}')
-    # message, topic, data, subscribed, channel = parse_raw_message(raw_message)
-    # return [ParsedIbkrMessage(message=message, topic=topic, data=data, subscribed=subscribed, channel=channel)]
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'

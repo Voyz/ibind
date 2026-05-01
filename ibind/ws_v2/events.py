@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import Hashable, Protocol, Callable
+from typing import Hashable, Protocol, Callable, TypeVar, List, Dict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -83,11 +83,6 @@ class WsError(ClientInternalEvent):
     error: Exception
 
 
-class WsCritical(ClientInternalEvent):
-    model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
-    exception: Exception
-
-
 # =============
 # ==  Sinks  ==
 # =============
@@ -101,16 +96,20 @@ class LogSink:
     def emit(self, event: WsEvent) -> None:
         _LOGGER.debug(f'{event.key}: {str(event)}')
 
+
 class NoopSink:
     def emit(self, event: WsEvent) -> None:
         pass
 
 
+T = TypeVar("T", bound=WsEvent)
+
+
 class CallbackSink:
     def __init__(self):
-        self._callbacks: dict[type[WsEvent], list[Callable[[WsEvent], None]]] = defaultdict(list)
+        self._callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = defaultdict(list)
 
-    def on(self, event_type: type[WsEvent], callback: Callable[[WsEvent], None]) -> None:
+    def on(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> None:
         self._callbacks[event_type].append(callback)
 
     def emit(self, event: WsEvent) -> None:

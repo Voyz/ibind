@@ -1,19 +1,20 @@
 import json
 import ssl
 import threading
+import time
 from pathlib import Path
 from queue import Queue
 from threading import Thread, Event
 from typing import Union, List, Dict, Callable, Literal
 
-from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
+from websocket import WebSocketApp
 
 from support.logs import project_logger
 from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany
 from ws_v2 import events
 from ws_v2.events import WsEvent, EventSink, Router
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
-from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportCritical, TransportReconnect
+from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
 _LOGGER = project_logger(__file__)
 
@@ -48,7 +49,8 @@ class WsRuntime():
         restart_on_close: bool = True,
         restart_on_critical: bool = True,
         get_cookie: Callable = _NOOP,
-        get_header: Callable = _NOOP
+        get_header: Callable = _NOOP,
+        max_ping_interval: float = 20,
     ):
         self._url = url
         self._cycle_interval = cycle_interval
@@ -59,13 +61,17 @@ class WsRuntime():
         self._connection_timeout = connection_timeout
         self._restart_on_close = restart_on_close
         self._restart_on_critical = restart_on_critical
+        self._max_ping_interval = max_ping_interval
 
         self._state = WsState.STOPPED
         self._authenticated = False
         self._running = False
+        self._last_heartbeat = None
+        self._last_tic = time.time()
+        self._last_health_check = time.time()
 
-        self._transport_thread = None
-        self._runtime_thread = None
+        self._transport_thread: Thread | None = None
+        self._runtime_thread: Thread | None = None
         self._transport_queue = Queue()
         self._wait_event = Event()
 
@@ -79,13 +85,23 @@ class WsRuntime():
         else:
             sslopt = {'ca_certs': cacert}
 
-        self._transport = WsTransport(
-            url=url,
-            event_callback=self._transport_callback,
-            sslopt=sslopt,
-            get_cookie=get_cookie,
-            get_header=get_header,
-        )
+        self._get_cookie = get_cookie
+        self._get_header = get_header
+
+        self._transport: WsTransport = None
+
+        def _new_transport():
+            self._transport = WsTransport(
+                url=url,
+                event_callback=self._transport_callback,
+                sslopt=sslopt,
+                get_cookie=get_cookie,
+                get_header=get_header,
+                max_ping_interval=self._max_ping_interval
+            )
+
+        self._new_transport = _new_transport
+        self._new_transport()
 
         self.subscription_controller = SubscriptionController(send_payload=self.send, subscription_resolver=self._subscription_resolver)
 
@@ -129,12 +145,30 @@ class WsRuntime():
         self._runtime_thread.daemon = True
         self._runtime_thread.start()
 
+    def _stop_transport_thread(self) -> bool:
+        try:
+            self._transport.stop()
+            if self._transport_thread is None:
+                return True
+
+            _LOGGER.debug(f'{self}: Joining transport thread')
+
+            self._transport_thread.join(self._connection_timeout)
+            is_alive = self._transport_thread.is_alive()
+            self._transport_thread = None
+            return not is_alive
+        except Exception as e:
+            _LOGGER.error(f'{self}: Failed to stop transport thread: {e}')
+            # TODO: decide what to do if transport disconnect fails
+
+        return False
+
     def start(self):
         if self.state != WsState.STOPPED:
             return
 
         if self._runtime_thread is not None and self._runtime_thread.is_alive():
-            _LOGGER.error(f'{self}: Runtime thread is not stopped')
+            _LOGGER.error(f'{self}: Runtime thread must be stopped and joined before starting')
             return
 
         self.state = WsState.STARTING
@@ -156,17 +190,16 @@ class WsRuntime():
 
         # TODO: decide which thread should stop first - transport or runtime
         self.state = WsState.STOPPING
-        try:
-            self._transport.disconnect()
-            if self._transport_thread is not None:
-                self._transport_thread.join(self._connection_timeout)
-        except Exception as e:
-            _LOGGER.error(f'{self}: Failed to disconnect: {e}')
-            # TODO: decide what to do if transport disconnect fails
+        self._stop_transport_thread()
 
         self._running = False
         if self._runtime_thread is not None:
             self._runtime_thread.join(self._connection_timeout)
+
+        if self._runtime_thread.is_alive():
+            _LOGGER.error(f'{self}: Runtime thread failed to stop, abandoning...')
+
+        self._runtime_thread = None
 
         self.state = WsState.STOPPED
 
@@ -184,6 +217,34 @@ class WsRuntime():
 
     def is_running(self) -> bool:
         return self._running
+
+    def set_last_heartbeat(self, value: float):
+        self._last_heartbeat = value
+
+    def hard_reset(self) -> None:
+        _LOGGER.info(f'{self}: Hard reset')
+
+        if threading.current_thread() in [self._runtime_thread, self._transport_thread]:
+            raise RuntimeError(f'{self}: Hard reset called from Runtime or Transport thread. Ensure it is called from a separate thread')
+
+        self.stop()
+        self.start()
+
+    def restart_transport(self):
+        if threading.current_thread() == self._transport_thread:
+            raise RuntimeError(f'{self}: Resetting transport thread called from within transport thread. Ensure it is called from a separate thread')
+
+        success = self._stop_transport_thread()
+        if not success:
+            _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
+            self._transport_thread = None
+
+        self._transport.set_degraded(True)
+        self._new_transport()
+        self._new_transport_thread()
+
+    def reset_transport_websocket(self):
+        self._transport.reset()
 
     def __str__(self):
         return f'{self.__class__.__qualname__}({self._state})'
@@ -217,6 +278,73 @@ class WsRuntime():
 
         self.subscription_controller.reconcile_bindings()
 
+    def check_should_restart(self):
+        # If WSA is not ready, we don't try to fix health
+        if not self._transport.is_ready():
+            return False
+
+        # If we're not either open or authenticated, we let WSA handle the reconnect first
+        if self._state not in [WsState.OPEN, WsState.AUTHENTICATED]:
+            return False
+
+        ping_ok = self._transport.check_ping(self._max_ping_interval)
+        if not ping_ok:
+            _LOGGER.warning(
+                f'{self}: Last WebSocket ping happened {self._transport.get_time_since_last_ping():.2f} seconds ago, '
+                f'exceeding the max ping interval of {self._max_ping_interval}.'
+            )
+            return False
+
+        # cookie_ok = self._transport.check_cookie()
+        # if cookie_ok is not None and not cookie_ok:
+        #     _LOGGER.warning(f'{self}: Cookie check failed')
+        #     return True
+
+        heartbeat_ok = True
+        if self._last_heartbeat is not None:
+            diff = abs(time.time() - self._last_heartbeat)
+            if diff > self._max_ping_interval:
+                _LOGGER.warning(
+                    f'{self}: Last heartbeat happened {diff:.2f} seconds ago, '
+                    f'exceeding the max ping interval of {self._max_ping_interval}.'
+                )
+                heartbeat_ok = False
+
+        if heartbeat_ok:
+            return False
+
+        return True
+
+    def health_check(self) -> bool:
+        if not self.check_should_restart():
+            return True
+
+        _LOGGER.warning(f'{self}: Health check failed, resetting transport websocket')
+        self.state = WsState.DEGRADED
+        self.set_authenticated(False)
+
+        if not self._running:  # return early if runtime got stopped in the meantime
+            return False
+
+        self.reset_transport_websocket()
+
+        # if wait_until(lambda: self._state == self._ready_state, timeout=self._connection_timeout):
+        #     _LOGGER.info(f'Health recovered by resetting transport WebSocket')
+        #     return True
+
+        # if not self._running:  # return early if runtime got stopped in the meantime
+        #     return False
+        #
+        # _LOGGER.warning(f'{self}: Resetting transport websocket failed, restarting transport')
+        # self.restart_transport()
+        #
+        # if wait_until(lambda: self._state == self._ready_state, timeout=self._connection_timeout):
+        #     _LOGGER.info(f'Health recovered by resetting transport thread')
+        #     return True
+        #
+        # _LOGGER.error(f'{self}: Resetting transport websocket failed')
+        return False
+
     def _cycle(self):
         _LOGGER.info(f'{self}: Runtime thread started ({tname()})')
         while self._running:
@@ -225,22 +353,40 @@ class WsRuntime():
 
             self._process_transport_queue()
 
+            if time.time() - self._last_health_check > 10:
+                self._last_health_check = time.time()
+                self.health_check()
+
+            # if time.time() - self._last_tic > 5:
+            #     if self._transport.is_ready():
+            #         _LOGGER.debug(f'{self}: Sending tic')
+            #         self._transport.send('tic')
+            #         self._last_tic = time.time()
+
             self._wait_event.clear()
             self._wait_event.wait(self._cycle_interval)
 
-        # final pass through the router queue to flush any remaining events
-        self._process_transport_queue()
-        # final pass through the subscription controller to carry out final unsubscribe events
-        self.subscription_controller.reconcile_bindings()
+        # if not stopped or closed yet, attempt to do one last pass before the thread dies
+        if self.state not in [WsState.STOPPED, WsState.CLOSED]:
+            # final pass through the transport queue to flush any remaining events
+            self._process_transport_queue()
+
+            # final pass through the subscription controller to carry out final unsubscribe events
+            self.subscription_controller.reconcile_bindings()
+
         _LOGGER.info(f'{self}: Runtime thread stopped ({tname()})')
 
     def _process_transport_queue(self):
+        retry_events = []
         while not self._transport_queue.empty():
             te = self._transport_queue.get()
             try:
                 self._handle_transport_event(te)
             except Exception as e:
                 _LOGGER.error(f'{self}: Exception processing transport event: {exception_to_string(e)} for {te}')
+                retry_events.append(te)
+        for event in retry_events:
+            self._transport_queue.put(event)
 
     def _handle_transport_event(self, te: TransportEvent):
         if isinstance(te, TransportOpened):
@@ -248,11 +394,9 @@ class WsRuntime():
         elif isinstance(te, TransportClosed):
             self._handle_on_close(te.wsa, te.close_status_code, te.close_msg)
         elif isinstance(te, TransportError):
-            self._handle_on_error(te.wsa, te.error)
+            self._handle_on_error(te.wsa, te.exception)
         elif isinstance(te, TransportMessage):
             self._handle_on_message(te.wsa, te.message)
-        elif isinstance(te, TransportCritical):
-            self._handle_on_critical(te.wsa, te.exception)
         elif isinstance(te, TransportReconnect):
             self._handle_on_reconnect(te.wsa)
         else:
@@ -283,6 +427,8 @@ class WsRuntime():
 
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
+        # self._last_heartbeat = time.time()
+        self._last_heartbeat = None
         self.state = WsState.OPEN  ## connected = True
         self._sink.emit(events.WsOpen())
 
@@ -290,29 +436,29 @@ class WsRuntime():
         _LOGGER.error(f'{self}: on_error: {exception}')
         if str(exception) in ['Connection to remote host was lost.', 'No connection could be made because the target machine actively refused it']:
             self.state = WsState.DEGRADED
+            self.set_authenticated(False)
         self._sink.emit(events.WsError(error=exception))
 
     def _handle_on_reconnect(self, wsa: WebSocketApp):  # pragma: no cover
         _LOGGER.error(f'{self}: on_reconnect')
+        # self._router.reset_last_heartbeat()
+        # self._last_heartbeat = time.time()
+        self._last_heartbeat = None
         self.set_authenticated(False)
         self.state = WsState.OPEN
         self._sink.emit(events.WsReconnect())
 
-    def _handle_on_critical(self, wsa: WebSocketApp, exception):  # pragma: no cover
-        self._sink.emit(events.WsCritical(exception=exception))
-        if self._restart_on_critical:
-            # TODO: following comment is not true - no restarting in on_close takes place
-            # if restart_on_close is set, restarting will happen in on_close callback
-            self.hard_reset(restart=not self._restart_on_close)
-
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         _LOGGER.info(f'{self}: on_close')
+        # self._router.reset_last_heartbeat()
+        self._last_heartbeat = None
         self.subscription_controller.invalidate_subscriptions()
         self._sink.emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
+
         # if we're not connected we shouldn't need to do anything
-        if self.state not in [self._ready_state, WsState.OPEN, WsState.STOPPING]:  ## not self._connected:
-            _LOGGER.info(f'{self}: Unexpected on_close event while not open')
-            return
+        # if self.state not in [self._ready_state, WsState.OPEN, WsState.STOPPING]:  ## not self._connected:
+        #     _LOGGER.info(f'{self}: Unexpected on_close event while not open')
+        #     return
 
         if close_status_code is not None or close_msg is not None:  # this means an error
             try:
@@ -323,69 +469,9 @@ class WsRuntime():
             _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
 
         else:  # otherwise it's a close success confirmation
-            _LOGGER.info(f'{self}: Connection closed')
-
-        if self.state == WsState.STOPPING:
-            _LOGGER.info(f'{self}: Gracefully closed')
+            if self.state == WsState.STOPPING:
+                _LOGGER.info(f'{self}: Gracefully closed')
+            else:
+                _LOGGER.info(f'{self}: Connection closed')
 
         self.state = WsState.CLOSED  ## self._connected = False
-
-        # if not self._running:  # if close happened due to shutting down, acknowledge and return
-        #     _LOGGER.info(f'{self}: Gracefully closed')
-        #     return
-
-    def hard_reset(self, restart: bool = False) -> None:
-        """
-        Performs a hard reset of the WebSocket connection.
-
-        This method forcefully closes the current WebSocketApp connection and optionally restarts it. It is
-        used to handle scenarios where the connection is unresponsive or encounters a critical error.
-
-        This method cannot be called from the transport thread.
-
-        Parameters:
-            restart (bool, optional): Specifies whether to restart the WebSocketApp connection after resetting.
-                                      Defaults to False.
-
-        Note:
-            - Closes the current WebSocketApp connection, if any, and clears related resources.
-            - If the WebSocketApp is unresponsive or cannot be closed, it will be abandoned and the connection will be reset.
-            - If 'restart' is True, the method attempts to re-establish a new WebSocketApp connection after resetting.
-        """
-        _LOGGER.info(f'{self}: Hard reset, {restart=}, {self._wsa is None=}')
-
-        # we want the websocket closed before reconnecting
-        if self._wsa is not None:
-            if not self._connected:
-                # this means that we get a bad error before we could even get a connection confirmation
-                # which shouldn't really happen, but if it does the original WebSocketApp is bad
-                # so let's drop it anyway.
-                self._wsa = None
-                restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
-            else:
-                _LOGGER.info(f'{self}: Hard reset is closing the WebSocketApp')
-                # check if current thread is the same as _transport_thread
-                if threading.current_thread() == self._transport_thread:
-                    raise RuntimeError(f'{self}: Hard reset called from transport thread. Ensure it is started from a separate thread')
-
-                self._wsa.close(status=STATUS_UNEXPECTED_CONDITION)
-
-        # ensure the websocket is closed and abandoned
-        if not wait_until(lambda: self._wsa is None, f'{self}: Hard reset close timeout', timeout=self._timeout):
-            _LOGGER.warning(f'{self}: Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
-            self._wsa = None
-            restart = True  # since we've abandoned the WebSocketApp, let's ensure we restart
-
-        # in some cases, closing the websocket will cause the restart elsewhere, therefore only closing it is enough
-        if restart:
-            _LOGGER.info(f'{self}: Forced restart')
-            self._reconnect()
-
-    def _reconnect(self):
-        with self._reconnect_lock:
-            if self.state not in [WsState.OPEN, self._ready_state]:  ## not self._has_active_connection():
-                _LOGGER.info(f'{self}: Reconnecting')
-                self._try_connecting()
-
-            if self._has_active_connection():
-                self._on_reconnect()

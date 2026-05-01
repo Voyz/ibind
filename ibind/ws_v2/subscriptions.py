@@ -172,9 +172,9 @@ class SubscriptionController:
 
     def reconcile_binding(self, binding: Binding):
         # wait until timeout has passed since last attempt
-        if binding.last_attempt + self._subscription_timeout > time.monotonic():
+        if binding.last_attempt + self._subscription_timeout > time.time():
             return
-        binding.last_attempt = time.monotonic()
+        binding.last_attempt = time.time()
 
         # if we've exceeded the number of retries, mark the subscription as failed
         if binding.attempts >= self._subscription_retries:
