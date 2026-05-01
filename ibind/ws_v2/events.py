@@ -65,11 +65,11 @@ class WsAuthenticated(ClientInternalEvent):
     ...
 
 
-class WsReady(ClientInternalEvent):
+class WsDegraded(ClientInternalEvent):
     ...
 
 
-class WsReconnect(ClientInternalEvent):
+class WsReady(ClientInternalEvent):
     ...
 
 

@@ -10,15 +10,13 @@ from typing import Union, List, Dict, Callable, Literal
 from websocket import WebSocketApp
 
 from support.logs import project_logger
-from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany
+from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, NOOP
 from ws_v2 import events
 from ws_v2.events import WsEvent, EventSink, Router
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
 from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
 _LOGGER = project_logger(__file__)
-
-_NOOP = lambda: None
 
 _DEFAULT_TIMEOUT = 5
 
@@ -35,6 +33,16 @@ class WsState(VerboseEnum):
     STOPPING = 'STOPPING',
 
 
+def make_sslopt(cacert: Union[str, bool]):
+    if not (cacert is False or Path(cacert).exists()):
+        raise ValueError(f'Cacert must be a valid Path or False, found: {cacert}')
+
+    if cacert is None or not cacert:
+        return {'cert_reqs': ssl.CERT_NONE}
+    else:
+        return {'ca_certs': cacert}
+
+
 class WsRuntime():
     def __init__(
         self,
@@ -46,21 +54,18 @@ class WsRuntime():
         ready_state: Literal[WsState.OPEN, WsState.AUTHENTICATED] = WsState.OPEN,
         cacert: Union[str, bool] = False,
         connection_timeout: float = _DEFAULT_TIMEOUT,
-        restart_on_close: bool = True,
-        restart_on_critical: bool = True,
-        get_cookie: Callable = _NOOP,
-        get_header: Callable = _NOOP,
         max_ping_interval: float = 20,
+        get_cookie: Callable = NOOP,
+        get_header: Callable = NOOP,
     ):
+        if ready_state not in [WsState.OPEN, WsState.AUTHENTICATED]:
+            raise ValueError(f'Invalid ready_state: {ready_state}, must be either {WsState.OPEN} or {WsState.AUTHENTICATED}')
         self._url = url
         self._cycle_interval = cycle_interval
         self._sink = sink
         self._router = router
-        self._subscription_resolver = subscription_resolver
         self._ready_state = ready_state
         self._connection_timeout = connection_timeout
-        self._restart_on_close = restart_on_close
-        self._restart_on_critical = restart_on_critical
         self._max_ping_interval = max_ping_interval
 
         self._state = WsState.STOPPED
@@ -77,33 +82,26 @@ class WsRuntime():
 
         self._state_lock = TimeoutLock(60)
 
-        if not (cacert is False or Path(cacert).exists()):
-            raise ValueError(f'{self}: cacert must be a valid Path or False')
-
-        if cacert is None or not cacert:
-            sslopt = {'cert_reqs': ssl.CERT_NONE}
-        else:
-            sslopt = {'ca_certs': cacert}
+        self._sslopt = make_sslopt(cacert)
 
         self._get_cookie = get_cookie
         self._get_header = get_header
 
-        self._transport: WsTransport = None
+        self._transport: WsTransport | None = None
 
-        def _new_transport():
-            self._transport = WsTransport(
-                url=url,
-                event_callback=self._transport_callback,
-                sslopt=sslopt,
-                get_cookie=get_cookie,
-                get_header=get_header,
-                max_ping_interval=self._max_ping_interval
-            )
-
-        self._new_transport = _new_transport
         self._new_transport()
 
-        self.subscription_controller = SubscriptionController(send_payload=self.send, subscription_resolver=self._subscription_resolver)
+        self.subscription_controller = SubscriptionController(send_payload=self.send, subscription_resolver=subscription_resolver)
+
+    def _new_transport(self):
+        self._transport = WsTransport(
+            url=self._url,
+            event_callback=self._transport_callback,
+            sslopt=self._sslopt,
+            get_cookie=self._get_cookie,
+            get_header=self._get_header,
+            max_ping_interval=self._max_ping_interval
+        )
 
     @property
     def state(self):
@@ -129,8 +127,16 @@ class WsRuntime():
             self._sink.emit(events.WsAuthenticated())
             self.state = WsState.AUTHENTICATED
 
-        if value == False:
-            self.subscription_controller.invalidate_subscriptions()
+        if value == False and self._state == self._ready_state:
+            self.state_degraded()
+
+    def state_degraded(self):
+        was_already_degraded = self._state == WsState.DEGRADED
+        self.state = WsState.DEGRADED
+        self.subscription_controller.invalidate_subscriptions()
+
+        if not was_already_degraded:
+            self._sink.emit(events.WsDegraded())
 
     def get_authenticated(self) -> bool:
         return self._authenticated
@@ -320,8 +326,7 @@ class WsRuntime():
             return True
 
         _LOGGER.warning(f'{self}: Health check failed, resetting transport websocket')
-        self.state = WsState.DEGRADED
-        self.set_authenticated(False)
+        self.state_degraded()
 
         if not self._running:  # return early if runtime got stopped in the meantime
             return False
@@ -418,42 +423,41 @@ class WsRuntime():
             try:
                 self.subscription_controller.observe(event)
             except Exception as e:
-                _LOGGER.error(f'{self}: Exception observing subscription: {exception_to_string(e)} for {event}')
+                _LOGGER.error(f'{self}: Exception observing subscription for {event}: {exception_to_string(e)}')
 
             try:
                 self._sink.emit(event)
             except Exception as e:
-                _LOGGER.error(f'{self}: Exception propagating event: {exception_to_string(e)} for {event}')
+                _LOGGER.error(f'{self}: Exception propagating event {event}: {exception_to_string(e)}')
 
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
         # self._last_heartbeat = time.time()
         self._last_heartbeat = None
-        self.state = WsState.OPEN  ## connected = True
+        self.state = WsState.OPEN
+        if self._state != self._ready_state:
+            self.set_authenticated(False)
         self._sink.emit(events.WsOpen())
 
-    def _handle_on_error(self, wsa: WebSocketApp, exception: Exception):  # pragma: no cover
+    def _handle_on_error(self, wsa: WebSocketApp, exception: Exception):
         _LOGGER.error(f'{self}: on_error: {exception}')
         if str(exception) in ['Connection to remote host was lost.', 'No connection could be made because the target machine actively refused it']:
-            self.state = WsState.DEGRADED
+            self.state_degraded()
             self.set_authenticated(False)
         self._sink.emit(events.WsError(error=exception))
 
-    def _handle_on_reconnect(self, wsa: WebSocketApp):  # pragma: no cover
+    def _handle_on_reconnect(self, wsa: WebSocketApp):
         _LOGGER.error(f'{self}: on_reconnect')
-        # self._router.reset_last_heartbeat()
         # self._last_heartbeat = time.time()
         self._last_heartbeat = None
-        self.set_authenticated(False)
         self.state = WsState.OPEN
-        self._sink.emit(events.WsReconnect())
+        if self._state != self._ready_state:
+            self.set_authenticated(False)
+        self._sink.emit(events.WsOpen())
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         _LOGGER.info(f'{self}: on_close')
-        # self._router.reset_last_heartbeat()
         self._last_heartbeat = None
-        self.subscription_controller.invalidate_subscriptions()
-        self._sink.emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
 
         # if we're not connected we shouldn't need to do anything
         # if self.state not in [self._ready_state, WsState.OPEN, WsState.STOPPING]:  ## not self._connected:
@@ -468,10 +472,12 @@ class WsRuntime():
 
             _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
 
-        else:  # otherwise it's a close success confirmation
-            if self.state == WsState.STOPPING:
-                _LOGGER.info(f'{self}: Gracefully closed')
-            else:
-                _LOGGER.info(f'{self}: Connection closed')
+        elif self.state == WsState.STOPPING:
+            _LOGGER.info(f'{self}: Gracefully closed')
+        else:
+            _LOGGER.info(f'{self}: Connection closed')
 
-        self.state = WsState.CLOSED  ## self._connected = False
+        self.set_authenticated(False)
+        self.subscription_controller.invalidate_subscriptions()
+        self.state = WsState.CLOSED
+        self._sink.emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))

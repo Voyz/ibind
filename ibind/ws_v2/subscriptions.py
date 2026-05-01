@@ -260,7 +260,7 @@ class SubscriptionController:
         for binding_key, binding in self._bindings.items():
             if binding.status == BindingStatus.ACTIVE:
                 binding.status = BindingStatus.DEGRADED
-                _LOGGER.info(f'{self}: Invalidated subscription: {binding}')
+                _LOGGER.info(f'{self}: Invalidated: {binding}')
 
     def is_subscription_active(self, binding_key: str) -> Optional[bool]:
         if not self.has_subscription(binding_key):

@@ -2,13 +2,12 @@ import json
 from typing import Union
 
 import var
-from ibind import ExternalBrokerError, IbkrClient
+from ibind import IbkrClient
 from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
 from support.logs import project_logger
-from ws_v2 import events
-from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, NoopSink
+from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router
 from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
 from ws_v2.ws_runtime import WsRuntime, WsState
 
@@ -90,11 +89,6 @@ class IbkrWsClientV2():
         self._internal_sink.on(ibkr_events.AuthenticationStatus, self._on_authentication_status)
         self._internal_sink.on(ibkr_events.WaitingForSession, self._set_unauthenticated)
         self._internal_sink.on(ibkr_events.System, self._on_system)
-        # self._internal_sink.on(events.WsReconnect, self._on_open)
-        # self._internal_sink.on(events.WsOpen, self._on_open)
-
-    def _on_open(self, event: events.WsOpen):
-        _LOGGER.info(f'{self}: WSA opened, cookie: {self._get_cookie()}')
 
     def _set_unauthenticated(self, _):
         self._runtime.set_authenticated(False)

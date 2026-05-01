@@ -7,11 +7,9 @@ from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 
 from ibind import ExternalBrokerError
 from support.logs import project_logger
-from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED
+from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, NOOP
 
 _LOGGER = project_logger(__file__)
-
-_NOOP = lambda: None
 
 
 class TransportEvent(BaseModel):
@@ -53,8 +51,8 @@ class WsTransport():
         url: str,
         event_callback: Callable,
         sslopt: dict[str, Any],
-        get_cookie: Callable = _NOOP,
-        get_header: Callable = _NOOP,
+        get_cookie: Callable = NOOP,
+        get_header: Callable = NOOP,
         ping_interval: float = 10,
         ping_timeout: float = 10,
         max_ping_interval: float = 20,
@@ -241,7 +239,6 @@ class WsTransport():
             self._header = self._get_header()
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to retrieve header: {exception_to_string(e)}')
-            header = None
             return None
 
         if not self._running:
@@ -287,7 +284,7 @@ class WsTransport():
                     ping_interval=self._ping_interval,
                     ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
                     sslopt=self._sslopt,
-                    reconnect=cast(int, self._connection_timeout)  # floats are accepted, hence casting only for linter
+                    reconnect=cast(int, self._connection_timeout)  # floats are de facto valid, casting only for the linter
                 )
                 _LOGGER.info(f'{self}: WSA run_forever stopped gracefully')
             except Exception as e:

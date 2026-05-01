@@ -20,6 +20,9 @@ _PRECISION_OFFSET = 7
 S = TypeVar('S')
 OneOrMany = Union[S, List[S]]
 
+def NOOP():
+    return None
+
 _LOGGER = project_logger(__file__)
 
 
