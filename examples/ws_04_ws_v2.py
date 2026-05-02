@@ -41,17 +41,19 @@ ws_client.start()
 as_sub = AccountSummarySubscription(account_id=account_id)
 al_sub = AccountLedgerSubscription(account_id=account_id)
 md_sub = MarketDataSubscription(conid='265598', fields=("31", "84", "86"))
+mh_sub = MarketHistorySubscription(conid='265598')
 or_sub = OrdersSubscription()
 # pl_sub = PriceLadderSubscription(conid='265598', account_id=account_id, exchange='SMART')
 pnl_sub = PnlSubscription()
 tr_sub = TradesSubscription()
 subs = [
-    as_sub,
-    al_sub,
-    md_sub,
-    or_sub,
-    pnl_sub,
-    tr_sub
+    # as_sub,
+    # al_sub,
+    # md_sub,
+    mh_sub,
+    # or_sub,
+    # pnl_sub,
+    # tr_sub
 ]
 
 sub_handles: List[SubscriptionHandle] = []

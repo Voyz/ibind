@@ -37,7 +37,7 @@ class IbkrRouter():
     ):
         self._log_raw_messages = log_raw_messages
         self._unwrap_market_data = unwrap_market_data
-        self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, int]] = defaultdict(dict)
+        self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, str]] = defaultdict(dict)
 
     def _preprocess_market_data_message(self, data: dict) -> OneOrMany[WsEvent]:
         """
@@ -59,10 +59,14 @@ class IbkrRouter():
 
     def _preprocess_market_history_message(self, data: dict) -> OneOrMany[WsEvent]:
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
+        events = []
+        conid = extract_conid(data)
         if 'serverId' in data and data['serverId'] not in mh_server_id_conid_pairs:
-            mh_server_id_conid_pairs[data['serverId']] = extract_conid(data)
+            mh_server_id_conid_pairs[data['serverId']] = str(conid)
+            events.append(ibkr_events.ServerId(conid=str(conid), server_id=data['serverId'], target_key=IbkrWsKey.MARKET_HISTORY))
 
-        return ibkr_events.MarketHistory(conid=str(data['conid']), data=data)
+        events.append(ibkr_events.MarketHistory(conid=str(conid), data=data))
+        return events
 
     def _preprocess_account_ledger(self, data):
         events = []
@@ -91,6 +95,7 @@ class IbkrRouter():
         if 'AccountCode' not in summary or 'value' not in summary['AccountCode']:
             _LOGGER.error(f'{self}: Account code not found in account summary: {summary}')
             return []
+
         account_id = summary['AccountCode']['value']
         summary['timestamp'] = timestamp
 
@@ -163,15 +168,13 @@ class IbkrRouter():
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
         if server_id in mh_server_id_conid_pairs:
             conid = mh_server_id_conid_pairs[server_id]
-            _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}/conid={conid!r}.')
+            _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}, conid={conid!r}.')
             if conid is not None:
-                return ibkr_events.Unsubscription(target_key=IbkrWsKey.MARKET_HISTORY, conid=conid)
+                return ibkr_events.Unsubscription(target_key=IbkrWsKey.MARKET_HISTORY, conid=str(conid))
 
             _LOGGER.warning(f'{self}: Unknown conid={conid!r}. Cannot mark the subscription as unsubscribed.')
         else:
-            _LOGGER.warning(
-                f'{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}'
-            )
+            _LOGGER.warning(f'{self}: Received unsubscribing confirmation for unknown server_id={server_id!r}. Existing server_ids: {mh_server_id_conid_pairs}')
         return []
 
     def _handle_message_without_topic(self, message: dict) -> OneOrMany[WsEvent]:

@@ -1,11 +1,12 @@
 import json
-from typing import Union
+from collections import defaultdict
+from typing import Union, List, Dict
 
 import var
-from ibind import IbkrClient
+from ibind import IbkrClient, IbkrWsKey
 from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
-from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver
+from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from support.logs import project_logger
 from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router
 from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
@@ -85,10 +86,14 @@ class IbkrWsClientV2():
             get_header=self._get_header,
         )
 
+        self._mh_subscriptions: List[MarketHistorySubscription] = []
+        self._conid_server_id_pairs: Dict[IbkrWsKey, Dict[str, str]] = defaultdict(dict)
+
     def _register_internal_callbacks(self):
         self._internal_sink.on(ibkr_events.AuthenticationStatus, self._on_authentication_status)
         self._internal_sink.on(ibkr_events.WaitingForSession, self._set_unauthenticated)
         self._internal_sink.on(ibkr_events.System, self._on_system)
+        self._internal_sink.on(ibkr_events.ServerId, self._on_server_id)
 
     def _set_unauthenticated(self, _):
         self._runtime.set_authenticated(False)
@@ -104,6 +109,12 @@ class IbkrWsClientV2():
     def _on_system(self, event: ibkr_events.System):
         if 'hb' in event.data:
             self._runtime.set_last_heartbeat(int(event.data['hb']) / 1000)
+
+    def _on_server_id(self, event: ibkr_events.ServerId):
+        self._conid_server_id_pairs[event.target_key][event.conid] = event.server_id
+        for subscription in self._mh_subscriptions:
+            if subscription.key == event.target_key and subscription.conid == event.conid and not subscription.has_server_id():
+                subscription.set_server_id(event.server_id)
 
     def _get_cookie(self):
         # try:
@@ -135,10 +146,32 @@ class IbkrWsClientV2():
         self._runtime.hard_reset()
 
     def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        if isinstance(subscription, MarketHistorySubscription):
+            self._mh_subscriptions.append(subscription)
         return self._runtime.subscription_controller.subscribe(subscription)
 
     def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        if isinstance(subscription, MarketHistorySubscription):
+            self._handle_mh_unsubscription(subscription)
         return self._runtime.subscription_controller.unsubscribe(subscription)
+
+    def get_server_id(self, key: IbkrWsKey, conid: str) -> str:
+        return self._conid_server_id_pairs[key][conid]
+
+    def _handle_mh_unsubscription(self, subscription: MarketHistorySubscription):
+        if subscription.has_server_id():
+            return
+        server_id = self._conid_server_id_pairs.get(subscription.key, {}).get(subscription.conid)
+        if server_id is None:
+            raise RuntimeError(f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Could not find server_id in memory. Ensure at least one MarketHistory event is received before unsubscribing.')
+
+        _LOGGER.warning(
+            f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Setting from memory: {server_id!r}. '
+            f'Unsubscribe using the same Subscription instance that was used for subscribing to avoid this warning, '
+            f'or set it manually before calling unsubscribe by using '
+            f'`subscription.set_server_id(ibkr_ws_client.get_server_id(IbkrWsKey.MARKET_HISTORY, conid))`'
+        )
+        subscription.set_server_id(server_id)
 
     def is_running(self) -> bool:
         return self._runtime.is_running()

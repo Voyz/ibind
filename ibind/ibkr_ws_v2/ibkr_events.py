@@ -11,6 +11,7 @@ class IbkrWsKey(Enum):
     UNCLASSIFIED = 'UNCLASSIFIED'
     GENERIC = 'GENERIC'
     UNSUBSCRIPTION = 'UNSUBSCRIPTION'
+    SERVER_ID = 'SERVER_ID'
 
     # unsolicited
     ACCOUNT_UPDATE = 'ACCOUNT_UPDATE'
@@ -125,7 +126,7 @@ class AuthenticationStatus(WsEvent):
 class Unsubscription(WsEvent):
     key: IbkrWsKey = IbkrWsKey.UNSUBSCRIPTION
     target_key: IbkrWsKey
-    conid: int | None = None
+    conid: str | None = None
 
 
 class AccountSummary(WsEvent):
@@ -151,6 +152,13 @@ class MarketHistory(WsEvent):
     key: IbkrWsKey = IbkrWsKey.MARKET_HISTORY
     conid: str
     data: dict
+
+
+class ServerId(WsEvent):
+    key: IbkrWsKey = IbkrWsKey.SERVER_ID
+    conid: str
+    server_id: str
+    target_key: IbkrWsKey
 
 
 class Orders(WsEvent):

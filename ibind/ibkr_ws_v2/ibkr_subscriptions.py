@@ -1,7 +1,10 @@
 import json
 from typing import Tuple
 
+from pydantic import Field
+
 from ibkr_ws_v2.ibkr_events import IbkrWsKey, AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary
+from support.py_utils import filter_none
 from ws_v2.subscriptions import Subscription, SubscriptionResolver
 
 
@@ -143,12 +146,31 @@ class MarketDataSubscription(IbkrSubscription):
 class MarketHistorySubscription(IbkrSubscription):
     key: IbkrWsKey = IbkrWsKey.MARKET_HISTORY
     conid: str
+    exchange: str = None
+    period: str = None
+    bar: str = None
+    outside_rth: bool = None
+    source: str = None
+    format: str = None
+    server_id: list = Field(default_factory=list) # uses list to allow writing despite frozen model
 
     def subscribe_payload(self) -> str:
-        ...
+        data = {
+            'exchange': self.exchange,
+            'period': self.period,
+            'bar': self.bar,
+            'outside_rth': self.outside_rth,
+            'source': self.source,
+            'format': self.format,
+        }
+        data = filter_none(data)
+        return f'smh+{self.conid}+{json.dumps(data, separators=(',', ':'))}'
 
     def unsubscribe_payload(self) -> str:
-        ...
+        server_id = self.get_server_id()
+        if server_id is None:
+            raise RuntimeError(f'{self}: Unsubscribing from market history for conid={self.conid!r} without server_id. MarketHistorySubscription must have server_id set before unsubscribing.')
+        return f'umh+{server_id}'
 
     @property
     def confirms_subscribe(self) -> bool:
@@ -157,6 +179,17 @@ class MarketHistorySubscription(IbkrSubscription):
     @property
     def confirms_unsubscribe(self) -> bool:
         return True
+
+    def set_server_id(self, server_id):
+        if self.has_server_id():
+            raise ValueError('Server ID already set')
+        self.server_id.append(server_id)
+
+    def has_server_id(self) -> bool:
+        return len(self.server_id) > 0
+
+    def get_server_id(self):
+        return self.server_id[0]
 
     def binding_key(self):
         return make_binding_key(self.key, conid=self.conid)
