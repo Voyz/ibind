@@ -182,7 +182,7 @@ class SubscriptionController:
         now = time.time()
         subscription = binding.subscription
 
-        if binding.status == binding.intent or binding.status == BindingStatus.FAILED:
+        if binding.status in [binding.intent, BindingStatus.FAILED]:
             if subscription.expiry_seconds is None:
                 return
 

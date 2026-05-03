@@ -8,7 +8,7 @@ from threading import Thread, Event
 from typing import Union, List, Dict, Callable, Literal
 
 from support.logs import project_logger
-from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, NOOP
+from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop
 from ws_v2 import events
 from ws_v2.events import WsEvent, EventSink, Router, CallbackSink, AsyncSink
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
@@ -57,8 +57,8 @@ class WsRuntime():
         connection_timeout: float = _DEFAULT_TIMEOUT,
         reconnect_timeout: float | None = _DEFAULT_TIMEOUT,
         max_ping_interval: float = 20,
-        get_cookie: Callable = NOOP,
-        get_header: Callable = NOOP,
+        get_cookie: Callable = noop,
+        get_header: Callable = noop,
     ):
         if ready_state not in [WsState.OPEN, WsState.AUTHENTICATED]:
             raise ValueError(f'Invalid ready_state: {ready_state}, must be either {WsState.OPEN} or {WsState.AUTHENTICATED}')

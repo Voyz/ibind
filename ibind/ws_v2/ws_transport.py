@@ -8,7 +8,7 @@ from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 import var
 from ibind import ExternalBrokerError
 from support.logs import project_logger
-from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, NOOP
+from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -56,8 +56,8 @@ class WsTransport():
         url: str,
         event_callback: Callable,
         sslopt: dict[str, Any],
-        get_cookie: Callable = NOOP,
-        get_header: Callable = NOOP,
+        get_cookie: Callable = noop,
+        get_header: Callable = noop,
         ping_interval: float = 10,
         ping_timeout: float = 10,
         max_ping_interval: float = 20,

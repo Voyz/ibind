@@ -154,7 +154,7 @@ class MarketHistorySubscription(IbkrSubscription):
             'format': self.format,
         }
         data = filter_none(data)
-        return f'smh+{self.conid}+{json.dumps(data, separators=(',', ':'))}'
+        return f'smh+{self.conid}+{json.dumps(data, separators=(",", ":"))}'
 
     def unsubscribe_payload(self) -> str:
         server_id = self.get_server_id()
