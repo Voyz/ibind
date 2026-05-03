@@ -130,12 +130,12 @@ class IbkrRouter():
             return None
 
     def _handle_account_update(self, message, arguments) -> OneOrMany[WsEvent]:
-        _LOGGER.info(f'{self}: Account update: {arguments}')
+        # _LOGGER.info(f'{self}: Account update: {arguments}')
         return ibkr_events.AccountUpdate(data=arguments)
 
     def _handle_authentication_status(self, message, arguments) -> OneOrMany[WsEvent]:
         if 'authenticated' in arguments or 'competing' in arguments:
-            _LOGGER.info(f'{self}: Authentication status: {arguments}')
+            # _LOGGER.info(f'{self}: Authentication status: {arguments}')
             return ibkr_events.AuthenticationStatus(data=arguments, authenticated=arguments.get('authenticated'), competing=arguments.get('competing'))
         elif (  # expected status updates that we ignore
                 arguments == {'message': ''} or
@@ -159,7 +159,7 @@ class IbkrRouter():
     def _handle_notification(self, data) -> OneOrMany[WsEvent]:  # pragma: no cover
         events = []
         for notification in data:
-            _LOGGER.info(f'{self}: IBKR notification: {notification}')
+            # _LOGGER.info(f'{self}: IBKR notification: {notification}')
             events.append(ibkr_events.Notification(message=notification))
         return events
 

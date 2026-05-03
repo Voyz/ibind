@@ -118,7 +118,12 @@ class WsRuntime():
             self._state = value
 
         if self._state == self._ready_state:
-            self._emit(events.WsReady())
+            self._websocket_ready()
+
+    def _websocket_ready(self):
+        self._emit(events.WsReady())
+        self._last_heartbeat = time.time()
+        _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._last_heartbeat}')
 
     def set_authenticated(self, value: bool):
         if value != self._authenticated:
@@ -172,12 +177,14 @@ class WsRuntime():
         return False
 
     def start(self):
-        if self.state != WsState.STOPPED:
+        if self._state != WsState.STOPPED:
             return
 
         if self._runtime_thread is not None and self._runtime_thread.is_alive():
             _LOGGER.error(f'{self}: Runtime thread must be stopped and joined before starting')
             return
+
+        _LOGGER.info(f'{self}: Starting runtime')
 
         self.state = WsState.STARTING
         self._running = True
@@ -189,11 +196,13 @@ class WsRuntime():
         return connection_success
 
     def stop(self):
-        if self.state == WsState.STOPPED:
+        if self._state == WsState.STOPPED:
             return
 
         if threading.current_thread() == self._runtime_thread:
             raise RuntimeError(f'{self}: Stopping runtime called from within runtime thread. Ensure it is called from a separate thread')
+
+        _LOGGER.info(f'{self}: Stopping runtime')
 
         # wait until one more pass of the runtime thread has occurred to allow unsubscriptions to complete
         wait_until(lambda: not self._wait_event.is_set(), timeout=self._connection_timeout)
@@ -203,7 +212,6 @@ class WsRuntime():
         # TODO: decide which thread should stop first - transport or runtime
         self.state = WsState.STOPPING
         self._stop_transport_thread()
-
 
         self._running = False
         if self._runtime_thread is not None:
@@ -258,8 +266,8 @@ class WsRuntime():
         self._new_transport()
         self._new_transport_thread()
 
-    def reset_transport_websocket(self):
-        self._transport.reset()
+    def reset_websocket_app(self):
+        self._transport.reset_websocket_app()
 
     def __str__(self):
         return f'{self.__class__.__qualname__}({self._state})'
@@ -283,7 +291,6 @@ class WsRuntime():
             return
 
         if self._transport_thread is None or not self._transport_thread.is_alive():
-            _LOGGER.info(f'{self}: Starting new transport thread')
             self.state = WsState.CONNECTING
             self._new_transport_thread()
 
@@ -334,13 +341,13 @@ class WsRuntime():
         if not self.check_should_restart():
             return True
 
-        _LOGGER.warning(f'{self}: Health check failed, resetting transport websocket')
-        self.state_degraded()
-
         if not self._running:  # return early if runtime got stopped in the meantime
             return False
 
-        self.reset_transport_websocket()
+        self.state_degraded()
+
+        _LOGGER.warning(f'{self}: Health check failed, resetting transport websocket')
+        self.reset_websocket_app()
 
         # if wait_until(lambda: self._state == self._ready_state, timeout=self._connection_timeout):
         #     _LOGGER.info(f'Health recovered by resetting transport WebSocket')
@@ -446,7 +453,7 @@ class WsRuntime():
         self._emit(events.WsOpen())
 
     def _handle_on_reconnect(self, wsa: WebSocketApp):
-        _LOGGER.info(f'{self}: on_reconnect')
+        _LOGGER.info(f'{self}: Connection reopened')
         # self._last_heartbeat = time.time()
         self._last_heartbeat = None
         self.state = WsState.OPEN
@@ -455,7 +462,7 @@ class WsRuntime():
         self._emit(events.WsOpen()) # we emit Open since reconnect pretty much equivalent
 
     def _handle_on_error(self, wsa: WebSocketApp, exception: Exception):
-        _LOGGER.error(f'{self}: on_error: {exception}')
+        _LOGGER.error(f'{self}: Connection error: {exception}')
         if str(exception) in ['Connection to remote host was lost.', 'No connection could be made because the target machine actively refused it']:
             self.state_degraded()
             self.set_authenticated(False)
@@ -463,7 +470,7 @@ class WsRuntime():
 
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
-        _LOGGER.info(f'{self}: on_close')
+        _LOGGER.info(f'{self}: Connection closed')
         self._last_heartbeat = None
 
         # if we're not connected we shouldn't need to do anything
@@ -479,13 +486,13 @@ class WsRuntime():
 
             _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
 
-        elif self.state == WsState.STOPPING:
-            _LOGGER.info(f'{self}: Gracefully closed')
-        else:
-            _LOGGER.info(f'{self}: Connection closed')
 
-        self.set_authenticated(False)
-        self.subscription_controller.invalidate_subscriptions()
+        if self.state != WsState.STOPPING:
+            self.set_authenticated(False)
+            self.subscription_controller.invalidate_subscriptions()
+        else:
+            _LOGGER.info(f'{self}: Gracefully closed')
+
         self.state = WsState.CLOSED
         self._emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
 

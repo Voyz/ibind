@@ -84,9 +84,9 @@ class WsTransport():
         self._running = False
         self.disconnect()
 
-    def reset(self) -> bool:
+    def reset_websocket_app(self) -> bool:
         if tname() == self._tname:
-            raise RuntimeError(f'{self}: Resetting transport thread called from within transport thread. Ensure it is called from a separate thread')
+            raise RuntimeError(f'{self}: Resetting websocket app called from within transport thread. Ensure it is called from a separate thread')
 
         if self._wsa is None:
             _LOGGER.info(f'{self}: WSA is None, skipping reset')

@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from base.queue_controller import QueueController
 from support.logs import project_logger
-from support.py_utils import OneOrMany, exception_to_string
+from support.py_utils import OneOrMany, exception_to_string, tname
 
 _LOGGER = project_logger('websocket')
 
@@ -179,7 +179,7 @@ class AsyncSink:
             return
 
         self._running = True
-        self._thread = Thread(target=self._cycle, name="ws_sink_thread", daemon=True)
+        self._thread = Thread(target=self._cycle, name="async_sink_thread", daemon=True)
         self._thread.start()
 
     def stop(self) -> bool:
@@ -239,12 +239,14 @@ class AsyncSink:
                 _LOGGER.error(f'{self}: Exception emitting event to sink: {exception_to_string(e)}')
 
     def _cycle(self):
+        _LOGGER.info(f'{self}: AsyncSink thread started ({tname()})')
         while self._running:
             self._wait_event.clear()
             self._wait_event.wait(self._cycle_interval)
             self._consume_queue()
 
         self._consume_queue()
+        _LOGGER.info(f'{self}: AsyncSink thread stopped ({tname()})')
 
     def __str__(self):
         return f'{self.__class__.__qualname__}({self._queue.qsize()})'

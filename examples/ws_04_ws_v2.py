@@ -49,8 +49,8 @@ tr_sub = TradesSubscription()
 subs = [
     # as_sub,
     # al_sub,
-    # md_sub,
-    mh_sub,
+    md_sub,
+    # mh_sub,
     # or_sub,
     # pnl_sub,
     # tr_sub
@@ -85,7 +85,7 @@ for handle in sub_handles:
 #     unsub_handles.append(handle)
 #
 # for handle in unsub_handles:
-#     handle.wait()
+#     handle.wait(10)
 # time.sleep(5)
 ws_client.shutdown()
 

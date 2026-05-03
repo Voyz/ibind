@@ -154,6 +154,9 @@ class IbkrWsClientV2():
     def hard_reset(self):
         self._runtime.hard_reset()
 
+    def reset_websocket_app(self):
+        self._runtime.reset_websocket_app()
+
     def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
         if isinstance(subscription, MarketHistorySubscription):
             self._mh_subscriptions.append(subscription)
