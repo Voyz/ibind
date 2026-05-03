@@ -44,7 +44,12 @@ def project_logger(filepath=None):
     Returns:
         logging.Logger: The project-specific logger instance.
     """
-    return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
+    logger_name = 'ibind'
+    if filepath is not None:
+        child = Path(filepath).stem if isinstance(filepath, Path) else str(filepath)
+        logger_name += f'.{child}'
+
+    return logging.getLogger(logger_name)
 
 
 _LOGGER = project_logger()
