@@ -9,7 +9,7 @@ from ibind import ExternalBrokerError
 from support.logs import project_logger
 from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, NOOP
 
-_LOGGER = project_logger(__file__)
+_LOGGER = project_logger('websocket')
 
 
 class TransportEvent(BaseModel):

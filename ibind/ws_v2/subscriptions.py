@@ -10,12 +10,13 @@ from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
 from ws_v2.events import WsEvent
 
-_LOGGER = project_logger(__file__)
+_LOGGER = project_logger('websocket')
 
 
 class Subscription(BaseModel):
     model_config = ConfigDict(frozen=True)
     key: Hashable
+    expiry_seconds: int | None = None
 
     @property
     def topic(self) -> str:
@@ -61,7 +62,7 @@ class BindingStatus(Enum):
     FAILED = "FAILED"
     DEGRADED = "DEGRADED"
     UNSUBSCRIBED = "UNSUBSCRIBED"
-    RECONNECTING = "RECONNECTING"
+    EXPIRED = "EXPIRED"
 
 
 class Binding(BaseModel):
@@ -171,10 +172,21 @@ class SubscriptionController:
                 self._confirm_unsubscribed(binding_key)
 
     def reconcile_binding(self, binding: Binding):
+        now = time.time()
+
+
+        if binding.status == binding.intent:
+            time_since_last_attempt = now - binding.last_attempt
+            if binding.subscription.expiry_seconds is None or time_since_last_attempt < binding.subscription.expiry_seconds:
+                return
+
+            _LOGGER.info(f'{self}: Subscription expired: {binding.subscription} after {time_since_last_attempt:.1f} seconds')
+            self._update_status(binding, BindingStatus.EXPIRED)
+
         # wait until timeout has passed since last attempt
-        if binding.last_attempt + self._subscription_timeout > time.time():
+        if binding.last_attempt + self._subscription_timeout > now:
             return
-        binding.last_attempt = time.time()
+        binding.last_attempt = now
 
         # if we've exceeded the number of retries, mark the subscription as failed
         if binding.attempts >= self._subscription_retries:
@@ -205,9 +217,6 @@ class SubscriptionController:
     def reconcile_bindings(self):
         with self._condition:
             for binding in self._bindings.values():
-                if binding.status == binding.intent:
-                    continue
-
                 self.reconcile_binding(binding)
 
     def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
@@ -260,7 +269,8 @@ class SubscriptionController:
         for binding_key, binding in self._bindings.items():
             if binding.status == BindingStatus.ACTIVE:
                 binding.status = BindingStatus.DEGRADED
-                _LOGGER.info(f'{self}: Invalidated: {binding}')
+                self._update_status(binding, BindingStatus.DEGRADED)
+                # _LOGGER.info(f'{self}: Invalidated: {binding}')
 
     def is_subscription_active(self, binding_key: str) -> Optional[bool]:
         if not self.has_subscription(binding_key):
@@ -298,6 +308,12 @@ class SubscriptionController:
                 if self.is_subscription_active(binding_key)
             }
 
+    def _update_status(self, binding: Binding, status: BindingStatus):
+        binding.status = status
+        binding.attempts = 0
+        _LOGGER.info(f'{self}: Updated subscription status: {binding.subscription.binding_key()} -> {status.value}')
+        self._condition.notify_all()
+
     def _confirm_subscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):
             _LOGGER.warning(f'{self}: Unknown subscription {binding_key} - cannot update status to {BindingStatus.ACTIVE.value}')
@@ -308,10 +324,7 @@ class SubscriptionController:
         if binding.status == BindingStatus.ACTIVE or binding.intent == BindingStatus.UNSUBSCRIBED:
             return
 
-        binding.status = BindingStatus.ACTIVE
-        binding.attempts = 0
-        _LOGGER.info(f'{self}: Updated subscription status: {binding_key} -> {BindingStatus.ACTIVE.value}')
-        self._condition.notify_all()
+        self._update_status(binding, BindingStatus.ACTIVE)
 
     def _confirm_unsubscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):
@@ -323,10 +336,7 @@ class SubscriptionController:
         if binding.status == BindingStatus.UNSUBSCRIBED or binding.intent == BindingStatus.ACTIVE:
             return
 
-        binding.status = BindingStatus.UNSUBSCRIBED
-        binding.attempts = 0
-        _LOGGER.info(f'{self}: Updated subscription status: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
-        self._condition.notify_all()
+        self._update_status(binding, BindingStatus.UNSUBSCRIBED)
 
     def wait_for(self, binding_key: str, timeout: float | None = None) -> bool:
         deadline = None if timeout is None else time.monotonic() + timeout

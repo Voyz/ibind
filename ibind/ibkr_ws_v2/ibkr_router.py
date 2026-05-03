@@ -10,7 +10,7 @@ from support.logs import project_logger
 from support.py_utils import UNDEFINED, OneOrMany
 from ws_v2.events import WsEvent
 
-_LOGGER = project_logger(__file__)
+_LOGGER = project_logger('websocket')
 
 
 def parse_raw_message(raw_message: str):

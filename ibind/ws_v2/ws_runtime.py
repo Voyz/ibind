@@ -12,11 +12,11 @@ from websocket import WebSocketApp
 from support.logs import project_logger
 from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, NOOP
 from ws_v2 import events
-from ws_v2.events import WsEvent, EventSink, Router
+from ws_v2.events import WsEvent, EventSink, Router, CallbackSink
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
 from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
-_LOGGER = project_logger(__file__)
+_LOGGER = project_logger('websocket')
 
 _DEFAULT_TIMEOUT = 5
 
@@ -49,6 +49,7 @@ class WsRuntime():
         url: str,
         cycle_interval: float,
         sink: EventSink,
+        internal_sink: CallbackSink,
         router: Router,
         subscription_resolver: SubscriptionResolver,
         ready_state: Literal[WsState.OPEN, WsState.AUTHENTICATED] = WsState.OPEN,
@@ -63,6 +64,7 @@ class WsRuntime():
         self._url = url
         self._cycle_interval = cycle_interval
         self._sink = sink
+        self._internal_sink = internal_sink
         self._router = router
         self._ready_state = ready_state
         self._connection_timeout = connection_timeout
@@ -116,7 +118,7 @@ class WsRuntime():
             self._state = value
 
         if self._state == self._ready_state:
-            self._sink.emit(events.WsReady())
+            self._emit(events.WsReady())
 
     def set_authenticated(self, value: bool):
         if value != self._authenticated:
@@ -124,7 +126,7 @@ class WsRuntime():
         self._authenticated = value
 
         if value and self._state == WsState.OPEN:
-            self._sink.emit(events.WsAuthenticated())
+            self._emit(events.WsAuthenticated())
             self.state = WsState.AUTHENTICATED
 
         if value == False and self._state == self._ready_state:
@@ -136,7 +138,7 @@ class WsRuntime():
         self.subscription_controller.invalidate_subscriptions()
 
         if not was_already_degraded:
-            self._sink.emit(events.WsDegraded())
+            self._emit(events.WsDegraded())
 
     def get_authenticated(self) -> bool:
         return self._authenticated
@@ -181,6 +183,7 @@ class WsRuntime():
         self._running = True
 
         self._new_runtime_thread()
+        self._sink.start()
 
         connection_success = wait_until(lambda: self._state == self._ready_state, f'{self}: Starting timeout', timeout=self._connection_timeout)
         return connection_success
@@ -188,6 +191,9 @@ class WsRuntime():
     def stop(self):
         if self.state == WsState.STOPPED:
             return
+
+        if threading.current_thread() == self._runtime_thread:
+            raise RuntimeError(f'{self}: Stopping runtime called from within runtime thread. Ensure it is called from a separate thread')
 
         # wait until one more pass of the runtime thread has occurred to allow unsubscriptions to complete
         wait_until(lambda: not self._wait_event.is_set(), timeout=self._connection_timeout)
@@ -198,6 +204,7 @@ class WsRuntime():
         self.state = WsState.STOPPING
         self._stop_transport_thread()
 
+
         self._running = False
         if self._runtime_thread is not None:
             self._runtime_thread.join(self._connection_timeout)
@@ -206,6 +213,8 @@ class WsRuntime():
             _LOGGER.error(f'{self}: Runtime thread failed to stop, abandoning...')
 
         self._runtime_thread = None
+
+        self._sink.stop()
 
         self.state = WsState.STOPPED
 
@@ -425,10 +434,7 @@ class WsRuntime():
             except Exception as e:
                 _LOGGER.error(f'{self}: Exception observing subscription for {event}: {exception_to_string(e)}')
 
-            try:
-                self._sink.emit(event)
-            except Exception as e:
-                _LOGGER.error(f'{self}: Exception propagating event {event}: {exception_to_string(e)}')
+            self._emit(event)
 
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
@@ -437,23 +443,24 @@ class WsRuntime():
         self.state = WsState.OPEN
         if self._state != self._ready_state:
             self.set_authenticated(False)
-        self._sink.emit(events.WsOpen())
+        self._emit(events.WsOpen())
+
+    def _handle_on_reconnect(self, wsa: WebSocketApp):
+        _LOGGER.info(f'{self}: on_reconnect')
+        # self._last_heartbeat = time.time()
+        self._last_heartbeat = None
+        self.state = WsState.OPEN
+        if self._state != self._ready_state:
+            self.set_authenticated(False)
+        self._emit(events.WsOpen()) # we emit Open since reconnect pretty much equivalent
 
     def _handle_on_error(self, wsa: WebSocketApp, exception: Exception):
         _LOGGER.error(f'{self}: on_error: {exception}')
         if str(exception) in ['Connection to remote host was lost.', 'No connection could be made because the target machine actively refused it']:
             self.state_degraded()
             self.set_authenticated(False)
-        self._sink.emit(events.WsError(error=exception))
+        self._emit(events.WsError(error=exception))
 
-    def _handle_on_reconnect(self, wsa: WebSocketApp):
-        _LOGGER.error(f'{self}: on_reconnect')
-        # self._last_heartbeat = time.time()
-        self._last_heartbeat = None
-        self.state = WsState.OPEN
-        if self._state != self._ready_state:
-            self.set_authenticated(False)
-        self._sink.emit(events.WsOpen())
 
     def _handle_on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         _LOGGER.info(f'{self}: on_close')
@@ -480,4 +487,15 @@ class WsRuntime():
         self.set_authenticated(False)
         self.subscription_controller.invalidate_subscriptions()
         self.state = WsState.CLOSED
-        self._sink.emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
+        self._emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
+
+    def _emit(self, event:WsEvent):
+        try:
+            self._internal_sink.emit(event)
+        except Exception as e:
+            _LOGGER.error(f'{self}: Internal sink exception for {event}: {exception_to_string(e)}')
+
+        try:
+            self._sink.emit(event)
+        except Exception as e:
+            _LOGGER.error(f'{self}: External sink exception for {event}: {exception_to_string(e)}')

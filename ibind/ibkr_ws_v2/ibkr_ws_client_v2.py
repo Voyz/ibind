@@ -3,16 +3,17 @@ from collections import defaultdict
 from typing import Union, List, Dict
 
 import var
+from base.queue_controller import QueueController
 from ibind import IbkrClient, IbkrWsKey
 from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from support.logs import project_logger
-from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router
+from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, AsyncSink
 from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
 from ws_v2.ws_runtime import WsRuntime, WsState
 
-_LOGGER = project_logger(__file__)
+_LOGGER = project_logger('websocket')
 
 _DEFAULT_CYCLE_INTERVAL = 0.25
 
@@ -34,6 +35,7 @@ class IbkrWsClientV2():
         sink: EventSink = None,
         router: Router = None,
         subscription_resolver: SubscriptionResolver = None,
+        synchronous_output_events: bool = False,
     ):
         self._account_id = account_id
 
@@ -56,8 +58,10 @@ class IbkrWsClientV2():
         self._use_oauth = use_oauth
         self._recreate_subscriptions_on_reconnect = recreate_subscriptions_on_reconnect
 
+        self._queue_controller = QueueController[IbkrWsKey]()
+        self._queue_controller.register_queues(list(IbkrWsKey))
+
         if sink is None:
-            # self._queue_controller = QueueController[IbkrWsKey]()
             # self._queue_controller.register_queues(['CLIENT_INTERNAL', 'IBKR'])
             # sink = QueueSink(queue_controller=self._queue_controller)
 
@@ -66,7 +70,11 @@ class IbkrWsClientV2():
 
         self._internal_sink = CallbackSink()
         self._register_internal_callbacks()
-        sink = CompositeSink(self._internal_sink, sink)
+
+        if synchronous_output_events:
+            _LOGGER.info(f'{self}: Output events will be emitted synchronously from the runtime thread')
+        else:
+            sink = AsyncSink(sink=sink)
 
         if router is None:
             router = IbkrRouter()
@@ -80,6 +88,7 @@ class IbkrWsClientV2():
             ready_state=WsState.AUTHENTICATED,
             cacert=cacert,
             sink=sink,
+            internal_sink=self._internal_sink,
             router=router,
             subscription_resolver=subscription_resolver,
             get_cookie=self._get_cookie,

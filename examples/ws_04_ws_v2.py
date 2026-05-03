@@ -15,7 +15,7 @@ import time
 from typing import List
 
 from ibind import ibind_logs_initialize
-from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PriceLadderSubscription, PnlSubscription, TradesSubscription
+from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PriceLadderSubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription
 from ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
 from ws_v2.subscriptions import SubscriptionHandle
 
@@ -40,7 +40,7 @@ ws_client.start()
 
 as_sub = AccountSummarySubscription(account_id=account_id)
 al_sub = AccountLedgerSubscription(account_id=account_id)
-md_sub = MarketDataSubscription(conid='265598', fields=("31", "84", "86"))
+md_sub = MarketDataSubscription(conid='265598', fields=("31", "84", "86"), expiry_seconds=30)
 mh_sub = MarketHistorySubscription(conid='265598')
 or_sub = OrdersSubscription()
 # pl_sub = PriceLadderSubscription(conid='265598', account_id=account_id, exchange='SMART')
