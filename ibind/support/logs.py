@@ -46,7 +46,7 @@ def project_logger(filepath=None):
     """
     logger_name = 'ibind'
     if filepath is not None:
-        child = Path(filepath).stem if isinstance(filepath, Path) else str(filepath)
+        child = Path(filepath).stem if os.path.exists(filepath) else str(filepath)
         logger_name += f'.{child}'
 
     return logging.getLogger(logger_name)
