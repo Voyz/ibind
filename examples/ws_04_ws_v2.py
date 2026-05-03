@@ -14,32 +14,49 @@ import os
 import time
 from typing import List
 
-from ibind import ibind_logs_initialize
-from ibkr_ws_v2.ibkr_events import IbkrWsKey
-from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription
-from ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
-from ws_v2.events import LogSink, QueueSink
-from ws_v2.subscriptions import SubscriptionHandle
+from ibind import events, IbkrWsClientV2, LogSink, QueueSink, CallbackSink, CompositeSink, ibind_logs_initialize
+from ibind.subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription, SubscriptionHandle
 
 ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 
-queue_sink = QueueSink(list(IbkrWsKey))
+# Queue Sink - queue-based event consumer
+queue_sink = QueueSink()
+
+# Callback Sink - callback-based event consumer
+callback_sink = CallbackSink()
+
+
+def on_market_data(event: events.MarketData):
+    print(event)
+
+def on_market_history(event: events.MarketHistory):
+    print(event)
+
+def on_lifecycle(event: events.LifecycleEvent):
+    print(event)
+
+callback_sink.on(events.MarketData, on_market_data)
+callback_sink.on(events.MarketHistory, on_market_data)
+callback_sink.on(events.WsOpen, on_lifecycle)
+callback_sink.on(events.WsClose, on_lifecycle)
+callback_sink.on(events.WsError, on_lifecycle)
+callback_sink.on(events.WsAuthenticated, on_lifecycle)
+callback_sink.on(events.WsReady, on_lifecycle)
+callback_sink.on(events.WsDegraded, on_lifecycle)
+
+# Log Sink - useful for debugging
+log_sink = LogSink()
+
+# Composite Sink - allows us to use all above sinks at once
+composite_sink = CompositeSink(callback_sink, log_sink)
 
 # ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 # ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=LogSink())
-ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=queue_sink)
+ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=composite_sink)
 
-# def stop(_, _1):
-#     print('exit')
-#     ws_client.shutdown()
-#     print('done')
-#     return False
-#
-# signal.signal(signal.SIGINT, stop)
-# signal.signal(signal.SIGTERM, stop)
 
 ws_client.start()
 
@@ -61,8 +78,6 @@ subs = [
     # tr_sub
 ]
 
-
-
 sub_handles: List[SubscriptionHandle] = []
 for sub in subs:
     handle = ws_client.subscribe(sub)
@@ -77,8 +92,8 @@ for handle in sub_handles:
 try:
     while ws_client.is_running():
         for sub in subs:
-            while not queue_sink.empty(sub.key):
-                ev = queue_sink.get(sub.key)
+            while not queue_sink.empty(sub.event_type):
+                ev = queue_sink.get(sub.event_type)
                 print(ev)
 
         time.sleep(1)
@@ -98,35 +113,5 @@ for handle in sub_handles:
 #
 # for handle in unsub_handles:
 #     handle.wait(10)
-# time.sleep(5)
+
 ws_client.shutdown()
-
-# requests = [
-#     {'channel': 'md+265598', 'data': {'fields': ['55', '71', '84', '86', '88', '85', '87', '7295', '7296', '70']}},
-#     {'channel': 'or'},
-#     {'channel': 'tr'},
-#     {'channel': f'sd+{account_id}'},
-#     {'channel': f'ld+{account_id}'},
-#     {'channel': 'pl'},
-# ]
-#
-#
-#
-
-#
-# for request in requests:
-#     while not ws_client.subscribe(**request):
-#         time.sleep(1)
-#
-# while ws_client.running:
-#     try:
-#         for qa in queue_accessors:
-#             while not qa.empty():
-#                 print(str(qa), qa.get())
-#
-#         time.sleep(1)
-#     except KeyboardInterrupt:
-#         print('KeyboardInterrupt')
-#         break
-#
-# stop(None, None)
