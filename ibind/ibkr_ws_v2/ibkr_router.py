@@ -5,7 +5,7 @@ from typing import Dict
 from client import ibkr_definitions
 from client.ibkr_utils import extract_conid
 from ibkr_ws_v2 import ibkr_events
-from ibkr_ws_v2.ibkr_events import GenericIbkrEvent, IbkrWsKey
+from ibkr_ws_v2.ibkr_events import GenericIbkrEvent, get_ibkr_topic_event, IbkrTopicEvent
 from support.logs import project_logger
 from support.py_utils import UNDEFINED, OneOrMany
 from ws_v2.events import WsEvent
@@ -18,7 +18,7 @@ def parse_raw_message(raw_message: str):
     topic = message.get('topic', UNDEFINED)
 
     if topic is UNDEFINED:
-        return message, None, None, None, None
+        return message, None, None
 
     data = message.get('args', {})
 
@@ -33,7 +33,7 @@ class IbkrRouter():
     ):
         self._log_raw_messages = log_raw_messages
         self._unwrap_market_data = unwrap_market_data
-        self._server_id_conid_pairs: Dict[IbkrWsKey, Dict[str, str]] = defaultdict(dict)
+        self._server_id_conid_pairs: Dict[type[IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)
 
     def _preprocess_market_data_message(self, data: dict) -> OneOrMany[WsEvent]:
         """
@@ -53,12 +53,12 @@ class IbkrRouter():
         return ibkr_events.MarketData(conid=str(data['conid']), data=unwrapped_data)
 
     def _preprocess_market_history_message(self, data: dict) -> OneOrMany[WsEvent]:
-        mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
+        mh_server_id_conid_pairs = self._server_id_conid_pairs[ibkr_events.MarketHistory]
         events = []
         conid = extract_conid(data)
         if 'serverId' in data and data['serverId'] not in mh_server_id_conid_pairs:
             mh_server_id_conid_pairs[data['serverId']] = str(conid)
-            events.append(ibkr_events.ServerId(conid=str(conid), server_id=data['serverId'], target_key=IbkrWsKey.MARKET_HISTORY))
+            events.append(ibkr_events.ServerId(conid=str(conid), server_id=data['serverId'], target_event_type=ibkr_events.MarketHistory))
 
         events.append(ibkr_events.MarketHistory(conid=str(conid), data=data))
         return events
@@ -99,26 +99,27 @@ class IbkrRouter():
 
     def _handle_subscribed_message(self, topic: str, data: dict) -> OneOrMany[WsEvent] | None:
         try:
-            ibkr_ws_key = IbkrWsKey.from_topic(topic[1:3])
+            # ibkr_ws_key = IbkrWsKey.from_topic(topic[1:3])
+            event_type = get_ibkr_topic_event(topic[1:3])
         except ValueError:
             # ValueError means we don't support this topic
             return None
 
-        if ibkr_ws_key == IbkrWsKey.ACCOUNT_SUMMARY:
+        if event_type == ibkr_events.AccountSummary:
             return self._preprocess_account_summary(data)
-        elif ibkr_ws_key == IbkrWsKey.ACCOUNT_LEDGER:
+        elif event_type == ibkr_events.AccountLedger:
             return self._preprocess_account_ledger(data)
-        elif ibkr_ws_key == IbkrWsKey.MARKET_DATA:
+        elif event_type == ibkr_events.MarketData:
             return self._preprocess_market_data_message(data)
-        elif ibkr_ws_key == IbkrWsKey.MARKET_HISTORY:
+        elif event_type == ibkr_events.MarketHistory:
             return self._preprocess_market_history_message(data)
-        elif ibkr_ws_key == IbkrWsKey.PRICE_LADDER:
+        elif event_type == ibkr_events.PriceLadder:
             return ibkr_events.PriceLadder(data=data)
-        elif ibkr_ws_key == IbkrWsKey.ORDERS:
+        elif event_type == ibkr_events.Orders:
             return ibkr_events.Orders(data=data)
-        elif ibkr_ws_key == IbkrWsKey.PNL:
+        elif event_type == ibkr_events.Pnl:
             return ibkr_events.Pnl(data=data)
-        elif ibkr_ws_key == IbkrWsKey.TRADES:
+        elif event_type == ibkr_events.Trades:
             return ibkr_events.Trades(data=data)
         else:
             _LOGGER.error(f'{self}: Unhandled subscribed message: {data}')
@@ -160,12 +161,12 @@ class IbkrRouter():
 
     def _handle_market_history_unsubscribe(self, data) -> OneOrMany[WsEvent]:
         server_id = data['message'].split('Unsubscribed ')[-1]
-        mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
+        mh_server_id_conid_pairs = self._server_id_conid_pairs[ibkr_events.MarketHistory]
         if server_id in mh_server_id_conid_pairs:
             conid = mh_server_id_conid_pairs[server_id]
             _LOGGER.info(f'{self}: Received unsubscribing confirmation for server_id={server_id!r}, conid={conid!r}.')
             if conid is not None:
-                return ibkr_events.Unsubscription(target_key=IbkrWsKey.MARKET_HISTORY, conid=str(conid))
+                return ibkr_events.Unsubscription(target_event_type=ibkr_events.MarketHistory, conid=str(conid))
 
             _LOGGER.warning(f'{self}: Unknown conid={conid!r}. Cannot mark the subscription as unsubscribed.')
         else:
@@ -183,13 +184,12 @@ class IbkrRouter():
 
         elif 'result' in message:
             if message['result'] == 'unsubscribed from summary':
-                return ibkr_events.Unsubscription(target_key=IbkrWsKey.ACCOUNT_SUMMARY)
+                return ibkr_events.Unsubscription(target_event_type=ibkr_events.AccountSummary)
             elif message['result'] == 'unsubscribed from ledger':
-                return ibkr_events.Unsubscription(target_key=IbkrWsKey.ACCOUNT_LEDGER)
+                return ibkr_events.Unsubscription(target_event_type=ibkr_events.AccountLedger)
 
         _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
         return GenericIbkrEvent(message=message)
-
 
     def route(self, raw_message: str) -> OneOrMany[WsEvent]:
         if self._log_raw_messages:
@@ -231,7 +231,6 @@ class IbkrRouter():
                 _LOGGER.error(f'{self}: topic "{topic}" subscribed but lacking a handler. Message: {message}')
                 events = GenericIbkrEvent(message=message, topic=topic, data=arguments)
             return events
-
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'

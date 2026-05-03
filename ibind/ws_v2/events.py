@@ -3,13 +3,13 @@ from collections import defaultdict
 from datetime import datetime
 from queue import Queue, Full, Empty
 from threading import Thread, Event
-from typing import Hashable, Protocol, Callable, TypeVar, List, Dict, Any
+from typing import Protocol, Callable, TypeVar, List, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from base.queue_controller import QueueAccessor
 from support.logs import project_logger
-from support.py_utils import OneOrMany, exception_to_string, tname, ensure_list_arg
+from support.py_utils import OneOrMany, exception_to_string, tname
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -22,7 +22,6 @@ class WsEvent(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     received_at: datetime = Field(default_factory=datetime.now)
-    key: Hashable
 
     def __str__(self):
         return self._format()
@@ -56,32 +55,32 @@ class WsEvent(BaseModel):
         return f"{self.__class__.__name__}({fields})"
 
 
-class ClientInternalEvent(WsEvent):
-    key: str = 'CLIENT_INTERNAL'
-
-
-class WsOpen(ClientInternalEvent):
+class LifecycleEvent(WsEvent):
     ...
 
 
-class WsAuthenticated(ClientInternalEvent):
+class WsOpen(LifecycleEvent):
     ...
 
 
-class WsDegraded(ClientInternalEvent):
+class WsAuthenticated(LifecycleEvent):
     ...
 
 
-class WsReady(ClientInternalEvent):
+class WsDegraded(LifecycleEvent):
     ...
 
 
-class WsClose(ClientInternalEvent):
+class WsReady(LifecycleEvent):
+    ...
+
+
+class WsClose(LifecycleEvent):
     close_status_code: int | None
     close_msg: str | None
 
 
-class WsError(ClientInternalEvent):
+class WsError(LifecycleEvent):
     model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
     error: Exception
 
@@ -97,7 +96,7 @@ class EventSink(Protocol):
 
 class LogSink:
     def emit(self, event: WsEvent) -> None:
-        _LOGGER.debug(f'{event.key}: {str(event)}')
+        _LOGGER.debug(event)
 
 
 class NoopSink:
@@ -127,38 +126,30 @@ class CallbackSink:
 
 
 class QueueSink:
-    def __init__(self, event_types: List[Hashable]):
-        self._queues = {
-            'CLIENT_INTERNAL': Queue()
-        }
-        self.register_queues(event_types)
+    def __init__(self):
+        self._queues = {}
 
-    @ensure_list_arg('keys')
-    def register_queues(self, keys: OneOrMany[Hashable]):
-        for key in keys:
-            if key not in self._queues:
-                self._queues[str(key)] = Queue()
+    def new_queue_accessor(self, event_type: type[WsEvent]) -> QueueAccessor:
+        return QueueAccessor(self._get_queue(event_type), event_type)
 
-    def new_queue_accessor(self, key: Hashable) -> QueueAccessor:
-        return QueueAccessor(self._get_queue(key), key)
-
-    def _get_queue(self, key: Hashable) -> Queue:  # pragma: no cover
+    def _get_queue(self, event_type: type[WsEvent]) -> Queue:  # pragma: no cover
         try:
-            return self._queues[str(key)]
+            return self._queues[event_type]
         except KeyError:
-            raise AttributeError(f'Invalid queue key: "{key}", expected: {list(self._queues.keys())}')
+            self._queues[event_type] = Queue()
+            return self._queues[event_type]
 
-    def get(self, key: Hashable, block: bool = False, timeout=None) -> Any:
+    def get(self, event_type: type[WsEvent], block: bool = False, timeout=None) -> Any:
         try:
-            return self._get_queue(key).get(block=block, timeout=timeout)
+            return self._get_queue(event_type).get(block=block, timeout=timeout)
         except Empty:
             return None
 
-    def empty(self, key: Hashable) -> bool:
-        return self._get_queue(key).empty()
+    def empty(self, event_type: type[WsEvent]) -> bool:
+        return self._get_queue(event_type).empty()
 
     def emit(self, event: WsEvent) -> None:
-        queue = self._get_queue(event.key)
+        queue = self._get_queue(type(event))
         queue.put(event)
 
 

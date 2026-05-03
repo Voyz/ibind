@@ -2,7 +2,7 @@ import copy
 import time
 from enum import Enum
 from threading import Condition, RLock
-from typing import Dict, Optional, Callable, Protocol, Tuple, Hashable, Literal
+from typing import Dict, Optional, Callable, Protocol, Tuple, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,7 +15,6 @@ _LOGGER = project_logger('ibkr_ws_client')
 
 class Subscription(BaseModel):
     model_config = ConfigDict(frozen=True)
-    key: Hashable
     expiry_seconds: int | None = None
 
     @property
@@ -39,19 +38,12 @@ class Subscription(BaseModel):
     def binding_key(self):
         return self.subscribe_payload()
 
-    def __hash__(self):
-        if hasattr(self, '_hash'):
-            return self._hash
-        _hash = hash(self.binding_key())
-        setattr(self, '_hash', _hash)
-        return _hash
-
     def __str__(self):
         return f'{self.__class__.__qualname__}({self.binding_key()})'
 
 
 class SubscriptionResolver(Protocol):
-    def resolve_binding_key(self, event) -> Tuple[bool, str]:
+    def resolve_binding_key(self, event: WsEvent) -> Tuple[bool, str]:
         ...
 
 
@@ -170,7 +162,7 @@ class SubscriptionController:
             else:
                 self._confirm_unsubscribed(binding_key)
 
-    def _make_attempt(self, binding:Binding):
+    def _make_attempt(self, binding: Binding):
         subscription = binding.subscription
         if binding.intent == BindingStatus.ACTIVE:
             payload = subscription.subscribe_payload()
@@ -214,7 +206,6 @@ class SubscriptionController:
         binding.last_attempt = now
         binding.attempts += 1
         self._make_attempt(binding)
-
 
     def reconcile_bindings(self):
         with self._condition:

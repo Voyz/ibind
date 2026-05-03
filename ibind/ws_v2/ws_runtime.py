@@ -380,8 +380,8 @@ class WsRuntime():
                 self._handle_transport_event(te)
             except Exception as e:
                 _LOGGER.error(f'{self}: Exception processing transport event {te}: {exception_to_string(e)}')
-                te.attempt += 1
-                if te.attempt > _MAX_TRANSPORT_EVENT_RETRIES:
+                te.add_attempt()
+                if te.get_attempt() > _MAX_TRANSPORT_EVENT_RETRIES:
                     _LOGGER.error(f'{self}: Max retries ({_MAX_TRANSPORT_EVENT_RETRIES}) reached for transport event {te}, dropping event.')
                     continue
                 retry_events.append(te)

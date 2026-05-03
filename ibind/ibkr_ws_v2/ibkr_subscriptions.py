@@ -3,62 +3,52 @@ from typing import Tuple
 
 from pydantic import Field
 
-from ibkr_ws_v2.ibkr_events import IbkrWsKey, AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary
+from ibkr_ws_v2 import ibkr_events
+from ibkr_ws_v2.ibkr_events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary, IbkrTopicEvent
 from support.py_utils import filter_none
 from ws_v2.subscriptions import Subscription, SubscriptionResolver
 
 
 def make_binding_key(
-    key: IbkrWsKey,
+    event_type: type[IbkrTopicEvent],
     conid: str = None,
     account_id=None,
     exchange=None
 ):
-    if key in [IbkrWsKey.MARKET_DATA, IbkrWsKey.MARKET_HISTORY]:
-        return f"{key.topic}+{conid}"
-    elif key in [IbkrWsKey.ACCOUNT_LEDGER, IbkrWsKey.ACCOUNT_SUMMARY]:
-        return f"{key.topic}+{account_id}"
-    elif key in [IbkrWsKey.PRICE_LADDER]:
-        return f"{key.topic}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
-    elif key in [IbkrWsKey.ORDERS, IbkrWsKey.PNL, IbkrWsKey.TRADES]:
-        return key.topic
+    if event_type in [ibkr_events.MarketData, ibkr_events.MarketHistory]:
+        return f"{event_type.topic}+{conid}"
+    elif event_type in [ibkr_events.AccountLedger, ibkr_events.AccountSummary]:
+        return f"{event_type.topic}+{account_id}"
+    elif event_type in [ibkr_events.PriceLadder]:
+        return f"{event_type.topic}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
+    elif event_type in [ibkr_events.Orders, ibkr_events.Pnl, ibkr_events.Trades]:
+        return event_type.topic
     else:
-        raise ValueError(f'Unsupported key: {key}')
+        raise ValueError(f'Unsupported event type: {event_type}')
 
 
 class IbkrSubscriptionResolver(SubscriptionResolver):
-    _register = [
-        MarketData,
-        AccountSummary,
-        AccountLedger,
-        MarketHistory,
-        Orders,
-        PriceLadder,
-        Pnl,
-        Trades,
-        Unsubscription
-    ]
-
     def __init__(self, account_id):
         self._account_id = account_id
 
     def _resolve_subscribing_event(self, event) -> str:
-        if event.key in [IbkrWsKey.MARKET_DATA, IbkrWsKey.MARKET_HISTORY]:
-            return make_binding_key(event.key, conid=event.conid)
-        elif event.key in [IbkrWsKey.ACCOUNT_LEDGER, IbkrWsKey.ACCOUNT_SUMMARY]:
-            return make_binding_key(event.key, account_id=event.account_id)
-        elif event.key in [IbkrWsKey.PRICE_LADDER]:
-            return make_binding_key(event.key, conid=event.conid, account_id=event.account_id, exchange=event.exchange)
-        elif event.key in [IbkrWsKey.ORDERS, IbkrWsKey.PNL, IbkrWsKey.TRADES]:
-            return make_binding_key(event.key)
+        event_type = type(event)
+        if event_type in [ibkr_events.MarketData, ibkr_events.MarketHistory]:
+            return make_binding_key(event_type, conid=event.conid)
+        elif event_type in [ibkr_events.AccountLedger, ibkr_events.AccountSummary]:
+            return make_binding_key(event_type, account_id=event.account_id)
+        elif event_type in [ibkr_events.PriceLadder]:
+            return make_binding_key(event_type, conid=event.conid, account_id=event.account_id, exchange=event.exchange)
+        elif event_type in [ibkr_events.Orders, ibkr_events.Pnl, ibkr_events.Trades]:
+            return make_binding_key(event_type)
         else:
             raise ValueError(f'Unsupported event: {event}')
 
     def _resolve_unsubscribing_event(self, event) -> str:
-        return make_binding_key(event.target_key, event.conid, self._account_id)
+        return make_binding_key(event.target_event_type, event.conid, self._account_id)
 
     def resolve_binding_key(self, event) -> Tuple[bool, str] | Tuple[None, None]:
-        if type(event) not in self._register:
+        if not (isinstance(event, IbkrTopicEvent) or isinstance(event, Unsubscription)):
             return None, None
 
         if isinstance(event, Unsubscription):
@@ -68,15 +58,15 @@ class IbkrSubscriptionResolver(SubscriptionResolver):
 
 
 class IbkrSubscription(Subscription):
-    key: IbkrWsKey
+    event_type: type[IbkrTopicEvent]
 
     @property
     def topic(self) -> str:
-        return self.key.topic
+        return self.event_type.topic
 
 
 class AccountSummarySubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.ACCOUNT_SUMMARY
+    event_type: type[IbkrTopicEvent] = AccountSummary
     account_id: str
 
     def subscribe_payload(self) -> str:
@@ -94,11 +84,11 @@ class AccountSummarySubscription(IbkrSubscription):
         return True
 
     def binding_key(self):
-        return make_binding_key(self.key, account_id=self.account_id)
+        return make_binding_key(self.event_type, account_id=self.account_id)
 
 
 class AccountLedgerSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.ACCOUNT_LEDGER
+    event_type: type[IbkrTopicEvent] = AccountLedger
     account_id: str
 
     def subscribe_payload(self) -> str:
@@ -116,11 +106,11 @@ class AccountLedgerSubscription(IbkrSubscription):
         return True
 
     def binding_key(self):
-        return make_binding_key(self.key, account_id=self.account_id)
+        return make_binding_key(self.event_type, account_id=self.account_id)
 
 
 class MarketDataSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.MARKET_DATA
+    event_type: type[IbkrTopicEvent] = MarketData
     conid: str
     fields: tuple[str, ...]
 
@@ -140,11 +130,11 @@ class MarketDataSubscription(IbkrSubscription):
         return False
 
     def binding_key(self):
-        return make_binding_key(self.key, conid=self.conid)
+        return make_binding_key(self.event_type, conid=self.conid)
 
 
 class MarketHistorySubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.MARKET_HISTORY
+    event_type: type[IbkrTopicEvent] = MarketHistory
     conid: str
     exchange: str = None
     period: str = None
@@ -152,7 +142,7 @@ class MarketHistorySubscription(IbkrSubscription):
     outside_rth: bool = None
     source: str = None
     format: str = None
-    server_id: list = Field(default_factory=list) # uses list to allow writing despite frozen model
+    server_id: list = Field(default_factory=list)  # uses list to allow writing despite frozen model
 
     def subscribe_payload(self) -> str:
         data = {
@@ -192,11 +182,11 @@ class MarketHistorySubscription(IbkrSubscription):
         return self.server_id[0]
 
     def binding_key(self):
-        return make_binding_key(self.key, conid=self.conid)
+        return make_binding_key(self.event_type, conid=self.conid)
 
 
 class OrdersSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.ORDERS
+    event_type: type[IbkrTopicEvent] = Orders
     filter: str = None
 
     def subscribe_payload(self) -> str:
@@ -215,11 +205,11 @@ class OrdersSubscription(IbkrSubscription):
         return False
 
     def binding_key(self):
-        return make_binding_key(self.key)
+        return make_binding_key(self.event_type)
 
 
 class PriceLadderSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.PRICE_LADDER
+    event_type: type[IbkrTopicEvent] = PriceLadder
     conid: str
     account_id: str
     exchange: str
@@ -239,11 +229,11 @@ class PriceLadderSubscription(IbkrSubscription):
         return False
 
     def binding_key(self):
-        return make_binding_key(self.key, conid=self.conid, account_id=self.account_id, exchange=self.exchange)
+        return make_binding_key(self.event_type, conid=self.conid, account_id=self.account_id, exchange=self.exchange)
 
 
 class PnlSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.PNL
+    event_type: type[IbkrTopicEvent] = Pnl
 
     def subscribe_payload(self) -> str:
         return 'spl'
@@ -260,11 +250,11 @@ class PnlSubscription(IbkrSubscription):
         return False
 
     def binding_key(self):
-        return make_binding_key(self.key)
+        return make_binding_key(self.event_type)
 
 
 class TradesSubscription(IbkrSubscription):
-    key: IbkrWsKey = IbkrWsKey.TRADES
+    event_type: type[IbkrTopicEvent] = Trades
     realtime_updates_only: bool | None = None
     days: int | None = None
 
@@ -289,4 +279,4 @@ class TradesSubscription(IbkrSubscription):
         return False
 
     def binding_key(self):
-        return make_binding_key(self.key)
+        return make_binding_key(self.event_type)

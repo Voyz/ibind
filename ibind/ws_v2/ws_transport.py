@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from typing import Callable, Any, cast
+from typing import Callable, Any, cast, List
 
 from pydantic import BaseModel, ConfigDict, Field
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
@@ -14,9 +14,15 @@ _LOGGER = project_logger('ibkr_ws_client')
 
 
 class TransportEvent(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
     received_at: datetime = Field(default_factory=datetime.now)
-    attempt: int = 0
+    attempt: List[int] = Field(default_factory=lambda: [0])
+
+    def add_attempt(self):
+        self.attempt[0] += 1
+
+    def get_attempt(self):
+        return self.attempt[0]
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'
