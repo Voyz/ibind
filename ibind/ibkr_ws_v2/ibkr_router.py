@@ -10,7 +10,7 @@ from support.logs import project_logger
 from support.py_utils import UNDEFINED, OneOrMany
 from ws_v2.events import WsEvent
 
-_LOGGER = project_logger('websocket')
+_LOGGER = project_logger('ibkr_ws_client')
 
 
 def parse_raw_message(raw_message: str):
@@ -22,11 +22,7 @@ def parse_raw_message(raw_message: str):
 
     data = message.get('args', {})
 
-    # subscribed is the indicator of whether it was a subscription or unsubscription, defined by the first letter
-    # channel is the actual channel we received the information about
-    subscribed, channel = topic[0], topic[1:]
-
-    return message, topic, data, subscribed, channel
+    return message, topic, data
 
 
 class IbkrRouter():
@@ -50,12 +46,11 @@ class IbkrRouter():
         if not self._unwrap_market_data:
             return ibkr_events.MarketData(conid=data['conid'], data=data)
 
-        fields = {}
+        unwrapped_data = {}
         for key, value in data.items():
             if key in ibkr_definitions.snapshot_by_id:
-                # result[ibkr_definitions.snapshot_by_id[key]] = value
-                fields[ibkr_definitions.snapshot_by_id[key]] = value
-        return ibkr_events.MarketData(conid=str(data['conid']), fields=fields)
+                unwrapped_data[ibkr_definitions.snapshot_by_id[key]] = value
+        return ibkr_events.MarketData(conid=str(data['conid']), data=unwrapped_data)
 
     def _preprocess_market_history_message(self, data: dict) -> OneOrMany[WsEvent]:
         mh_server_id_conid_pairs = self._server_id_conid_pairs[IbkrWsKey.MARKET_HISTORY]
@@ -102,11 +97,11 @@ class IbkrRouter():
         event = ibkr_events.AccountSummary(data=summary, account_id=account_id)
         return event
 
-    def _handle_subscribed_message(self, channel: str, data: dict) -> OneOrMany[WsEvent] | None:
+    def _handle_subscribed_message(self, topic: str, data: dict) -> OneOrMany[WsEvent] | None:
         try:
-            ibkr_ws_key = IbkrWsKey.from_channel(channel[:2])
+            ibkr_ws_key = IbkrWsKey.from_topic(topic[1:3])
         except ValueError:
-            # ValueError means we don't support this channel
+            # ValueError means we don't support this topic
             return None
 
         if ibkr_ws_key == IbkrWsKey.ACCOUNT_SUMMARY:
@@ -199,7 +194,7 @@ class IbkrRouter():
     def route(self, raw_message: str) -> OneOrMany[WsEvent]:
         if self._log_raw_messages:
             _LOGGER.debug(f'{self}: Raw message: {raw_message}')
-        message, topic, arguments, subscribed, channel = parse_raw_message(raw_message)
+        message, topic, arguments = parse_raw_message(raw_message)
 
         if 'error' in message:
             return self._handle_error(message)
@@ -231,10 +226,10 @@ class IbkrRouter():
             return self._handle_error(message)
 
         else:
-            events = self._handle_subscribed_message(channel, message)
+            events = self._handle_subscribed_message(topic, message)
             if events is None:
-                _LOGGER.error(f'{self}: Channel "{channel}" subscribed but lacking a handler. Message: {message}')
-                events = GenericIbkrEvent(message=message, topic=topic, data=arguments, subscribed=subscribed, channel=channel)
+                _LOGGER.error(f'{self}: topic "{topic}" subscribed but lacking a handler. Message: {message}')
+                events = GenericIbkrEvent(message=message, topic=topic, data=arguments)
             return events
 
 

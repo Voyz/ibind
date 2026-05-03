@@ -5,18 +5,18 @@ from typing import Callable, Any, cast
 from pydantic import BaseModel, ConfigDict, Field
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 
+import var
 from ibind import ExternalBrokerError
 from support.logs import project_logger
 from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, NOOP
 
-_LOGGER = project_logger('websocket')
+_LOGGER = project_logger('ibkr_ws_client')
 
 
 class TransportEvent(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
-
     received_at: datetime = Field(default_factory=datetime.now)
-    wsa: WebSocketApp
+    attempt: int = 0
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'
@@ -32,7 +32,6 @@ class TransportClosed(TransportEvent):
 
 
 class TransportError(TransportEvent):
-    model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
     exception: Exception
 
 
@@ -57,16 +56,20 @@ class WsTransport():
         ping_timeout: float = 10,
         max_ping_interval: float = 20,
         connection_timeout: float = 5,
+        reconnect_timeout: float = 5,
+        skip_utf8_validation: bool = var.IBIND_WS_SKIP_UTF8_VALIDATION,
     ):
         self._url = url
         self._event_callback = event_callback
+        self._sslopt = sslopt
         self._get_cookie = get_cookie
         self._get_header = get_header
         self._ping_interval = ping_interval
         self._ping_timeout = ping_timeout
         self._max_ping_interval = max_ping_interval
         self._connection_timeout = connection_timeout
-        self._sslopt = sslopt
+        self._reconnect_timeout = reconnect_timeout
+        self._skip_utf8_validation = skip_utf8_validation
 
         self._running = False
         self._wsa: WebSocketApp | None = None
@@ -199,38 +202,46 @@ class WsTransport():
     def _on_open(self, wsa: WebSocketApp):
         if self._degraded:
             return
+
         if not self.check_cookie():
             self._wsa.close(status=STATUS_UNEXPECTED_CONDITION, timeout=self._connection_timeout)
             return
-        self._event_callback(TransportOpened(wsa=wsa))
+
+        self._event_callback(TransportOpened())
 
     def _on_message(self, wsa: WebSocketApp, message):
         if self._degraded:
             return
-        self._event_callback(TransportMessage(wsa=wsa, message=message))
+
+        self._event_callback(TransportMessage(message=message))
 
     def _on_close(self, wsa: WebSocketApp, close_status_code, close_msg):
         if self._degraded:
             return
-        self._event_callback(TransportClosed(wsa=wsa, close_status_code=close_status_code, close_msg=close_msg))
+
+        self._event_callback(TransportClosed(close_status_code=close_status_code, close_msg=close_msg))
 
     def _on_error(self, wsa: WebSocketApp, error):
         if self._degraded:
             return
-        self._event_callback(TransportError(wsa=wsa, exception=error))
+
+        self._event_callback(TransportError(exception=error))
 
     def _on_reconnect(self, wsa: WebSocketApp):
         if self._degraded:
             return
+
         if not self.check_cookie():
             self._wsa.close(status=STATUS_UNEXPECTED_CONDITION, timeout=self._connection_timeout)
             return
-        self._event_callback(TransportReconnect(wsa=wsa))
+
+        self._event_callback(TransportReconnect())
 
     def new_wsa(self):
         cookie = self.fetch_cookie()
         if cookie is UNDEFINED:
             return None
+
         self._cookie = cookie
         if cookie is not None:
             _LOGGER.info(f'{self}: Current cookie: {cookie}')
@@ -266,12 +277,6 @@ class WsTransport():
         self._running = True
 
         while self._running:
-            # status, reason = probe_ws_reachability(self._url, sslopt=self._sslopt, timeout=3)
-            # _LOGGER.debug(f'{self}: Probe result: {status}, {reason}')
-            # if status != ReachabilityStatus.OK:
-            #     time.sleep(5)
-            #     continue
-
             if self._wsa is None:
                 wsa = self.new_wsa()
                 if wsa is None:
@@ -284,7 +289,8 @@ class WsTransport():
                     ping_interval=self._ping_interval,
                     ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
                     sslopt=self._sslopt,
-                    reconnect=cast(int, self._connection_timeout)  # floats are de facto valid, casting only for the linter
+                    reconnect=cast(int, self._reconnect_timeout),  # floats are de facto valid, casting only for the linter
+                    skip_utf8_validation=self._skip_utf8_validation
                 )
                 _LOGGER.info(f'{self}: WSA run_forever stopped gracefully')
             except Exception as e:

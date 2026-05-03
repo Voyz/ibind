@@ -10,7 +10,7 @@ from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
 from ws_v2.events import WsEvent
 
-_LOGGER = project_logger('websocket')
+_LOGGER = project_logger('ibkr_ws_client')
 
 
 class Subscription(BaseModel):
@@ -116,9 +116,9 @@ class SubscriptionHandle:
 
 class SubscriptionController:
     """
-    Mixin which manages subscriptions to different channels using the WsClient.
+    Mixin which manages subscriptions to different topics using the WsClient.
 
-    This class handles the logic for subscribing and unsubscribing to various channels. It maintains a
+    This class handles the logic for subscribing and unsubscribing to various topics. It maintains a
     record of active subscriptions and provides methods to modify them. The class relies on a
     SubscriptionProcessor to create subscription and unsubscription payloads.
 

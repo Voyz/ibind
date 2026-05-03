@@ -3,15 +3,15 @@ from collections import defaultdict
 from datetime import datetime
 from queue import Queue, Full, Empty
 from threading import Thread, Event
-from typing import Hashable, Protocol, Callable, TypeVar, List, Dict
+from typing import Hashable, Protocol, Callable, TypeVar, List, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from base.queue_controller import QueueController
+from base.queue_controller import QueueAccessor
 from support.logs import project_logger
-from support.py_utils import OneOrMany, exception_to_string, tname
+from support.py_utils import OneOrMany, exception_to_string, tname, ensure_list_arg
 
-_LOGGER = project_logger('websocket')
+_LOGGER = project_logger('ibkr_ws_client')
 
 
 # ======================
@@ -94,12 +94,6 @@ class EventSink(Protocol):
     def emit(self, event: "WsEvent") -> None:
         pass
 
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
 
 class LogSink:
     def emit(self, event: WsEvent) -> None:
@@ -133,11 +127,39 @@ class CallbackSink:
 
 
 class QueueSink:
-    def __init__(self, queue_controller: QueueController):
-        self._queue_controller = queue_controller
+    def __init__(self, event_types: List[Hashable]):
+        self._queues = {
+            'CLIENT_INTERNAL': Queue()
+        }
+        self.register_queues(event_types)
+
+    @ensure_list_arg('keys')
+    def register_queues(self, keys: OneOrMany[Hashable]):
+        for key in keys:
+            if key not in self._queues:
+                self._queues[str(key)] = Queue()
+
+    def new_queue_accessor(self, key: Hashable) -> QueueAccessor:
+        return QueueAccessor(self._get_queue(key), key)
+
+    def _get_queue(self, key: Hashable) -> Queue:  # pragma: no cover
+        try:
+            return self._queues[str(key)]
+        except KeyError:
+            raise AttributeError(f'Invalid queue key: "{key}", expected: {list(self._queues.keys())}')
+
+    def get(self, key: Hashable, block: bool = False, timeout=None) -> Any:
+        try:
+            return self._get_queue(key).get(block=block, timeout=timeout)
+        except Empty:
+            return None
+
+    def empty(self, key: Hashable) -> bool:
+        return self._get_queue(key).empty()
 
     def emit(self, event: WsEvent) -> None:
-        self._queue_controller.put_to_queue(event.key, event)
+        queue = self._get_queue(event.key)
+        queue.put(event)
 
 
 class CompositeSink:

@@ -15,8 +15,10 @@ import time
 from typing import List
 
 from ibind import ibind_logs_initialize
-from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PriceLadderSubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription
+from ibkr_ws_v2.ibkr_events import IbkrWsKey
+from ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription
 from ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
+from ws_v2.events import LogSink, QueueSink
 from ws_v2.subscriptions import SubscriptionHandle
 
 ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
@@ -24,8 +26,11 @@ ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
 
+queue_sink = QueueSink(list(IbkrWsKey))
+
 # ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
-ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id)
+# ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=LogSink())
+ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=queue_sink)
 
 # def stop(_, _1):
 #     print('exit')
@@ -56,6 +61,8 @@ subs = [
     # tr_sub
 ]
 
+
+
 sub_handles: List[SubscriptionHandle] = []
 for sub in subs:
     handle = ws_client.subscribe(sub)
@@ -69,6 +76,11 @@ for handle in sub_handles:
 
 try:
     while ws_client.is_running():
+        for sub in subs:
+            while not queue_sink.empty(sub.key):
+                ev = queue_sink.get(sub.key)
+                print(ev)
+
         time.sleep(1)
 except KeyboardInterrupt:
     print('Interrupt')

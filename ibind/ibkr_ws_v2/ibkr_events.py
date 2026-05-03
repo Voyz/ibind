@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Any
 
 from pydantic import Field
 
@@ -8,7 +7,6 @@ from ws_v2.events import WsEvent
 
 class IbkrWsKey(Enum):
     # generic
-    UNCLASSIFIED = 'UNCLASSIFIED'
     GENERIC = 'GENERIC'
     UNSUBSCRIPTION = 'UNSUBSCRIPTION'
     SERVER_ID = 'SERVER_ID'
@@ -35,8 +33,8 @@ class IbkrWsKey(Enum):
     CLIENT_INTERNAL = 'CLIENT_INTERNAL'
 
     @classmethod
-    def from_channel(cls, channel):
-        channel_to_key = {
+    def from_topic(cls, topic):
+        topic_to_key = {
             'sd': IbkrWsKey.ACCOUNT_SUMMARY,
             'ld': IbkrWsKey.ACCOUNT_LEDGER,
             'md': IbkrWsKey.MARKET_DATA,
@@ -46,17 +44,17 @@ class IbkrWsKey(Enum):
             'pl': IbkrWsKey.PNL,
             'tr': IbkrWsKey.TRADES,
         }
-        if channel in channel_to_key:
-            return channel_to_key[channel]
-        raise ValueError(f"No enum member associated with channel '{channel}'")
+        if topic in topic_to_key:
+            return topic_to_key[topic]
+        raise ValueError(f"No enum member associated with topic '{topic}'")
 
     @property
-    def channel(self):
+    def topic(self):
         """
-        Gets the solicited channel string associated with the enum member.
+        Gets the solicited topic string associated with the enum member.
 
         Returns:
-            str: The channel string corresponding to the enum member.
+            str: The topic string corresponding to the enum member.
         """
         return {
             IbkrWsKey.ACCOUNT_SUMMARY: 'sd',
@@ -69,14 +67,15 @@ class IbkrWsKey(Enum):
             IbkrWsKey.TRADES: 'tr',
         }[self]
 
+    def __str__(self):
+        return self.value
+
 
 class GenericIbkrEvent(WsEvent):
-    key: str = IbkrWsKey.UNCLASSIFIED
+    key: str = IbkrWsKey.GENERIC
     message: dict | None
     topic: str | None = None
     data: dict | None = None
-    subscribed: str | None = None
-    channel: str | None = None
 
 
 # ===================
@@ -145,7 +144,6 @@ class MarketData(WsEvent):
     key: IbkrWsKey = IbkrWsKey.MARKET_DATA
     conid: str
     data: dict = Field(default_factory=dict)
-    fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class MarketHistory(WsEvent):

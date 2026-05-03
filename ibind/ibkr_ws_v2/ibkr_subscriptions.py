@@ -15,13 +15,13 @@ def make_binding_key(
     exchange=None
 ):
     if key in [IbkrWsKey.MARKET_DATA, IbkrWsKey.MARKET_HISTORY]:
-        return f"{key.channel}+{conid}"
+        return f"{key.topic}+{conid}"
     elif key in [IbkrWsKey.ACCOUNT_LEDGER, IbkrWsKey.ACCOUNT_SUMMARY]:
-        return f"{key.channel}+{account_id}"
+        return f"{key.topic}+{account_id}"
     elif key in [IbkrWsKey.PRICE_LADDER]:
-        return f"{key.channel}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
+        return f"{key.topic}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
     elif key in [IbkrWsKey.ORDERS, IbkrWsKey.PNL, IbkrWsKey.TRADES]:
-        return key.channel
+        return key.topic
     else:
         raise ValueError(f'Unsupported key: {key}')
 
@@ -72,7 +72,7 @@ class IbkrSubscription(Subscription):
 
     @property
     def topic(self) -> str:
-        return self.key.channel
+        return self.key.topic
 
 
 class AccountSummarySubscription(IbkrSubscription):

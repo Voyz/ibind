@@ -102,6 +102,9 @@ IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
 """ Whether raw WebSocket messages should be logged. """
 
+IBIND_WS_SKIP_UTF8_VALIDATION = to_bool(os.environ.get('IBIND_WS_SKIP_UTF8_VALIDATION', True))
+""" Whether to skip UTF-8 validation for WebSocket messages. """
+
 ##### OAuth common #####
 
 IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))

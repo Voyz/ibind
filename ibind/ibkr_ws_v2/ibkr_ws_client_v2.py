@@ -9,11 +9,12 @@ from ibkr_ws_v2 import ibkr_events
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from support.logs import project_logger
-from ws_v2.events import EventSink, LogSink, CallbackSink, CompositeSink, Router, AsyncSink
-from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle
+from support.py_utils import OneOrMany, ensure_list_arg
+from ws_v2.events import EventSink, LogSink, CallbackSink, Router, AsyncSink, NoopSink
+from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle, BindingStatus
 from ws_v2.ws_runtime import WsRuntime, WsState
 
-_LOGGER = project_logger('websocket')
+_LOGGER = project_logger('ibkr_ws_client')
 
 _DEFAULT_CYCLE_INTERVAL = 0.25
 
@@ -58,15 +59,15 @@ class IbkrWsClientV2():
         self._use_oauth = use_oauth
         self._recreate_subscriptions_on_reconnect = recreate_subscriptions_on_reconnect
 
-        self._queue_controller = QueueController[IbkrWsKey]()
-        self._queue_controller.register_queues(list(IbkrWsKey))
+        # self._queue_controller = QueueController[IbkrWsKey]()
+        # self._queue_controller.register_queues(list(IbkrWsKey))
 
         if sink is None:
             # self._queue_controller.register_queues(['CLIENT_INTERNAL', 'IBKR'])
             # sink = QueueSink(queue_controller=self._queue_controller)
 
-            sink = LogSink()
-            # sink = NoopSink()
+            # sink = LogSink()
+            sink = NoopSink()
 
         self._internal_sink = CallbackSink()
         self._register_internal_callbacks()
@@ -91,6 +92,7 @@ class IbkrWsClientV2():
             internal_sink=self._internal_sink,
             router=router,
             subscription_resolver=subscription_resolver,
+            connection_timeout=5,
             get_cookie=self._get_cookie,
             get_header=self._get_header,
         )
@@ -167,6 +169,9 @@ class IbkrWsClientV2():
             self._handle_mh_unsubscription(subscription)
         return self._runtime.subscription_controller.unsubscribe(subscription)
 
+    def get_status(self, binding_key: str) -> BindingStatus:
+        return self._runtime.subscription_controller.get_status(binding_key)
+
     def get_server_id(self, key: IbkrWsKey, conid: str) -> str:
         return self._conid_server_id_pairs[key][conid]
 
@@ -185,8 +190,20 @@ class IbkrWsClientV2():
         )
         subscription.set_server_id(server_id)
 
+    @ensure_list_arg('subscription_handles')
+    def wait_all(self, subscription_handles: OneOrMany[SubscriptionHandle], timeout: float | None = None) -> List[SubscriptionHandle]:
+        failed = []
+        for subscription_handle in subscription_handles:
+            if not (subscription_handle.wait(timeout)):
+                failed.append(subscription_handle)
+        return failed
+
     def is_running(self) -> bool:
         return self._runtime.is_running()
+
+
+    def get_state(self) -> WsState:
+        return self._runtime.get_state()
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'
