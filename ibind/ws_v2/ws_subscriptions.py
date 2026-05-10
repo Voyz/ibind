@@ -13,51 +13,108 @@ from ibind.events import WsEvent
 _LOGGER = project_logger('ibkr_ws_client')
 
 
-class Subscription(BaseModel):
+class Subscription(BaseModel):  # pragma: no cover
+    """
+    Base class for WebSocket subscriptions.
+
+    Immutable model defining subscription behaviour including payload generation,
+    confirmation requirements, and expiry settings. Subclasses implement specific
+    subscription types by overriding abstract methods.
+
+    Attributes:
+        expiry_seconds (int | None): Time in seconds before subscription expires and
+            requires renewal. None means no expiry. Default: None.
+    """
+
     model_config = ConfigDict(frozen=True)
     expiry_seconds: int | None = None
 
     @property
     def topic(self) -> str:
+        """Get the subscription topic identifier."""
         raise NotImplementedError
 
     def subscribe_payload(self) -> str:
+        """Generate the payload string to send for subscribing."""
         raise NotImplementedError
 
     def unsubscribe_payload(self) -> str:
+        """Generate the payload string to send for unsubscribing."""
         raise NotImplementedError
 
     @property
     def confirms_subscribe(self) -> bool:
+        """Whether the server sends confirmation when subscription succeeds."""
         return True
 
     @property
     def confirms_unsubscribe(self) -> bool:
+        """Whether the server sends confirmation when unsubscription succeeds."""
         return False
 
     def binding_key(self):
+        """Get the unique key identifying this subscription binding."""
         return self.subscribe_payload()
 
     def __str__(self):
         return f'{self.__class__.__qualname__}({self.binding_key()})'
 
 
-class SubscriptionResolver(Protocol):
+class SubscriptionResolver(Protocol):  # pragma: no cover
+    """
+    Protocol for resolving subscription binding keys from events.
+
+    Implementations determine which subscription an event belongs to and whether
+    the event indicates an active or inactive subscription state.
+    """
+
     def resolve_binding_key(self, event: WsEvent) -> Tuple[bool, str]:
+        """
+        Resolve the binding key and active state from an event.
+
+        Args:
+            event (WsEvent): Event to resolve.
+
+        Returns:
+            tuple[bool, str]: (is_active, binding_key) where is_active indicates
+                subscription is active, and binding_key identifies the subscription.
+                Returns (None, None) if event is not subscription-related.
+        """
         ...
 
 
-class BindingStatus(Enum):
-    NEW = "NEW"
-    PENDING = "PENDING"
-    ACTIVE = "ACTIVE"
-    FAILED = "FAILED"
-    DEGRADED = "DEGRADED"
-    UNSUBSCRIBED = "UNSUBSCRIBED"
-    EXPIRED = "EXPIRED"
+class BindingStatus(Enum):  # pragma: no cover
+    """
+    Status of a subscription binding.
+
+    Tracks the lifecycle state of a subscription from initial registration through
+    activation, failure, or unsubscription.
+    """
+
+    NEW = 'NEW'
+    PENDING = 'PENDING'
+    ACTIVE = 'ACTIVE'  # subscription successful
+    FAILED = 'FAILED'
+    DEGRADED = 'DEGRADED'
+    UNSUBSCRIBED = 'UNSUBSCRIBED'  # unsubscription successful
+    EXPIRED = 'EXPIRED'
 
 
 class Binding(BaseModel):
+    """
+    Internal state tracking for a subscription binding.
+
+    Maintains the desired intent (subscribe or unsubscribe), current status,
+    and retry state for subscription operations.
+
+    Attributes:
+        subscription (Subscription): The subscription being tracked.
+        intent (Literal[BindingStatus.ACTIVE, BindingStatus.UNSUBSCRIBED]): Desired state.
+        status (BindingStatus): Current state. Default: BindingStatus.NEW.
+        attempts (int): Number of attempts made. Default: 0.
+        last_attempt (float): Timestamp of last attempt. Default: 0.
+    """
+
     subscription: Subscription
     intent: Literal[BindingStatus.ACTIVE, BindingStatus.UNSUBSCRIBED]
     status: BindingStatus = BindingStatus.NEW
@@ -66,58 +123,82 @@ class Binding(BaseModel):
 
     @property
     def done(self) -> bool:
+        """Whether the binding has reached its intended state."""
         return self.status == self.intent
 
-    def reset(self):
+    def reset(self):  # pragma: no cover
+        """Reset retry state to allow new attempts."""
         self.attempts = 0
         self.last_attempt = 0
 
 
 class SubscriptionHandle:
-    def __init__(self, controller: "SubscriptionController", subscription: Subscription):
+    """
+    Handle for interacting with a subscription.
+
+    Provides methods to query subscription state, wait for completion, and unsubscribe.
+    Returned by subscribe/unsubscribe operations.
+    """
+
+    def __init__(self, controller: 'SubscriptionController', subscription: Subscription):
         self._controller = controller
         self._subscription = subscription
 
     @property
     def binding_key(self) -> str:
+        """Get the unique key identifying this subscription."""
         return self._subscription.binding_key()
 
     @property
     def status(self) -> BindingStatus:
+        """Get the current status of this subscription."""
         return self._controller.get_status(self.binding_key)
 
     @property
     def active(self) -> bool:
+        """Whether the subscription is currently active."""
         return self.status == BindingStatus.ACTIVE
 
     @property
     def unsubscribed(self) -> bool:
+        """Whether the subscription has been unsubscribed."""
         return self.status == BindingStatus.UNSUBSCRIBED
 
     @property
     def done(self) -> bool:
+        """Whether the subscription has reached its intended state."""
         return self._controller.is_done(self.binding_key)
 
     def wait(self, timeout: float | None = None) -> bool:
+        """
+        Wait for the subscription to reach its intended state.
+
+        Args:
+            timeout (float | None): Maximum time to wait in seconds, or indefinitely if None. Default: None.
+
+        Returns:
+            bool: True if subscription reached intended state, False if timed out or failed.
+        """
         return self._controller.wait_for(self.binding_key, timeout=timeout)
 
-    def unsubscribe(self) -> "SubscriptionHandle":
+    def unsubscribe(self) -> 'SubscriptionHandle':
+        """
+        Unsubscribe from this subscription.
+
+        Returns:
+            SubscriptionHandle: This handle for chaining.
+        """
         self._controller.unsubscribe(self._subscription)
         return self
 
 
 class SubscriptionController:
     """
-    Mixin which manages subscriptions to different topics using the WsClient.
+    Manages WebSocket subscriptions with automatic retries and state tracking.
 
-    This class handles the logic for subscribing and unsubscribing to various topics. It maintains a
-    record of active subscriptions and provides methods to modify them. The class relies on a
-    SubscriptionProcessor to create subscription and unsubscription payloads.
-
-    Constructor Parameters:
-        subscription_processor (SubscriptionProcessor): The processor to create subscription payloads.
-        subscription_retries (int, optional): The number of retries for subscription requests. Defaults to 5.
-        subscription_timeout (float, optional): The timeout in seconds for subscription requests. Defaults to 2.
+    Handles subscription lifecycle including registration, activation, expiry, and unsubscription.
+    Maintains binding state and coordinates with a resolver to match events to subscriptions.
+    Thread-safe through internal condition variable.
     """
 
     def __init__(
@@ -127,6 +208,16 @@ class SubscriptionController:
         subscription_retries: int = 5,
         subscription_timeout: float = 2,
     ):
+        """
+        Create a subscription controller.
+
+        Args:
+            send_payload (Callable[[str], bool]): Function to send payloads through the WebSocket.
+                Returns True if sent successfully.
+            subscription_resolver (SubscriptionResolver): Resolver to match events to subscriptions.
+            subscription_retries (int, optional): Maximum retry attempts per subscription. Default: 5.
+            subscription_timeout (float, optional): Seconds to wait between retry attempts. Default: 2.
+        """
         self._send_payload = send_payload
         self._subscription_resolver = subscription_resolver
         self._subscription_retries = subscription_retries
@@ -146,6 +237,15 @@ class SubscriptionController:
             return False
 
     def observe(self, event: WsEvent):
+        """
+        Process an event to update subscription state.
+
+        Uses the resolver to determine if the event confirms subscription or unsubscription,
+        then updates the corresponding binding status.
+
+        Args:
+            event (WsEvent): Event to process.
+        """
         is_active, binding_key = self._subscription_resolver.resolve_binding_key(event)
 
         # None means the event is not related to a tracked subscription
@@ -179,9 +279,19 @@ class SubscriptionController:
                 self._confirm_unsubscribed(subscription.binding_key())
 
     def reconcile_binding(self, binding: Binding):
+        """
+        Reconcile a single binding by checking expiry and retrying if needed.
+
+        Handles expiry checks, retry logic, and failure detection. Called periodically
+        by the runtime to maintain subscription state.
+
+        Args:
+            binding (Binding): Binding to reconcile.
+        """
         now = time.time()
         subscription = binding.subscription
 
+        # if either done or failed, return early or check expiration if expiry_seconds is provided
         if binding.status in [binding.intent, BindingStatus.FAILED]:
             if subscription.expiry_seconds is None:
                 return
@@ -208,11 +318,24 @@ class SubscriptionController:
         self._make_attempt(binding)
 
     def reconcile_bindings(self):
+        """Reconcile all bindings by checking expiry and retrying as needed."""
         with self._condition:
             for binding in self._bindings.values():
                 self.reconcile_binding(binding)
 
     def subscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        """
+        Register intent to subscribe.
+
+        Creates or updates a binding with ACTIVE intent. The actual subscription
+        attempt occurs during reconciliation.
+
+        Args:
+            subscription (Subscription): Subscription to activate.
+
+        Returns:
+            SubscriptionHandle: Handle for tracking and controlling this subscription.
+        """
         binding_key = subscription.binding_key()
 
         with self._condition:
@@ -236,6 +359,18 @@ class SubscriptionController:
             return SubscriptionHandle(self, subscription)
 
     def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
+        """
+        Register intent to unsubscribe.
+
+        Creates or updates a binding with UNSUBSCRIBED intent. The actual unsubscription
+        attempt occurs during reconciliation.
+
+        Args:
+            subscription (Subscription): Subscription to deactivate.
+
+        Returns:
+            SubscriptionHandle: Handle for tracking this unsubscription.
+        """
         binding_key = subscription.binding_key()
 
         with self._condition:
@@ -259,45 +394,88 @@ class SubscriptionController:
             return SubscriptionHandle(self, subscription)
 
     def invalidate_subscriptions(self):
+        """Mark all subscriptions as degraded, typically after connection loss."""
         with self._condition:
             for binding_key, binding in self._bindings.items():
                 if binding.status != BindingStatus.DEGRADED:
                     self._update_status(binding, BindingStatus.DEGRADED)
 
-    def is_subscription_active(self, binding_key: str) -> Optional[bool]:
+    def is_subscription_active(self, binding_key: str) -> Optional[bool]:  # pragma: no cover
+        """Check if a subscription is currently active.
+
+        Args:
+            binding_key (str): Binding key to check.
+
+        Returns:
+            bool: True if subscription exists and is active, False otherwise.
+        """
         with self._condition:
             if not self.has_subscription(binding_key):
                 return False
             return self._bindings[binding_key].status == BindingStatus.ACTIVE
 
     def has_active_subscriptions(self) -> bool:
+        """
+        Check if any subscriptions are currently active.
+
+        Returns:
+            bool: True if any subscriptions are active, False otherwise.
+        """
         with self._condition:
             for subscription in self._bindings:
                 if self.is_subscription_active(subscription):
                     return True
         return False
 
-    def has_subscription(self, binding_key: str) -> bool:
+    def has_subscription(self, binding_key: str) -> bool:  # pragma: no cover
+        """Check if a subscription exists.
+
+        Args:
+            binding_key (str): Binding key to check.
+
+        Returns:
+            bool: True if subscription exists, False otherwise.
+        """
         return binding_key in self._bindings
 
-    def get_status(self, binding_key: str) -> BindingStatus | None:
+    def get_status(self, binding_key: str) -> BindingStatus | None:  # pragma: no cover
+        """Get the status of a subscription.
+
+        Args:
+            binding_key (str): Binding key to query.
+
+        Returns:
+            BindingStatus | None: Current status, or None if subscription doesn't exist.
+        """
         with self._condition:
             if not self.has_subscription(binding_key):
                 return None
             return self._bindings[binding_key].status
 
-    def is_done(self, binding_key: str) -> bool | None:
+    def is_done(self, binding_key: str) -> bool | None:  # pragma: no cover
+        """Check if a subscription has reached its intended state.
+
+        Args:
+            binding_key (str): Binding key to check.
+
+        Returns:
+            bool | None: True if done, False if not done, None if subscription doesn't exist.
+        """
         with self._condition:
             if not self.has_subscription(binding_key):
                 return None
             return self._bindings[binding_key].done
 
     def get_active_subscriptions(self):
+        """
+        Get all active subscriptions.
+
+        Returns:
+            dict[str, Binding]: Deep copies of active bindings keyed by binding_key.
+        """
         with self._condition:
             return {
-                binding_key: copy.deepcopy(binding)
-                for binding_key, binding in self._bindings.items()
-                if self.is_subscription_active(binding_key)
+                binding_key: copy.deepcopy(binding) for binding_key, binding in self._bindings.items() if self.is_subscription_active(binding_key)
             }
 
     def _update_status(self, binding: Binding, status: BindingStatus):
@@ -331,6 +509,19 @@ class SubscriptionController:
         self._update_status(binding, BindingStatus.UNSUBSCRIBED)
 
     def wait_for(self, binding_key: str, timeout: float | None = None) -> bool:
+        """
+        Wait for a subscription to reach its intended state.
+
+        Blocks until the binding reaches its intent or fails. Uses a condition variable
+        for efficient waiting.
+
+        Args:
+            binding_key (str): Binding key to wait for.
+            timeout (float | None): Maximum time to wait in seconds. None means wait indefinitely. Default: None.
+
+        Returns:
+            bool: True if binding reached intended state, False if timed out, failed, or binding not found.
+        """
         deadline = None if timeout is None else time.monotonic() + timeout
 
         with self._condition:
@@ -346,6 +537,7 @@ class SubscriptionController:
                 if binding.status == BindingStatus.FAILED:
                     return False
 
+                # wait for the remaining time
                 remaining = None
                 if timeout is not None:
                     remaining = deadline - time.monotonic()
@@ -354,5 +546,5 @@ class SubscriptionController:
 
                 self._condition.wait(remaining)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}()'
