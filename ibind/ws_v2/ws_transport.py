@@ -192,7 +192,7 @@ class WsTransport:
         """Get seconds elapsed since the last pong was received."""
         return abs(time.time() - self._wsa.last_pong_tm)
 
-    def fetch_cookie(self) -> Union[str, None, UNDEFINED]:
+    def fetch_cookie(self) -> Union[str, None]:
         """
         Retrieve session cookie using the configured callback.
 
