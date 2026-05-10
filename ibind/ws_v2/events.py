@@ -1,5 +1,4 @@
 import threading
-from collections import defaultdict
 from datetime import datetime
 from queue import Queue, Full, Empty
 from threading import Thread, Event
@@ -32,9 +31,6 @@ class WsEvent(BaseModel):
     def _format(self):
         data = self.model_dump()
 
-        # remove key (already logged elsewhere)
-        data.pop("key", None)
-
         # normalize values
         for k, v in data.items():
             if isinstance(v, datetime):
@@ -56,23 +52,23 @@ class WsEvent(BaseModel):
 
 
 class LifecycleEvent(WsEvent):
-    ...
+    pass
 
 
 class WsOpen(LifecycleEvent):
-    ...
+    pass
 
 
 class WsAuthenticated(LifecycleEvent):
-    ...
+    pass
 
 
 class WsDegraded(LifecycleEvent):
-    ...
+    pass
 
 
 class WsReady(LifecycleEvent):
-    ...
+    pass
 
 
 class WsClose(LifecycleEvent):
@@ -96,7 +92,7 @@ class EventSink(Protocol):
 
 class LogSink:
     def emit(self, event: WsEvent) -> None:
-        _LOGGER.debug(event)
+        _LOGGER.info(event)
 
 
 class NoopSink:
@@ -108,14 +104,13 @@ T = TypeVar("T", bound=WsEvent)
 
 
 class CallbackSink:
-    def __init__(self):
-        self._callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = defaultdict(list)
+    _callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
 
     def on(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> None:
-        self._callbacks[event_type].append(callback)
+        self._callbacks.setdefault(event_type, []).append(callback)
 
     def emit(self, event: WsEvent) -> None:
-        for callback in self._callbacks[type(event)]:
+        for callback in self._callbacks.get(type(event), []):
             try:
                 callback(event)
             except Exception as e:
@@ -126,8 +121,7 @@ class CallbackSink:
 
 
 class QueueSink:
-    def __init__(self):
-        self._queues = {}
+    _queues = {}
 
     def new_queue_accessor(self, event_type: type[WsEvent]) -> QueueAccessor:
         return QueueAccessor(self._get_queue(event_type), event_type)
@@ -252,14 +246,14 @@ class AsyncSink:
                 _LOGGER.error(f'{self}: Exception emitting event to sink: {exception_to_string(e)}')
 
     def _cycle(self):
-        _LOGGER.info(f'{self}: AsyncSink thread started ({tname()})')
+        _LOGGER.debug(f'{self}: AsyncSink thread started ({tname()})')
         while self._running:
             self._wait_event.clear()
             self._wait_event.wait(self._cycle_interval)
             self._consume_queue()
 
         self._consume_queue()
-        _LOGGER.info(f'{self}: AsyncSink thread stopped ({tname()})')
+        _LOGGER.debug(f'{self}: AsyncSink thread stopped ({tname()})')
 
     def __str__(self):
         return f'{self.__class__.__qualname__}({self._queue.qsize()})'
@@ -271,7 +265,7 @@ class AsyncSink:
 
 class Router(Protocol):
     def route(self, raw_message) -> OneOrMany[WsEvent]:
-        ...
+        pass
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'

@@ -1,10 +1,10 @@
 import json
-from typing import Tuple
+from typing import Tuple, List
 
 from pydantic import Field
 
-from ibkr_ws_v2 import ibkr_events
-from ibkr_ws_v2.ibkr_events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary, IbkrTopicEvent
+from ibind import events
+from ibind.events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary, IbkrTopicEvent
 from support.py_utils import filter_none
 from ws_v2.subscriptions import Subscription, SubscriptionResolver
 
@@ -15,13 +15,13 @@ def make_binding_key(
     account_id=None,
     exchange=None
 ):
-    if event_type in [ibkr_events.MarketData, ibkr_events.MarketHistory]:
+    if event_type in [events.MarketData, events.MarketHistory]:
         return f"{event_type.topic}+{conid}"
-    elif event_type in [ibkr_events.AccountLedger, ibkr_events.AccountSummary]:
+    elif event_type in [events.AccountLedger, events.AccountSummary]:
         return f"{event_type.topic}+{account_id}"
-    elif event_type in [ibkr_events.PriceLadder]:
+    elif event_type in [events.PriceLadder]:
         return f"{event_type.topic}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
-    elif event_type in [ibkr_events.Orders, ibkr_events.Pnl, ibkr_events.Trades]:
+    elif event_type in [events.Orders, events.Pnl, events.Trades]:
         return event_type.topic
     else:
         raise ValueError(f'Unsupported event type: {event_type}')
@@ -33,13 +33,13 @@ class IbkrSubscriptionResolver(SubscriptionResolver):
 
     def _resolve_subscribing_event(self, event) -> str:
         event_type = type(event)
-        if event_type in [ibkr_events.MarketData, ibkr_events.MarketHistory]:
+        if event_type in [events.MarketData, events.MarketHistory]:
             return make_binding_key(event_type, conid=event.conid)
-        elif event_type in [ibkr_events.AccountLedger, ibkr_events.AccountSummary]:
+        elif event_type in [events.AccountLedger, events.AccountSummary]:
             return make_binding_key(event_type, account_id=event.account_id)
-        elif event_type in [ibkr_events.PriceLadder]:
+        elif event_type in [events.PriceLadder]:
             return make_binding_key(event_type, conid=event.conid, account_id=event.account_id, exchange=event.exchange)
-        elif event_type in [ibkr_events.Orders, ibkr_events.Pnl, ibkr_events.Trades]:
+        elif event_type in [events.Orders, events.Pnl, events.Trades]:
             return make_binding_key(event_type)
         else:
             raise ValueError(f'Unsupported event: {event}')
@@ -112,7 +112,7 @@ class AccountLedgerSubscription(IbkrSubscription):
 class MarketDataSubscription(IbkrSubscription):
     event_type: type[IbkrTopicEvent] = MarketData
     conid: str
-    fields: tuple[str, ...]
+    fields: List[str]
 
     def subscribe_payload(self) -> str:
         fields_str = json.dumps({"fields": list(self.fields)}, separators=(',', ':'))

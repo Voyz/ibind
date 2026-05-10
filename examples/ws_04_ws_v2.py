@@ -17,7 +17,7 @@ from typing import List
 from ibind import events, IbkrWsClientV2, LogSink, QueueSink, CallbackSink, CompositeSink, ibind_logs_initialize
 from ibind.subscriptions import MarketDataSubscription, OrdersSubscription, AccountLedgerSubscription, AccountSummarySubscription, PnlSubscription, TradesSubscription, MarketHistorySubscription, SubscriptionHandle
 
-ibind_logs_initialize(log_to_file=False, log_level='DEBUG')
+ibind_logs_initialize(log_to_file=False, log_level='INFO')
 
 account_id = os.getenv('IBIND_ACCOUNT_ID', '[YOUR_ACCOUNT_ID]')
 cacert = os.getenv('IBIND_CACERT', False)  # insert your cacert path here
@@ -55,14 +55,14 @@ composite_sink = CompositeSink(callback_sink, log_sink)
 
 # ws_client = IbkrWsClient(cacert=cacert, account_id=account_id)
 # ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=LogSink())
-ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=composite_sink)
+ws_client = IbkrWsClientV2(cacert=cacert, account_id=account_id, sink=queue_sink)
 
 
 ws_client.start()
 
 as_sub = AccountSummarySubscription(account_id=account_id)
 al_sub = AccountLedgerSubscription(account_id=account_id)
-md_sub = MarketDataSubscription(conid='265598', fields=("31", "84", "86"), expiry_seconds=30)
+md_sub = MarketDataSubscription(conid='265598', fields=["31", "84", "86"], expiry_seconds=30)
 mh_sub = MarketHistorySubscription(conid='265598')
 or_sub = OrdersSubscription()
 # pl_sub = PriceLadderSubscription(conid='265598', account_id=account_id, exchange='SMART')

@@ -1,11 +1,11 @@
 import json
 from collections import defaultdict
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Type
 
+from ibind import events
 import var
 from ibind import IbkrClient
-from ibkr_ws_v2 import ibkr_events
-from ibkr_ws_v2.ibkr_events import IbkrTopicEvent
+from ibind.events import IbkrTopicEvent
 from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from support.logs import project_logger
@@ -98,18 +98,18 @@ class IbkrWsClientV2():
         )
 
         self._mh_subscriptions: List[MarketHistorySubscription] = []
-        self._conid_server_id_pairs: Dict[type[ibkr_events.IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)
+        self._conid_server_id_pairs: Dict[type[events.IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)
 
     def _register_internal_callbacks(self):
-        self._internal_sink.on(ibkr_events.AuthenticationStatus, self._on_authentication_status)
-        self._internal_sink.on(ibkr_events.WaitingForSession, self._set_unauthenticated)
-        self._internal_sink.on(ibkr_events.System, self._on_system)
-        self._internal_sink.on(ibkr_events.ServerId, self._on_server_id)
+        self._internal_sink.on(events.AuthenticationStatus, self._on_authentication_status)
+        self._internal_sink.on(events.WaitingForSession, self._set_unauthenticated)
+        self._internal_sink.on(events.System, self._on_system)
+        self._internal_sink.on(events.ServerId, self._on_server_id)
 
     def _set_unauthenticated(self, _):
         self._runtime.set_authenticated(False)
 
-    def _on_authentication_status(self, event: ibkr_events.AuthenticationStatus):
+    def _on_authentication_status(self, event: events.AuthenticationStatus):
         if event.authenticated is False:
             _LOGGER.error(f'{self}: Status unauthenticated: {event}')
         elif event.competing is True:
@@ -117,11 +117,11 @@ class IbkrWsClientV2():
 
         self._runtime.set_authenticated(event.authenticated)
 
-    def _on_system(self, event: ibkr_events.System):
+    def _on_system(self, event: events.System):
         if 'hb' in event.data:
             self._runtime.set_last_heartbeat(int(event.data['hb']) / 1000)
 
-    def _on_server_id(self, event: ibkr_events.ServerId):
+    def _on_server_id(self, event: events.ServerId):
         self._conid_server_id_pairs[event.target_event_type][event.conid] = event.server_id
         for subscription in self._mh_subscriptions:
             if subscription.event_type == event.target_event_type and subscription.conid == event.conid and not subscription.has_server_id():
@@ -172,7 +172,7 @@ class IbkrWsClientV2():
     def get_status(self, binding_key: str) -> BindingStatus:
         return self._runtime.subscription_controller.get_status(binding_key)
 
-    def get_server_id(self, event_type: type[IbkrTopicEvent], conid: str) -> str:
+    def get_server_id(self, event_type: Type[IbkrTopicEvent], conid: str) -> str:
         return self._conid_server_id_pairs[event_type][conid]
 
     def _handle_mh_unsubscription(self, subscription: MarketHistorySubscription):

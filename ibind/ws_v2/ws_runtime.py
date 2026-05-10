@@ -9,8 +9,9 @@ from typing import Union, List, Dict, Callable, Literal
 
 from support.logs import project_logger
 from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop
-from ws_v2 import events
-from ws_v2.events import WsEvent, EventSink, Router, CallbackSink, AsyncSink
+from ibind import events
+from ibind.events import WsEvent
+from ws_v2.events import EventSink, Router, CallbackSink, AsyncSink
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
 from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
@@ -108,7 +109,7 @@ class WsRuntime():
         )
 
     def _set_state(self, value):
-        _LOGGER.info(f'{self}: {self._state.value} -> {value.value}')
+        _LOGGER.debug(f'{self}: {self._state.value} -> {value.value}')
         with self._state_lock:
             self._state = value
 
@@ -124,8 +125,7 @@ class WsRuntime():
         _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._last_heartbeat}')
 
     def set_authenticated(self, value: bool):
-        if value != self._authenticated:
-            _LOGGER.info(f'{self}: Authenticated: {value}')
+        previous_value = self._authenticated
         self._authenticated = value
 
         if value and self._state == WsState.OPEN:
@@ -134,6 +134,8 @@ class WsRuntime():
 
         if value == False and self._state == self._ready_state:
             self.state_degraded()
+        if value != previous_value:
+            _LOGGER.info(f'{self}: Connection {"authenticated" if value else "unauthenticated"}')
 
     def state_degraded(self):
         was_already_degraded = self._state == WsState.DEGRADED
@@ -170,7 +172,6 @@ class WsRuntime():
             return not is_alive
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to stop transport thread: {e}')
-            # TODO: decide what to do if transport disconnect fails
 
         return False
 
@@ -182,7 +183,7 @@ class WsRuntime():
             _LOGGER.error(f'{self}: Runtime thread must be stopped and joined before starting')
             return
 
-        _LOGGER.info(f'{self}: Starting runtime')
+        _LOGGER.info(f'{self}: Starting WebSocket runtime')
 
         self._set_state(WsState.STARTING)
         self._running = True
@@ -202,16 +203,19 @@ class WsRuntime():
         if threading.current_thread() == self._runtime_thread:
             raise RuntimeError(f'{self}: Stopping runtime called from within runtime thread. Ensure it is called from a separate thread')
 
-        _LOGGER.info(f'{self}: Stopping runtime')
+        _LOGGER.info(f'{self}: Stopping WebSocket runtime')
 
         # wait until one more pass of the runtime thread has occurred to allow unsubscriptions to complete
         wait_until(lambda: not self._wait_event.is_set(), timeout=self._connection_timeout)
         self._wait_event.set()
         wait_until(lambda: not self._wait_event.is_set(), timeout=self._connection_timeout)
 
-        # TODO: decide which thread should stop first - transport or runtime
         self._set_state(WsState.STOPPING)
-        self._stop_transport_thread()
+        transport_thread_stopped = self._stop_transport_thread()
+        if not transport_thread_stopped:
+            _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
+            self._transport_thread = None
+        self._transport.set_degraded(True)
 
         self._running = False
         if self._runtime_thread is not None:
@@ -232,7 +236,7 @@ class WsRuntime():
             _LOGGER.error(f'{self}: State must be {self._ready_state.value} before sending payloads, found {self._state.value}')
             return False
 
-        _LOGGER.debug(f'{self}: Sending payload: {payload}')
+        _LOGGER.info(f'{self}: Sending payload: {payload}')
 
         return self._transport.send(payload)
 
@@ -258,8 +262,8 @@ class WsRuntime():
         if threading.current_thread() == self._transport_thread:
             raise RuntimeError(f'{self}: Resetting transport thread called from within transport thread. Ensure it is called from a separate thread')
 
-        success = self._stop_transport_thread()
-        if not success:
+        transport_thread_stopped = self._stop_transport_thread()
+        if not transport_thread_stopped:
             _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
             self._transport_thread = None
 
@@ -278,7 +282,6 @@ class WsRuntime():
     # ======================
 
     def _transport_callback(self, te: TransportEvent):
-        # _LOGGER.debug(f'{self}: {te}')
         self._transport_queue.put(te)
         self._wait_event.set()
 
@@ -348,7 +351,7 @@ class WsRuntime():
         return False
 
     def _cycle(self):
-        _LOGGER.info(f'{self}: Runtime thread started ({tname()})')
+        _LOGGER.debug(f'{self}: Runtime thread started ({tname()})')
         while self._running:
             self._maintain_transport()
             self._maintain_subscriptions()
@@ -370,7 +373,7 @@ class WsRuntime():
             # final pass through the subscription controller to carry out final unsubscribe events
             self.subscription_controller.reconcile_bindings()
 
-        _LOGGER.info(f'{self}: Runtime thread stopped ({tname()})')
+        _LOGGER.debug(f'{self}: Runtime thread stopped ({tname()})')
 
     def _process_transport_queue(self):
         retry_events = []
@@ -424,9 +427,9 @@ class WsRuntime():
             self._emit(event)
 
     def _handle_on_open(self):
-        _LOGGER.info(f'{self}: Connection open')
         self._last_heartbeat = None
         self._set_state(WsState.OPEN)
+        _LOGGER.info(f'{self}: Connection open')
         if self._state != self._ready_state:
             self.set_authenticated(False)
         self._emit(events.WsOpen())
@@ -447,8 +450,16 @@ class WsRuntime():
         self._emit(events.WsError(error=exception))
 
     def _handle_on_close(self, close_status_code, close_msg):
-        _LOGGER.info(f'{self}: Connection closed')
         self._last_heartbeat = None
+
+        if self._state != WsState.STOPPING:
+            _LOGGER.info(f'{self}: Connection closed')
+            self.set_authenticated(False)
+            self.subscription_controller.invalidate_subscriptions()
+        else:
+            _LOGGER.info(f'{self}: Connection gracefully closed')
+
+        self._set_state(WsState.CLOSED)
 
         if close_status_code is not None or close_msg is not None:  # this means an error
             try:
@@ -458,13 +469,6 @@ class WsRuntime():
 
             _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
 
-        if self._state != WsState.STOPPING:
-            self.set_authenticated(False)
-            self.subscription_controller.invalidate_subscriptions()
-        else:
-            _LOGGER.info(f'{self}: Gracefully closed')
-
-        self._set_state(WsState.CLOSED)
         self._emit(events.WsClose(close_status_code=close_status_code, close_msg=close_msg))
 
     def _emit(self, event: WsEvent):

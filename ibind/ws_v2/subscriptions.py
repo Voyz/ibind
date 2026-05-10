@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
-from ws_v2.events import WsEvent
+from ibind.events import WsEvent
 
 _LOGGER = project_logger('ibkr_ws_client')
 

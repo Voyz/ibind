@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from typing import Callable, Any, cast, List
+from typing import Callable, Any, cast, List, Union, Dict
 
 from pydantic import BaseModel, ConfigDict, Field
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
@@ -14,6 +14,13 @@ _LOGGER = project_logger('ibkr_ws_client')
 
 
 class TransportEvent(BaseModel):
+    """
+    Base class for WebSocket transport-level events.
+
+    Tracks when events were received and how many processing attempts have been made.
+    Uses a list for attempt count to allow mutation despite frozen model.
+    """
+
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
     received_at: datetime = Field(default_factory=datetime.now)
     attempt: List[int] = Field(default_factory=lambda: [0])
@@ -29,35 +36,51 @@ class TransportEvent(BaseModel):
 
 
 class TransportOpened(TransportEvent):
-    ...
+    """Emitted when the WebSocket connection is successfully opened."""
+
+    pass
 
 
 class TransportClosed(TransportEvent):
+    """Emitted when the WebSocket connection is closed."""
+
     close_status_code: int | None
     close_msg: str | None
 
 
 class TransportError(TransportEvent):
+    """Emitted when a WebSocket error occurs. Note that currently WebSocketApp only emits this once, due to reconnection logic then skipping this event."""
+
     exception: Exception
 
 
 class TransportMessage(TransportEvent):
+    """Emitted when a message is received from the WebSocket."""
+
     message: str
 
 
 class TransportReconnect(TransportEvent):
-    ...
+    """Emitted when the WebSocket reconnects after a disconnection."""
+
+    pass
 
 
-class WsTransport():
+class WsTransport:
+    """
+    Manages low-level WebSocket transport using WebSocketApp.
+
+    Handles connection lifecycle, message sending, cookie validation, and ping monitoring.
+    Runs in a dedicated thread and communicates via event callbacks.
+    """
 
     def __init__(
         self,
         url: str,
-        event_callback: Callable,
-        sslopt: dict[str, Any],
-        get_cookie: Callable = noop,
-        get_header: Callable = noop,
+        event_callback: Callable[[TransportEvent], None],
+        sslopt: Dict[str, Any],
+        get_cookie: Callable[[], str | None] = noop,
+        get_header: Callable[[], Dict[str, Any] | None] = noop,
         ping_interval: float = 10,
         ping_timeout: float = 10,
         max_ping_interval: float = 20,
@@ -65,6 +88,22 @@ class WsTransport():
         reconnect_timeout: float = 5,
         skip_utf8_validation: bool = var.IBIND_WS_SKIP_UTF8_VALIDATION,
     ):
+        """
+        Create a WebSocket transport instance.
+
+        Args:
+            url (str): WebSocket URL to connect to.
+            event_callback (Callable): Callback function invoked with TransportEvent instances.
+            sslopt (dict[str, Any]): SSL options for the WebSocket connection.
+            get_cookie (Callable, optional): Function to retrieve session cookie. Default: noop.
+            get_header (Callable, optional): Function to retrieve HTTP headers. Default: noop.
+            ping_interval (float, optional): Interval in seconds between ping messages. Default: 10.
+            ping_timeout (float, optional): Timeout in seconds for ping responses. Default: 10.
+            max_ping_interval (float, optional): Maximum acceptable time since last pong. Default: 20.
+            connection_timeout (float, optional): Timeout in seconds for connection operations. Default: 5.
+            reconnect_timeout (float, optional): Timeout in seconds before reconnect attempts. Default: 5.
+            skip_utf8_validation (bool, optional): Whether to skip UTF-8 validation. Default: True
+        """
         self._url = url
         self._event_callback = event_callback
         self._sslopt = sslopt
@@ -82,23 +121,36 @@ class WsTransport():
         self._degraded = False
         self._tname = None
 
+        self._session_lacks_authentication = False
+
     def disconnect(self):
+        """Gracefully disconnect the WebSocket connection."""
         if self._wsa is None:
-            _LOGGER.info(f'{self}: WSA is None, skipping disconnect')
+            _LOGGER.info(f'{self}: WebSocketApp is None, skipping disconnect')
             return
         self._wsa.close(status=STATUS_NORMAL, timeout=self._connection_timeout)
 
     def stop(self):
-        _LOGGER.info(f'{self}: Stopping')
+        """Stop the transport thread and disconnect the WebSocket."""
+        _LOGGER.debug(f'{self}: Stopping transport')
         self._running = False
         self.disconnect()
 
     def reset_websocket_app(self) -> bool:
+        """
+        Force close and recreate the WebSocketApp connection.
+
+        Returns:
+            bool: True if a new WebSocketApp was successfully created, False otherwise.
+
+        Raises:
+            RuntimeError: If called from within the transport thread.
+        """
         if tname() == self._tname:
             raise RuntimeError(f'{self}: Resetting websocket app called from within transport thread. Ensure it is called from a separate thread')
 
         if self._wsa is None:
-            _LOGGER.info(f'{self}: WSA is None, skipping reset')
+            _LOGGER.info(f'{self}: WebSocketApp is None, skipping reset')
             return False
 
         _LOGGER.info(f'{self}: Reset')
@@ -115,17 +167,15 @@ class WsTransport():
 
     def check_ping(self, max_interval: float = None) -> bool:
         """
-        Checks the last ping response time of the WebSocketApp connection.
+        Check if the last pong was received within the acceptable interval.
 
-        Verifies whether the last ping response from the WebSocketApp was within the acceptable time interval
-        defined by 'max_ping_interval' parameter. If the last ping response exceeds this interval, a hard reset of the connection is triggered.
+        Args:
+            max_interval (float, optional): Maximum acceptable seconds since last pong.
+                Default: self._max_ping_interval.
 
         Returns:
-            bool: True if the last ping was within the acceptable interval or if the WebSocketApp is not connected,
-                  False if the ping interval was exceeded and a hard reset was initiated.
-
-        Note:
-            - A ping interval exceeding 'max_ping_interval' indicates potential issues with the WebsocketApp connection.
+            bool: True if last pong was within the interval or WebSocketApp is not connected,
+                False if the interval was exceeded.
         """
         if self._wsa is None:
             return True
@@ -139,26 +189,41 @@ class WsTransport():
         return self.get_time_since_last_ping() <= max_interval
 
     def get_time_since_last_ping(self) -> float:
+        """Get seconds elapsed since the last pong was received."""
         return abs(time.time() - self._wsa.last_pong_tm)
 
-    def fetch_cookie(self):
+    def fetch_cookie(self) -> Union[str, None, UNDEFINED]:
         """
-        Using UNDEFINED since _get_cookie could in fact return a None, and they mean different things
+        Retrieve session cookie using the configured callback.
+
+        Returns:
+            str | None | UNDEFINED: Cookie value, None if no cookie needed, or UNDEFINED if retrieval failed.
         """
         try:
-            return self._get_cookie()
+            cookie = self._get_cookie()
+            if self._session_lacks_authentication:
+                self._session_lacks_authentication = False
+            return cookie
         except Exception as e:
             if isinstance(e, TimeoutError):
                 _LOGGER.info(f'{self}: Timeout retrieving cookie')
                 return UNDEFINED
             if isinstance(e, ExternalBrokerError):
                 if e.status_code == 401:
-                    _LOGGER.info(f'{self}: Failed to retrieve cookie due to lack of authentication')
+                    if not self._session_lacks_authentication:
+                        self._session_lacks_authentication = True
+                        _LOGGER.info(f'{self}: Failed to retrieve cookie due to lack of authentication. Continuing reattempts silently until authentication is reestablished.')
                     return UNDEFINED
             _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
             return UNDEFINED
 
     def check_cookie(self) -> bool:
+        """
+        Verify the current cookie matches the stored cookie.
+
+        Returns:
+            bool: True if cookies match, False if retrieval failed or cookies differ.
+        """
         cookie = self.fetch_cookie()
         if cookie is UNDEFINED:
             return False
@@ -169,14 +234,28 @@ class WsTransport():
         return True
 
     def set_degraded(self, value):
+        """Mark the transport as degraded to suppress event callbacks."""
         self._degraded = value
 
     def is_ready(self) -> bool:
+        """Check if the WebSocketApp is ready to send messages."""
         return self._wsa is not None and self._wsa.ready and self._wsa.sock is not None and self._wsa.sock.sock is not None
 
     def send(self, payload: str) -> bool:
+        """
+        Send a message through the WebSocket.
+
+        Args:
+            payload (str): Message to send.
+
+        Returns:
+            bool: True if sent successfully, False otherwise.
+
+        Raises:
+            RuntimeError: If the WebSocketApp is not ready.
+        """
         if not self.is_ready():
-            raise RuntimeError(f'{self}: WSA socket is not ready')
+            raise RuntimeError(f'{self}: WebSocketApp socket is not ready')
 
         try:
             self._wsa.send(payload)
@@ -243,14 +322,13 @@ class WsTransport():
 
         self._event_callback(TransportReconnect())
 
-    def new_wsa(self):
+    def _new_wsa(self):
+        """Create a new WebSocketApp instance with current cookie and header."""
         cookie = self.fetch_cookie()
         if cookie is UNDEFINED:
             return None
 
         self._cookie = cookie
-        if cookie is not None:
-            _LOGGER.info(f'{self}: Current cookie: {cookie}')
 
         try:
             self._header = self._get_header()
@@ -259,7 +337,7 @@ class WsTransport():
             return None
 
         if not self._running:
-            # Transport got stopped between invocation of new_wsa and creating one
+            # Transport got stopped between invocation of this function and creating a WebSocketApp
             return None
 
         wsa = WebSocketApp(
@@ -272,11 +350,13 @@ class WsTransport():
             cookie=self._cookie,
             header=self._header,
         )
+        _LOGGER.debug(f'{self}: Created new WebSocketApp instance{f", cookie: {cookie}" if cookie is not None else ""}')
 
         return wsa
 
     def connect(self):
-        _LOGGER.info(f'{self}: Transport thread started ({tname()})')
+        """Main transport thread loop that maintains the WebSocket connection."""
+        _LOGGER.debug(f'{self}: Transport thread started ({tname()})')
 
         self._tname = tname()
 
@@ -284,7 +364,7 @@ class WsTransport():
 
         while self._running:
             if self._wsa is None:
-                wsa = self.new_wsa()
+                wsa = self._new_wsa()
                 if wsa is None:
                     time.sleep(1)
                     continue
@@ -296,9 +376,9 @@ class WsTransport():
                     ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
                     sslopt=self._sslopt,
                     reconnect=cast(int, self._reconnect_timeout),  # floats are de facto valid, casting only for the linter
-                    skip_utf8_validation=self._skip_utf8_validation
+                    skip_utf8_validation=self._skip_utf8_validation,
                 )
-                _LOGGER.info(f'{self}: WSA run_forever stopped gracefully')
+                _LOGGER.debug(f'{self}: WebSocketApp stopped gracefully')
             except Exception as e:
                 if 'url is invalid' in str(e):
                     _LOGGER.error(f'{self}: URL is invalid: {self._url}')
@@ -307,4 +387,4 @@ class WsTransport():
             finally:
                 self._wsa = None
 
-        _LOGGER.info(f'{self}: Transport thread stopped ({tname()})')
+        _LOGGER.debug(f'{self}: Transport thread stopped ({tname()})')
