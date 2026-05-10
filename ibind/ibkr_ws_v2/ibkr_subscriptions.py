@@ -6,7 +6,7 @@ from pydantic import Field
 from ibind import events
 from ibind.events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, Unsubscription, AccountSummary, IbkrTopicEvent
 from support.py_utils import filter_none
-from ws_v2.subscriptions import Subscription, SubscriptionResolver
+from ws_v2.ws_subscriptions import Subscription, SubscriptionResolver
 
 
 def make_binding_key(

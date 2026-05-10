@@ -12,8 +12,8 @@ from ibind.support.logs import ibind_logs_initialize
 from ibind.support.py_utils import execute_in_parallel
 from ibind import events, subscriptions
 from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
-from ibind.ws_v2.subscriptions import SubscriptionHandle
 from ibind.ws_v2._ws_events import LogSink, QueueSink, CallbackSink, CompositeSink, NoopSink, EventSink
+from ibind.ws_v2.ws_subscriptions import SubscriptionHandle
 
 
 __all__ = [
