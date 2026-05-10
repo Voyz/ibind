@@ -10,8 +10,8 @@ from ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from support.logs import project_logger
 from support.py_utils import OneOrMany, ensure_list_arg
-from ws_v2.events import EventSink, CallbackSink, Router, AsyncSink, NoopSink
 from ws_v2.subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle, BindingStatus
+from ws_v2._ws_events import EventSink, CallbackSink, Router, AsyncSink, NoopSink
 from ws_v2.ws_runtime import WsRuntime, WsState
 
 _LOGGER = project_logger('ibkr_ws_client')

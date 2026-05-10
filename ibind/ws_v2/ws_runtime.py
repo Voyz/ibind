@@ -11,8 +11,8 @@ from support.logs import project_logger
 from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop
 from ibind import events
 from ibind.events import WsEvent
-from ws_v2.events import EventSink, Router, CallbackSink, AsyncSink
 from ws_v2.subscriptions import SubscriptionController, SubscriptionResolver
+from ws_v2._ws_events import EventSink, Router, CallbackSink, AsyncSink
 from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
 _LOGGER = project_logger('ibkr_ws_client')
