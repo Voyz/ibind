@@ -1,5 +1,4 @@
 import threading
-import time
 from datetime import datetime
 from queue import Empty, Full
 from unittest.mock import MagicMock, patch
@@ -151,9 +150,11 @@ class TestCallbackSink:
     @capture_logs(logger_level='ERROR', expected_errors=['Exception emitting event to callback test_fn'], partial_match=True)
     def test_emit_logs_callback_exception(self, callback_sink, sample_event):
         """CallbackSink.emit logs exceptions raised by callbacks without propagating."""
+
         ## Arrange
         def test_fn(event):
             raise ValueError('callback error')
+
         callback_sink.on(WsOpen, test_fn)
 
         ## Act
@@ -188,7 +189,6 @@ class TestQueueSink:
 
         ## Assert
         assert result is None
-
 
     @capture_logs()
     def test_empty_returns_true_when_empty(self, queue_sink):
@@ -468,7 +468,6 @@ class TestAsyncSink:
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=1, drop_oldest=True)
         event1 = WsOpen()
-        event2 = WsAuthenticated()
 
         ## Act
         with patch.object(sink._queue, 'put_nowait', side_effect=[Full, None]) as mock_put:
@@ -492,6 +491,6 @@ class TestAsyncSink:
         event2 = WsAuthenticated()
 
         ## Act
-        with patch.object(sink._queue, 'put_nowait', side_effect=[Full, Full]) as mock_put:
+        with patch.object(sink._queue, 'put_nowait', side_effect=[Full, Full]):
             with patch.object(sink._queue, 'get_nowait', return_value=event1):
                 sink.emit(event2)
