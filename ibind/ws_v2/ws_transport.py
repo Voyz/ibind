@@ -31,7 +31,7 @@ class TransportEvent(BaseModel):
     def get_attempt(self):
         return self.attempt[0]
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}()'
 
 
@@ -212,7 +212,9 @@ class WsTransport:
                 if e.status_code == 401:
                     if not self._session_lacks_authentication:
                         self._session_lacks_authentication = True
-                        _LOGGER.info(f'{self}: Failed to retrieve cookie due to lack of authentication. Continuing reattempts silently until authentication is reestablished.')
+                        _LOGGER.info(
+                            f'{self}: Failed to retrieve cookie due to lack of authentication. Continuing reattempts silently until authentication is reestablished.'
+                        )
                     return UNDEFINED
             _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
             return UNDEFINED
@@ -233,7 +235,7 @@ class WsTransport:
             return False
         return True
 
-    def set_degraded(self, value):
+    def set_degraded(self, value):  # pragma: no cover
         """Mark the transport as degraded to suppress event callbacks."""
         self._degraded = value
 
@@ -268,7 +270,7 @@ class WsTransport:
 
         return True
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}({f"degraded:{tname()}" if self._degraded else ""})'
 
     # ======================
@@ -354,6 +356,31 @@ class WsTransport:
 
         return wsa
 
+    def _cycle(self):
+        if self._wsa is None:
+            wsa = self._new_wsa()
+            if wsa is None:
+                time.sleep(1)
+                return
+            self._wsa = wsa
+
+        try:
+            self._wsa.run_forever(
+                ping_interval=self._ping_interval,
+                ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
+                sslopt=self._sslopt,
+                reconnect=cast(int, self._reconnect_timeout),  # floats are de facto valid, casting only for the linter
+                skip_utf8_validation=self._skip_utf8_validation,
+            )
+            _LOGGER.debug(f'{self}: WebSocketApp stopped gracefully')
+        except Exception as e:
+            if 'url is invalid' in str(e):
+                _LOGGER.error(f'{self}: URL is invalid: {self._url}')
+            else:
+                _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
+        finally:
+            self._wsa = None
+
     def connect(self):
         """Main transport thread loop that maintains the WebSocket connection."""
         _LOGGER.debug(f'{self}: Transport thread started ({tname()})')
@@ -363,28 +390,6 @@ class WsTransport:
         self._running = True
 
         while self._running:
-            if self._wsa is None:
-                wsa = self._new_wsa()
-                if wsa is None:
-                    time.sleep(1)
-                    continue
-                self._wsa = wsa
-
-            try:
-                self._wsa.run_forever(
-                    ping_interval=self._ping_interval,
-                    ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
-                    sslopt=self._sslopt,
-                    reconnect=cast(int, self._reconnect_timeout),  # floats are de facto valid, casting only for the linter
-                    skip_utf8_validation=self._skip_utf8_validation,
-                )
-                _LOGGER.debug(f'{self}: WebSocketApp stopped gracefully')
-            except Exception as e:
-                if 'url is invalid' in str(e):
-                    _LOGGER.error(f'{self}: URL is invalid: {self._url}')
-                else:
-                    _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
-            finally:
-                self._wsa = None
+            self._cycle()
 
         _LOGGER.debug(f'{self}: Transport thread stopped ({tname()})')
