@@ -6,11 +6,12 @@ authors = [
 ]
 description = "IBind is a REST and WebSocket client library for Interactive Brokers Client Portal Web API."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license-files=["LICENSE"]
 dependencies = [
     "requests>=2.31",
-    "websocket-client>=1.7"
+    "websocket-client>=1.7",
+    "pydantic>=2.13"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

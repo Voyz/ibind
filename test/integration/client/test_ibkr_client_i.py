@@ -158,7 +158,7 @@ def _marketdata_request(method, url, *args, **kwargs):
     if leaf == 'stocks':
         return MagicMock(json=lambda: ibkr_responses.responses['stocks'])
     elif leaf == 'history':
-        conid = kwargs['params']['conid']
+        conid = int(kwargs['params']['conid'])
         history_by_conid = {
             ibkr_responses.responses['filtered_conids'][key]: value for key, value in ibkr_responses.responses['history'].items()
         }
@@ -217,6 +217,18 @@ def test_marketdata_history_by_symbols(client, requests_mock):
         assert result['close'] == pytest.approx(expected['close'])
         assert result['volume'] == pytest.approx(expected['volume'])
         assert result['date'] == expected['date']
+
+
+def test_marketdata_history_by_symbol_accepts_stock_query(client, requests_mock):
+    # Arrange
+    requests_mock.request.side_effect = _marketdata_request
+    query = StockQuery(symbol='AAPL', contract_conditions={'isUS': False, 'exchange': 'AEQLIT'}, name_match='APPLE')
+
+    # Act
+    result = client.marketdata_history_by_symbol(query, bar='1min')
+
+    # Assert
+    assert result.data == ibkr_responses.responses['history']['AAPL']
 
 
 def test_check_health_authenticated_and_connected(client, default_url, requests_mock):

@@ -663,13 +663,16 @@ class Tickler:
         This method creates and starts a daemon thread that periodically calls `tickle()` to keep the
         session alive.
         """
-        if self._thread is not None:
+        if self._thread is not None and self._thread.is_alive():
             _LOGGER.info('Tickler thread already running. Stop the existing thread first by calling Tickler.stop()')
-            return
+            return False
+
+        self._thread = None
 
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
+        return True
 
     def stop(self, timeout:float=None):
         """
@@ -682,11 +685,18 @@ class Tickler:
                                        If None, waits indefinitely.
         """
         if self._thread is None:
-            return
+            return True
 
+        thread = self._thread
         self._stop_event.set()  # Wake up the sleeping thread immediately
-        self._thread.join(timeout)
+        thread.join(timeout)
+
+        if thread.is_alive():
+            _LOGGER.error(f'Tickler thread did not stop within timeout={timeout}. Keeping the thread reference to avoid starting a duplicate tickler.')
+            return False
+
         self._thread = None  # Ensure cleanup
+        return True
 
 
 def cleanup_market_history_responses(

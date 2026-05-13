@@ -1,9 +1,10 @@
+import ssl
 import time
 from unittest.mock import MagicMock
 
 import pytest
 
-from ibind.support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until
+from ibind.support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until, append_query_params, make_websocket_sslopt
 
 
 @ensure_list_arg('arg')
@@ -62,7 +63,7 @@ def test_ensure_list_arg_with_keyword_arg_non_list():
 def test_ensure_list_arg_with_missing_arg():
     """Raises TypeError when the decorated arg is missing."""
     # Arrange
-    
+
     # Act / Assert
     with pytest.raises(TypeError):
         sample_function()
@@ -226,3 +227,14 @@ def test_wait_until_timeout():
     assert result is False
     duration = time.time() - start_time
     assert duration == pytest.approx(timeout, abs=0.02)
+
+
+def test_append_query_params_preserves_existing_query():
+    url = append_query_params('wss://example.test/ws?existing=1', {'oauth_token': 'abc 123'})
+    assert url == 'wss://example.test/ws?existing=1&oauth_token=abc+123'
+
+
+def test_make_websocket_sslopt_supports_bool_modes():
+    assert make_websocket_sslopt(False) == {'cert_reqs': ssl.CERT_NONE}
+    assert make_websocket_sslopt(None) == {'cert_reqs': ssl.CERT_NONE}
+    assert make_websocket_sslopt(True) == {'cert_reqs': ssl.CERT_REQUIRED}

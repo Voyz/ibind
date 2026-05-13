@@ -189,7 +189,8 @@ class MarketdataMixin:
             start_time (datetime.datetime, optional): Starting date of the request duration.
 
         """
-        conid = str(self.stock_conid_by_symbol(symbol).data[symbol])
+        symbol_key = symbol.symbol if isinstance(symbol, StockQuery) else symbol
+        conid = str(self.stock_conid_by_symbol(symbol).data[symbol_key])
         return self.marketdata_history_by_conid(conid, bar, exchange, period, outside_rth, start_time)
 
     def marketdata_history_by_conids(

@@ -1,8 +1,6 @@
 import json
-import ssl
 import threading
 import time
-from pathlib import Path
 from threading import Thread, RLock
 from typing import Optional, Union, Dict, List
 
@@ -10,7 +8,7 @@ from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION
 
 from ibind.base.subscription_controller import SubscriptionController, SubscriptionProcessor
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import exception_to_string, wait_until, tname
+from ibind.support.py_utils import exception_to_string, wait_until, tname, make_websocket_sslopt
 
 _LOGGER = project_logger(__file__)
 
@@ -85,14 +83,9 @@ class WsClient(SubscriptionController):
         self._thread = None
         self._thread_ids = {}
         self._next_thread_id = 0
+        self._last_unanswered_ping_tm = None
 
-        if not (cacert is False or Path(cacert).exists()):
-            raise ValueError(f'{self}: cacert must be a valid Path or False')
-
-        if cacert is None or not cacert:
-            self._sslopt = {'cert_reqs': ssl.CERT_NONE}
-        else:
-            self._sslopt = {'ca_certs': cacert}
+        self._sslopt = make_websocket_sslopt(cacert)
 
     def send(self, payload: str) -> bool:
         """
@@ -303,6 +296,7 @@ class WsClient(SubscriptionController):
     def _handle_on_open(self, wsa: WebSocketApp):
         _LOGGER.info(f'{self}: Connection open')
         self._connected = True
+        self._last_unanswered_ping_tm = None
         self._on_open(wsa)
 
     def _handle_on_error(self, wsa: WebSocketApp, error):  # pragma: no cover
@@ -463,13 +457,25 @@ class WsClient(SubscriptionController):
         if self._wsa is None:
             return True
 
-        if self._wsa.last_ping_tm == 0:
+        last_ping_tm = getattr(self._wsa, 'last_ping_tm', 0)
+        last_pong_tm = getattr(self._wsa, 'last_pong_tm', 0)
+
+        if last_ping_tm == 0:
             return True
 
-        diff = abs(time.time() - self._wsa.last_ping_tm)
+        if last_pong_tm >= last_ping_tm and last_pong_tm != 0:
+            self._last_unanswered_ping_tm = None
+            diff = abs(time.time() - last_pong_tm)
+        else:
+            if self._last_unanswered_ping_tm is not None and last_pong_tm >= self._last_unanswered_ping_tm:
+                self._last_unanswered_ping_tm = None
+            if self._last_unanswered_ping_tm is None:
+                self._last_unanswered_ping_tm = last_ping_tm
+            diff = abs(time.time() - self._last_unanswered_ping_tm)
+
         if diff > self._max_ping_interval:
             _LOGGER.warning(
-                f'{self}: Last WebSocket ping happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.'
+                f'{self}: Last WebSocket pong happened {diff: .2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}. Restarting.'
             )
             self.hard_reset(restart=True)
             return False

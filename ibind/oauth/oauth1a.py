@@ -237,7 +237,6 @@ def generate_oauth_headers(
         'Accept-Encoding': 'gzip,deflate',
         'Authorization': headers_string,
         'Connection': 'keep-alive',
-        'Host': 'api.ibkr.com',
         'User-Agent': 'ibind',
     }
 

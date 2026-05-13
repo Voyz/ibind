@@ -1,11 +1,11 @@
 import asyncio
-import logging
 import threading
 
 import pytest
 from unittest.mock import MagicMock
 
 from requests import ReadTimeout, Timeout
+from requests import ConnectionError as RequestsConnectionError
 
 from ibind.client.ibkr_client import IbkrClient
 from ibind.support.errors import ExternalBrokerError
@@ -134,6 +134,47 @@ def test_response_raise_generic(client, result, requests_mock):
 
     # Assert
     assert f'RestClient: response error {result.copy(data=None)} :: {response.status_code} :: {response.reason} :: {response.text}' == str(excinfo.value)
+
+
+def test_result_copy_with_none_data():
+    result = Result()
+    assert result.copy() == Result(data=None, request={})
+
+
+def test_request_recreates_session_before_retry(default_url, data, requests_mock):
+    # Arrange
+    response = MagicMock()
+    response.json.return_value = data
+
+    first_session = MagicMock()
+    first_session.request.side_effect = RequestsConnectionError('connection dropped')
+
+    second_session = MagicMock()
+    second_session.request.return_value = response
+
+    requests_mock.Session.side_effect = [first_session, second_session]
+    client = RestClient(url=_URL, timeout=_TIMEOUT, max_retries=1, use_session=True)
+
+    # Act
+    rv = client.get(_DEFAULT_PATH)
+
+    # Assert
+    assert rv == Result(data=data, request={'url': default_url})
+    first_session.close.assert_called_once()
+    first_session.request.assert_called_once_with('GET', default_url, verify=False, headers={}, timeout=_TIMEOUT)
+    second_session.request.assert_called_once_with('GET', default_url, verify=False, headers={}, timeout=_TIMEOUT)
+
+
+def test_close_is_idempotent(client):
+    # Arrange
+    client.close_session = MagicMock()
+
+    # Act
+    client.close()
+    client.close()
+
+    # Assert
+    client.close_session.assert_called_once()
 
 
 def _worker_in_thread(results: []):

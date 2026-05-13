@@ -74,7 +74,7 @@ def _logs_exception_starting(error_message: str, thread_mock: MagicMock):
 
 def _logs_check_health_error(max_ping_interval: int, time_ago: str):
     return [
-        f'WsClient: Last WebSocket ping happened  {time_ago} seconds ago, exceeding the max ping interval of {max_ping_interval}. Restarting.',
+        f'WsClient: Last WebSocket pong happened  {time_ago} seconds ago, exceeding the max ping interval of {max_ping_interval}. Restarting.',
         'WsClient: Hard reset, restart=True, self._wsa is None=False',
         'WsClient: Hard reset is closing the WebSocketApp',
     ]
@@ -353,7 +353,7 @@ def test_send_without_start(ws_client, **kwargs):
 @capture_logs(
     logger_level='DEBUG',
     expected_errors=[
-        'WsClient: Last WebSocket ping happened',
+        'WsClient: Last WebSocket pong happened',
         'WsClient: Hard reset close timeout',
         'WsClient: Abandoning current WebSocketApp that cannot be closed:',
     ],
@@ -396,3 +396,29 @@ def test_check_ping(ws_client, wsa_mock, patched_constructors, mocker, **kwargs)
         + _logs_shutdown_success()
         == [r.msg for r in cm.records]
     )
+
+
+def test_check_ping_tracks_first_unanswered_ping(ws_client, wsa_mock, patched_constructors, mocker):
+    """Fails even if outgoing ping timestamps keep updating without a pong."""
+    ## Arrange
+    current_time = [100.0]
+    mocker.patch('ibind.base.ws_client.time.time', side_effect=lambda: current_time[0])
+    ws_client.start()
+
+    ## Act / Assert
+    wsa_mock.last_ping_tm = 100.0
+    wsa_mock.last_pong_tm = 0
+    assert ws_client.check_ping() is True
+
+    current_time[0] = 130.0
+    wsa_mock.last_ping_tm = 130.0
+    assert ws_client.check_ping() is True
+
+    current_time[0] = 139.0
+    wsa_mock.last_ping_tm = 139.0
+    ws_client.hard_reset = MagicMock()
+    assert ws_client.check_ping() is False
+    ws_client.hard_reset.assert_called_once_with(restart=True)
+
+    ## Cleanup
+    ws_client.shutdown()
