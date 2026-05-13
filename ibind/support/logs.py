@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os.path
 import sys
 from pathlib import Path
 from typing import List
@@ -44,7 +45,12 @@ def project_logger(filepath=None):
     Returns:
         logging.Logger: The project-specific logger instance.
     """
-    return logging.getLogger('ibind' + (f'.{Path(filepath).stem}' if filepath is not None else ''))
+    logger_name = 'ibind'
+    if filepath is not None:
+        child = Path(filepath).stem if os.path.exists(filepath) else str(filepath)
+        logger_name += f'.{child}'
+
+    return logging.getLogger(logger_name)
 
 
 _LOGGER = project_logger()

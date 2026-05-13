@@ -20,6 +20,9 @@ _PRECISION_OFFSET = 7
 S = TypeVar('S')
 OneOrMany = Union[S, List[S]]
 
+def noop():
+    return None
+
 _LOGGER = project_logger(__file__)
 
 
@@ -279,8 +282,8 @@ def wait_until(condition: callable, timeout_message: str = None, timeout: float 
          bool: True if the condition becomes True within the timeout period, False otherwise.
     """
 
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if condition():
             return True
         time.sleep(sleep)
