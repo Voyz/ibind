@@ -134,7 +134,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
                 raise ExternalBrokerError('IBKR returned 400 Bad Request: no bridge. Try calling `initialize_brokerage_session()` first.') from e
             raise
 
-    def _get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str, request_params: dict = None):
         if (not self._use_oauth) or request_url == f'{self.base_url}{self.oauth_config.live_session_token_endpoint}':
             # No need for extra headers if we don't use oauth or getting live session token
             return {}
@@ -143,7 +143,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
         from ibind.oauth.oauth1a import generate_oauth_headers
 
         headers = generate_oauth_headers(
-            oauth_config=self.oauth_config, request_method=request_method, request_url=request_url, live_session_token=self.live_session_token
+            oauth_config=self.oauth_config,
+            request_method=request_method,
+            request_url=request_url,
+            live_session_token=self.live_session_token,
+            request_params=request_params,
         )
 
         return headers
@@ -251,6 +255,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, Orde
             self._tickler.stop(timeout)
 
     def close(self):
+        if getattr(self, '_closed', False):
+            return
         if self._use_oauth and self.oauth_config.shutdown_oauth:
             self.oauth_shutdown()
         super().close()

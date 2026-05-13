@@ -1,6 +1,7 @@
 import copy
 import inspect
 import os
+import ssl
 import sys
 import threading
 import time
@@ -10,7 +11,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum, EnumMeta
 from functools import wraps
 from collections.abc import Mapping
+from pathlib import Path
 from typing import List, TypeVar, Union, Dict
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from ibind.support.logs import project_logger
 
@@ -199,6 +202,27 @@ def filter_none(d):  # pragma: no cover
         return d
 
 
+def append_query_params(url: str, params: dict) -> str:
+    parts = urlsplit(url)
+    query_items = parse_qsl(parts.query, keep_blank_values=True)
+    query_items.extend((key, value) for key, value in params.items() if value is not None)
+    query = urlencode(query_items)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
+
+
+def make_websocket_sslopt(cacert: Union[str, os.PathLike, bool, None]) -> dict:
+    if cacert in (False, None):
+        return {'cert_reqs': ssl.CERT_NONE}
+
+    if cacert is True:
+        return {'cert_reqs': ssl.CERT_REQUIRED}
+
+    if not Path(cacert).exists():
+        raise ValueError(f'cacert must be a valid Path, True, False, or None, found: {cacert}')
+
+    return {'cert_reqs': ssl.CERT_REQUIRED, 'ca_certs': str(cacert)}
+
+
 class TimeoutLock:  # pragma: no cover
     """
     A lock with a timeout mechanism, extending the standard threading.RLock.
@@ -213,17 +237,19 @@ class TimeoutLock:  # pragma: no cover
     def __init__(self, timeout: int):
         self._lock = threading.RLock()
         self._timeout = timeout
-        self._acquired = False
 
     def acquire(self, *args, **kwargs):
-        self._acquired = self._lock.acquire(*args, timeout=self._timeout, **kwargs)
+        acquired = self._lock.acquire(*args, timeout=self._timeout, **kwargs)
+        if not acquired:
+            raise TimeoutError(f'Could not acquire lock within {self._timeout} seconds')
+        return True
 
     def release(self):
-        if self._acquired:
-            self._lock.release()
+        self._lock.release()
 
     def __enter__(self):
         self.acquire()
+        return self
 
     def __exit__(self, type, value, traceback):
         self.release()

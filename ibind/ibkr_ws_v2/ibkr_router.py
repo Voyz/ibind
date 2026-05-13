@@ -2,10 +2,9 @@ import json
 from collections import defaultdict
 from typing import Dict
 
-from client import ibkr_definitions
-from client.ibkr_utils import extract_conid
+from ibind.client import ibkr_definitions
+from ibind.client.ibkr_utils import extract_conid
 
-# from ibkr_ws_v2 import ibkr_events
 from ibind import events
 from ibind.events import GenericIbkrEvent, IbkrTopicEvent
 from ibind.support.logs import project_logger
@@ -148,14 +147,15 @@ class IbkrRouter:
             return events.AuthenticationStatus(data=arguments, authenticated=arguments.get('authenticated'), competing=arguments.get('competing'))
         elif (  # expected status updates that we ignore
             arguments == {'message': ''}
-            or arguments.get('fail', '') == ''
+            or arguments.get('fail') == ''
             or 'serverName' in arguments
             or 'serverVersion' in arguments
             or 'username' in arguments
         ):
-            pass
+            return []
 
-        return []
+        _LOGGER.info(f'{self}: Status message: {arguments}')
+        return GenericIbkrEvent(message=message, topic='sts', data=arguments)
 
     def _handle_bulletin(self, message) -> OneOrMany[WsEvent]:  # pragma: no cover
         return events.Bulletin(message=message)

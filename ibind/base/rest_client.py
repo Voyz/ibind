@@ -49,7 +49,10 @@ class Result:
         Returns:
             Result: A new Result instance with the specified modifications.
         """
-        return Result(data=data if data is not UNDEFINED else self.data.copy(), request=request if request is not UNDEFINED else self.request.copy())
+        def _copy(value):
+            return value.copy() if hasattr(value, 'copy') else value
+
+        return Result(data=data if data is not UNDEFINED else _copy(self.data), request=request if request is not UNDEFINED else _copy(self.request))
 
 
 def pass_result(data: dict, old_result: Result) -> Result:
@@ -117,6 +120,7 @@ class RestClient:
 
         self.use_session = use_session
         self._auto_recreate_session = auto_recreate_session
+        self._closed = False
 
         if use_session:
             self.make_session()
@@ -139,7 +143,7 @@ class RestClient:
             self._make_logger()
             return self._logger
 
-    def _get_headers(self, request_method: str, request_url: str):
+    def _get_headers(self, request_method: str, request_url: str, request_params: dict = None):
         return {}
 
     def get(
@@ -224,23 +228,24 @@ class RestClient:
         endpoint = endpoint.lstrip('/')
         url = f'{base_url}{endpoint}'
 
-        headers = self._get_headers(request_method=method, request_url=url)
-        headers = {**headers, **(extra_headers or {})}
-
         # we want to allow default values used by IBKR, so we remove all None parameters
         kwargs = filter_none(kwargs)
 
-        # choose which function should be used to make a reqeust based on use_session field
-        if self.use_session and self._session is not None:
-            request_function = self._session.request
-        else:
-            request_function = requests.request
-
-        if request_function is None:
-            _LOGGER.warning(f'{self}: an attempt was made to create a request with no valid session.')
+        request_params = kwargs.get('params') if method.upper() == 'GET' else None
+        headers = self._get_headers(request_method=method, request_url=url, request_params=request_params)
+        headers = {**headers, **(extra_headers or {})}
 
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
+            # choose which function should be used to make a request based on the current session
+            if self.use_session and self._session is not None:
+                request_function = self._session.request
+            else:
+                request_function = requests.request
+
+            if request_function is None:
+                _LOGGER.warning(f'{self}: an attempt was made to create a request with no valid session.')
+
             if log:
                 self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
@@ -308,6 +313,9 @@ class RestClient:
             self._session = None
 
     def close(self):
+        if getattr(self, '_closed', False):
+            return
+        self._closed = True
         self.close_session()
 
 
@@ -328,12 +336,7 @@ class RestClient:
         existing_handler_int = signal.getsignal(signal.SIGINT)
         existing_handler_term = signal.getsignal(signal.SIGTERM)
 
-        self._closed = False
-
         def _close_handler():
-            if self._closed:
-                return
-            self._closed = True
             self.close()
 
         def _signal_handler(signum, frame):

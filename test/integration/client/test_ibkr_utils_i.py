@@ -1,4 +1,5 @@
 from pprint import pformat
+import threading
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -13,6 +14,7 @@ from ibind.client.ibkr_utils import (
     question_type_to_message_id,
     OrderRequest,
     parse_order_request,
+    Tickler,
 )
 from test.integration.client import ibkr_responses
 from test.test_utils import CaptureLogsContext
@@ -392,3 +394,31 @@ def test_raise_with_conid_and_conidex():
         parse_order_request(order_request)
 
     assert "Both 'conidex' and 'conid' are provided. When using 'conidex', specify `conid=None`." == str(cm_err.value)
+
+
+def test_tickler_keeps_thread_reference_when_stop_times_out():
+    ## Arrange
+    tickle_started = threading.Event()
+    release_tickle = threading.Event()
+    client = MagicMock()
+
+    def slow_tickle():
+        tickle_started.set()
+        release_tickle.wait(1)
+
+    client.tickle.side_effect = slow_tickle
+    tickler = Tickler(client, interval=0)
+
+    ## Act
+    tickler.start()
+    assert tickle_started.wait(1)
+    stopped = tickler.stop(timeout=0.01)
+
+    ## Assert
+    assert stopped is False
+    assert tickler._thread is not None
+    assert tickler._thread.is_alive()
+
+    ## Cleanup
+    release_tickle.set()
+    assert tickler.stop(timeout=1) is True

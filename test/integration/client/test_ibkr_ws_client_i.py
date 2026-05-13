@@ -1,4 +1,5 @@
 import json
+import ssl
 from threading import Thread
 from typing import Optional
 from unittest.mock import MagicMock, call
@@ -94,7 +95,6 @@ def ws_app_factory(wsa_mock):
 def patched_constructors(mocker, thread_mock, ws_app_factory):
     mocker.patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: ws_app_factory['fn'](*args, **kwargs))
     mocker.patch('ibind.base.ws_client.Thread', return_value=thread_mock)
-    return None
 
 
 
@@ -131,6 +131,32 @@ def _subscribe(ws_client, wsa_mock, request: dict, response: Optional[dict]):
     )
     ws_client.shutdown()
     return rv
+
+
+def test_oauth_url_preserves_existing_query_and_forces_tls(client_mock):
+    # Arrange / Act
+    client = IbkrWsClient(
+        url='wss://localhost:5000/v1/api/ws?existing=1',
+        ibkr_client=client_mock,
+        use_oauth=True,
+        access_token='TOKEN VALUE',  # noqa: S106
+        cacert=False,
+    )
+
+    # Assert
+    assert client._url == 'wss://localhost:5000/v1/api/ws?existing=1&oauth_token=TOKEN+VALUE'
+    assert client._sslopt == {'cert_reqs': ssl.CERT_REQUIRED}
+
+
+def test_auth_status_competing_false_not_logged_as_error(ws_client, mocker):
+    # Arrange
+    logger_error = mocker.patch('ibind.client.ibkr_ws_client._LOGGER.error')
+
+    # Act
+    ws_client._handle_authentication_status({}, {'competing': False})
+
+    # Assert
+    logger_error.assert_not_called()
 
 
 
@@ -246,7 +272,7 @@ def test_on_message_sts_authenticated(ws_client, patched_constructors):
     _send_payload(ws_client, {'topic': 'sts', 'args': {'authenticated': True}})
 
 
-@capture_logs(logger_level='DEBUG', expected_errors = [f'IbkrWsClient: Error message:'], partial_match=True)
+@capture_logs(logger_level='DEBUG', expected_errors = ['IbkrWsClient: Error message:'], partial_match=True)
 def test_on_message_error(ws_client, patched_constructors):
     """Logs error-topic messages as warnings."""
     ## Act

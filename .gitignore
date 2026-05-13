@@ -4,6 +4,7 @@ __pycache__
 ibind.egg-info
 build/docs/.generated-files.txt
 build/docs/mkdocs.yml
+build/lib/
 
 .venv
 .env

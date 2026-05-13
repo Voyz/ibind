@@ -6,9 +6,9 @@ from typing import Protocol, Callable, TypeVar, List, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from base.queue_controller import QueueAccessor
-from support.logs import project_logger
-from support.py_utils import OneOrMany, exception_to_string, tname
+from ibind.base.queue_controller import QueueAccessor
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import OneOrMany, exception_to_string, tname
 
 __all__ = []
 
@@ -138,7 +138,8 @@ class CallbackSink:
     Exceptions from callbacks are logged but do not propagate.
     """
 
-    _callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
+    def __init__(self):
+        self._callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
 
     def on(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> None:
         """
@@ -175,7 +176,8 @@ class QueueSink:
     retrieved synchronously or asynchronously via queue accessors.
     """
 
-    _queues = {}
+    def __init__(self):
+        self._queues = {}
 
     def new_queue_accessor(self, event_type: type[WsEvent]) -> QueueAccessor:
         """
@@ -314,10 +316,14 @@ class AsyncSink:
         """Start the background thread for processing events."""
         if self._running:
             return
+        if self._thread is not None and self._thread.is_alive():
+            _LOGGER.error(f'{self}: Async sink thread is still alive and cannot be restarted yet')
+            return False
 
         self._running = True
         self._thread = Thread(target=self._cycle, name='async_sink_thread', daemon=True)
         self._thread.start()
+        return True
 
     def stop(self) -> bool:
         """
@@ -343,7 +349,8 @@ class AsyncSink:
             self._thread.join(self._stop_timeout)
             succeeded = not self._thread.is_alive()
 
-        self._thread = None
+        if succeeded:
+            self._thread = None
 
         if self._queue.qsize() > 0:
             _LOGGER.warning(f'{self}: Event queue not empty when stopping; discarding {self._queue.qsize()} events')

@@ -21,7 +21,7 @@ from ibind import (
     EventSink,
 )
 from test.test_utils import capture_logs
-from ws_v2._ws_events import AsyncSink
+from ibind.ws_v2._ws_events import AsyncSink
 
 
 @pytest.fixture

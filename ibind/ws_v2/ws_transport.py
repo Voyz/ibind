@@ -5,10 +5,10 @@ from typing import Callable, Any, cast, List, Union, Dict
 from pydantic import BaseModel, ConfigDict, Field
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 
-import var
-from ibind import ExternalBrokerError
-from support.logs import project_logger
-from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
+from ibind import var
+from ibind.support.errors import ExternalBrokerError
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -120,6 +120,7 @@ class WsTransport:
         self._wsa: WebSocketApp | None = None
         self._degraded = False
         self._tname = None
+        self._last_unanswered_ping_tm = None
 
         self._session_lacks_authentication = False
 
@@ -180,17 +181,36 @@ class WsTransport:
         if self._wsa is None:
             return True
 
-        if self._wsa.last_pong_tm == 0:
+        last_ping_tm = getattr(self._wsa, 'last_ping_tm', 0)
+        last_pong_tm = getattr(self._wsa, 'last_pong_tm', 0)
+
+        if last_ping_tm == 0:
             return True
 
         if max_interval is None:
             max_interval = self._max_ping_interval
 
-        return self.get_time_since_last_ping() <= max_interval
+        now = time.time()
+        if last_pong_tm >= last_ping_tm and last_pong_tm != 0:
+            self._last_unanswered_ping_tm = None
+            return abs(now - last_pong_tm) <= max_interval
+
+        if self._last_unanswered_ping_tm is not None and last_pong_tm >= self._last_unanswered_ping_tm:
+            self._last_unanswered_ping_tm = None
+        if self._last_unanswered_ping_tm is None:
+            self._last_unanswered_ping_tm = last_ping_tm
+
+        return abs(now - self._last_unanswered_ping_tm) <= max_interval
 
     def get_time_since_last_ping(self) -> float:
-        """Get seconds elapsed since the last pong was received."""
-        return abs(time.time() - self._wsa.last_pong_tm)
+        """Get seconds elapsed since the latest ping that still needs a fresh pong, or the last pong."""
+        last_ping_tm = getattr(self._wsa, 'last_ping_tm', 0)
+        last_pong_tm = getattr(self._wsa, 'last_pong_tm', 0)
+        if last_pong_tm >= last_ping_tm and last_pong_tm != 0:
+            return abs(time.time() - last_pong_tm)
+        if self._last_unanswered_ping_tm is not None:
+            return abs(time.time() - self._last_unanswered_ping_tm)
+        return abs(time.time() - last_ping_tm)
 
     def fetch_cookie(self) -> Union[str, None]:
         """

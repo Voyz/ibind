@@ -1,19 +1,17 @@
 import json
-import ssl
 import threading
 import time
-from pathlib import Path
 from queue import Queue
 from threading import Thread, Event
 from typing import Union, List, Dict, Callable, Literal
 
-from support.logs import project_logger
-from support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop
 from ibind import events
 from ibind.events import WsEvent
-from ws_v2._ws_events import EventSink, Router, CallbackSink, AsyncSink
-from ws_v2.ws_subscriptions import SubscriptionController, SubscriptionResolver
-from ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop, make_websocket_sslopt
+from ibind.ws_v2._ws_events import EventSink, Router, CallbackSink, AsyncSink
+from ibind.ws_v2.ws_subscriptions import SubscriptionController, SubscriptionResolver
+from ibind.ws_v2.ws_transport import WsTransport, TransportEvent, TransportOpened, TransportClosed, TransportError, TransportMessage, TransportReconnect
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -23,25 +21,19 @@ _HEALTH_CHECK_INTERVAL = 10
 
 
 class WsState(VerboseEnum):
-    STOPPED = 'STOPPED',
-    STARTING = 'STARTING',
-    CONNECTING = 'CONNECTING',
-    OPEN = 'OPEN',
-    AUTHENTICATED = 'AUTHENTICATED',
-    CLOSED = 'CLOSED',
-    DEGRADED = 'DEGRADED',
-    RECONNECTING = 'RECONNECTING',
-    STOPPING = 'STOPPING',
+    STOPPED = 'STOPPED'
+    STARTING = 'STARTING'
+    CONNECTING = 'CONNECTING'
+    OPEN = 'OPEN'
+    AUTHENTICATED = 'AUTHENTICATED'
+    CLOSED = 'CLOSED'
+    DEGRADED = 'DEGRADED'
+    RECONNECTING = 'RECONNECTING'
+    STOPPING = 'STOPPING'
 
 
 def make_sslopt(cacert: Union[str, bool]):
-    if not (cacert is False or Path(cacert).exists()):
-        raise ValueError(f'Cacert must be a valid Path or False, found: {cacert}')
-
-    if cacert is None or not cacert:
-        return {'cert_reqs': ssl.CERT_NONE}
-    else:
-        return {'ca_certs': cacert}
+    return make_websocket_sslopt(cacert)
 
 
 class WsRuntime():
@@ -168,7 +160,8 @@ class WsRuntime():
 
             self._transport_thread.join(self._connection_timeout)
             is_alive = self._transport_thread.is_alive()
-            self._transport_thread = None
+            if not is_alive:
+                self._transport_thread = None
             return not is_alive
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to stop transport thread: {e}')
@@ -213,16 +206,17 @@ class WsRuntime():
         self._set_state(WsState.STOPPING)
         transport_thread_stopped = self._stop_transport_thread()
         if not transport_thread_stopped:
-            _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
-            self._transport_thread = None
+            _LOGGER.error(f'{self}: Failed to stop transport thread; keeping the thread reference to avoid duplicate transport loops')
         self._transport.set_degraded(True)
 
         self._running = False
-        if self._runtime_thread is not None:
-            self._runtime_thread.join(self._connection_timeout)
+        runtime_thread = self._runtime_thread
+        if runtime_thread is not None:
+            runtime_thread.join(self._connection_timeout)
 
-        if self._runtime_thread.is_alive():
-            _LOGGER.error(f'{self}: Runtime thread failed to stop, abandoning...')
+        if runtime_thread is not None and runtime_thread.is_alive():
+            _LOGGER.error(f'{self}: Runtime thread failed to stop; keeping the thread reference to avoid duplicate runtime loops')
+            return
 
         self._runtime_thread = None
 
@@ -264,12 +258,14 @@ class WsRuntime():
 
         transport_thread_stopped = self._stop_transport_thread()
         if not transport_thread_stopped:
-            _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
-            self._transport_thread = None
+            _LOGGER.error(f'{self}: Failed to stop transport thread; restart aborted to avoid duplicate transport loops')
+            self._transport.set_degraded(True)
+            return False
 
         self._transport.set_degraded(True)
         self._transport = self._new_transport()
         self._new_transport_thread()
+        return True
 
     def reset_websocket_app(self):
         self._transport.reset_websocket_app()

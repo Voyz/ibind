@@ -15,7 +15,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import extract_conid
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import TimeoutLock, UNDEFINED, wait_until
+from ibind.support.py_utils import TimeoutLock, UNDEFINED, wait_until, append_query_params
 
 _LOGGER = project_logger(__file__)
 
@@ -278,7 +278,8 @@ class IbkrWsClient(WsClient):
                 raise ValueError(
                     'OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.'
                 )
-            url += f'?oauth_token={access_token}'
+            url = append_query_params(url, {'oauth_token': access_token})
+            cacert = True
 
         if ibkr_client is None:
             ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert, use_oauth=use_oauth)
@@ -401,12 +402,11 @@ class IbkrWsClient(WsClient):
                 _LOGGER.error(f'{self}: Status unauthenticated: {data}')
             self.set_authenticated(data.get('authenticated'))
         elif 'competing' in data:
-            if data.get('competing') is False:
-                pass
-            _LOGGER.error(f'{self}: Status competing: {data}')
+            if data.get('competing') is True:
+                _LOGGER.error(f'{self}: Status competing: {data}')
         elif (  # expected status updates that we ignore
                 data == {'message': ''} or
-                data.get('fail', '') == '' or
+                data.get('fail') == '' or
                 'serverName' in data or
                 'serverVersion' in data or
                 'username' in data

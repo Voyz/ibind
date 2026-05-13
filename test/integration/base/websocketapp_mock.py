@@ -27,6 +27,7 @@ def init_wsa_mock(
     wsa_mock._on_close.side_effect = on_close
 
     wsa_mock.last_ping_tm = 0
+    wsa_mock.last_pong_tm = 0
     wsa_mock.keep_running = False
 
     return wsa_mock

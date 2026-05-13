@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+
 import pytest
 from unittest.mock import MagicMock
 from ibind.client.ibkr_client import IbkrClient
@@ -62,3 +66,35 @@ def test_handle_auth_status_not_healthy_oauth_success(client, caplog):
     assert any("IBKR connection is not healthy. Attempting to re-establish OAuth authentication." in r.message for r in caplog.records)
     client.stop_tickler.assert_called_once_with(15)
     client.oauth_init.assert_called_once_with(maintain_oauth=True, init_brokerage_session=True)
+
+
+def test_close_oauth_is_idempotent(client):
+    ## Arrange
+    client._use_oauth = True
+    client.oauth_config.shutdown_oauth = True
+    client.oauth_shutdown = MagicMock()
+
+    ## Act
+    client.close()
+    client.close()
+
+    ## Assert
+    client.oauth_shutdown.assert_called_once()
+
+
+def test_oauth_config_init_brokerage_session_uses_dedicated_env_var():
+    ## Arrange
+    env = os.environ.copy()
+    env['IBIND_INIT_OAUTH'] = 'false'
+    env['IBIND_INIT_BROKERAGE_SESSION'] = 'true'
+    code = (
+        'from ibind.oauth import OAuthConfig\n'
+        'print(OAuthConfig.__dataclass_fields__["init_oauth"].default)\n'
+        'print(OAuthConfig.__dataclass_fields__["init_brokerage_session"].default)\n'
+    )
+
+    ## Act
+    completed = subprocess.run([sys.executable, '-c', code], env=env, capture_output=True, text=True, check=True)  # noqa: S603
+
+    ## Assert
+    assert completed.stdout.splitlines() == ['False', 'True']

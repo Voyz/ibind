@@ -3,16 +3,16 @@ from collections import defaultdict
 from typing import Union, List, Dict, Type
 
 from ibind import events
-import var
-from ibind import IbkrClient
+from ibind import var
+from ibind.client.ibkr_client import IbkrClient
 from ibind.events import IbkrTopicEvent
-from ibkr_ws_v2.ibkr_router import IbkrRouter
-from ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
-from support.logs import project_logger
-from support.py_utils import OneOrMany, ensure_list_arg
-from ws_v2._ws_events import EventSink, CallbackSink, Router, AsyncSink, NoopSink
-from ws_v2.ws_subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle, BindingStatus
-from ws_v2.ws_runtime import WsRuntime, WsState
+from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter
+from ibind.ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import OneOrMany, ensure_list_arg, append_query_params
+from ibind.ws_v2._ws_events import EventSink, CallbackSink, Router, AsyncSink, NoopSink
+from ibind.ws_v2.ws_subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle, BindingStatus
+from ibind.ws_v2.ws_runtime import WsRuntime, WsState
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -50,7 +50,8 @@ class IbkrWsClientV2():
                 raise ValueError(
                     'OAuth access token not found. Please set IBIND_OAUTH1A_ACCESS_TOKEN environment variable or provide it as `access_token` argument.'
                 )
-            url += f'?oauth_token={access_token}'
+            url = append_query_params(url, {'oauth_token': access_token})
+            cacert = True
 
         if ibkr_client is None:
             ibkr_client = IbkrClient(account_id=account_id, host=host, port=port, cacert=cacert, use_oauth=use_oauth)
@@ -115,7 +116,8 @@ class IbkrWsClientV2():
         elif event.competing is True:
             _LOGGER.error(f'{self}: Authentication competing: {event}')
 
-        self._runtime.set_authenticated(event.authenticated)
+        if event.authenticated is not None:
+            self._runtime.set_authenticated(event.authenticated)
 
     def _on_system(self, event: events.System):
         if 'hb' in event.data:
