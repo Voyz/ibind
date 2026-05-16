@@ -31,15 +31,15 @@ _HEALTH_CHECK_INTERVAL = 10
 
 
 class WsState(VerboseEnum):
-    STOPPED = 'STOPPED',
-    STARTING = 'STARTING',
-    CONNECTING = 'CONNECTING',
-    OPEN = 'OPEN',
-    AUTHENTICATED = 'AUTHENTICATED',
-    CLOSED = 'CLOSED',
-    DEGRADED = 'DEGRADED',
-    RECONNECTING = 'RECONNECTING',
-    STOPPING = 'STOPPING',
+    STOPPED = 'STOPPED'
+    STARTING = 'STARTING'
+    CONNECTING = 'CONNECTING'
+    OPEN = 'OPEN'
+    AUTHENTICATED = 'AUTHENTICATED'
+    CLOSED = 'CLOSED'
+    DEGRADED = 'DEGRADED'
+    RECONNECTING = 'RECONNECTING'
+    STOPPING = 'STOPPING'
 
 
 def make_sslopt(cacert: Union[str, bool]):
@@ -52,7 +52,7 @@ def make_sslopt(cacert: Union[str, bool]):
         return {'ca_certs': cacert}
 
 
-class WsRuntime():
+class WsRuntime:
     def __init__(
         self,
         url: str,
@@ -85,7 +85,6 @@ class WsRuntime():
         self._authenticated = False
         self._running = False
         self._last_heartbeat = None
-        self._last_tic = time.time()
         self._last_health_check = time.time()
 
         self._transport_thread: Thread | None = None
@@ -124,8 +123,11 @@ class WsRuntime():
         if self._state == self._ready_state:
             self._websocket_ready()
 
-    def get_state(self) -> WsState:
+    def get_state(self) -> WsState:  # pragma: no cover
         return self._state
+
+    def is_ready(self) -> bool:  # pragma: no cover
+        return self._state == self._ready_state
 
     def _websocket_ready(self):
         self._emit(events.WsReady())
@@ -153,15 +155,15 @@ class WsRuntime():
         if not was_already_degraded:
             self._emit(events.WsDegraded())
 
-    def get_authenticated(self) -> bool:
+    def get_authenticated(self) -> bool:  # pragma: no cover
         return self._authenticated
 
-    def _new_transport_thread(self):
+    def _new_transport_thread(self):  # pragma: no cover
         self._transport_thread = Thread(target=self._transport.connect, name='ws_transport_thread')
         self._transport_thread.daemon = True
         self._transport_thread.start()
 
-    def _new_runtime_thread(self):
+    def _new_runtime_thread(self):  # pragma: no cover
         self._runtime_thread = Thread(target=self._cycle, name='ws_runtime_thread')
         self._runtime_thread.daemon = True
         self._runtime_thread.start()
@@ -253,10 +255,10 @@ class WsRuntime():
     def send_json(self, payload: Union[List, Dict]) -> bool:  # pragma: no cover
         return self.send(json.dumps(payload))
 
-    def is_running(self) -> bool:
+    def is_running(self) -> bool:  # pragma: no cover
         return self._running
 
-    def set_last_heartbeat(self, value: float):
+    def set_last_heartbeat(self, value: float):  # pragma: no cover
         self._last_heartbeat = value
 
     def hard_reset(self) -> None:
@@ -281,17 +283,17 @@ class WsRuntime():
         self._transport = self._new_transport()
         self._new_transport_thread()
 
-    def reset_websocket_app(self):
+    def reset_websocket_app(self):  # pragma: no cover
         self._transport.reset_websocket_app()
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}({self._state})'
 
     # ======================
     # == Transport Thread ==
     # ======================
 
-    def _transport_callback(self, te: TransportEvent):
+    def _transport_callback(self, te: TransportEvent):  # pragma: no cover
         self._transport_queue.put(te)
         self._wait_event.set()
 
@@ -337,8 +339,7 @@ class WsRuntime():
             diff = abs(time.time() - self._last_heartbeat)
             if diff > self._max_ping_interval:
                 _LOGGER.warning(
-                    f'{self}: Last heartbeat happened {diff:.2f} seconds ago, '
-                    f'exceeding the max ping interval of {self._max_ping_interval}.'
+                    f'{self}: Last heartbeat happened {diff:.2f} seconds ago, exceeding the max ping interval of {self._max_ping_interval}.'
                 )
                 heartbeat_ok = False
 
@@ -372,8 +373,8 @@ class WsRuntime():
                 self._last_health_check = time.time()
                 self.health_check()
 
-            self._wait_event.clear()
             self._wait_event.wait(self._cycle_interval)
+            self._wait_event.clear()
 
         # if not stopped or closed yet, attempt to do one last pass before the thread dies
         if self._state not in [WsState.STOPPED, WsState.CLOSED]:
