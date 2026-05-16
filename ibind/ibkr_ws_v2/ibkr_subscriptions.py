@@ -9,18 +9,13 @@ from ibind.support.py_utils import filter_none
 from ibind.ws_v2.ws_subscriptions import Subscription, SubscriptionResolver
 
 
-def make_binding_key(
-    event_type: type[IbkrTopicEvent],
-    conid: str = None,
-    account_id=None,
-    exchange=None
-):
+def make_binding_key(event_type: type[IbkrTopicEvent], conid: str = None, account_id=None, exchange=None):
     if event_type in [events.MarketData, events.MarketHistory]:
-        return f"{event_type.topic}+{conid}"
+        return f'{event_type.topic}+{conid}'
     elif event_type in [events.AccountLedger, events.AccountSummary]:
-        return f"{event_type.topic}+{account_id}"
+        return f'{event_type.topic}+{account_id}'
     elif event_type in [events.PriceLadder]:
-        return f"{event_type.topic}+{account_id}+{conid}" + (f"+{exchange}" if exchange is not None else '')
+        return f'{event_type.topic}+{account_id}+{conid}' + (f'+{exchange}' if exchange is not None else '')
     elif event_type in [events.Orders, events.Pnl, events.Trades]:
         return event_type.topic
     else:
@@ -115,7 +110,7 @@ class MarketDataSubscription(IbkrSubscription):
     fields: List[str]
 
     def subscribe_payload(self) -> str:
-        fields_str = json.dumps({"fields": list(self.fields)}, separators=(',', ':'))
+        fields_str = json.dumps({'fields': list(self.fields)}, separators=(',', ':'))
         return f'smd+{self.conid}+{fields_str}'
 
     def unsubscribe_payload(self) -> str:
@@ -159,7 +154,9 @@ class MarketHistorySubscription(IbkrSubscription):
     def unsubscribe_payload(self) -> str:
         server_id = self.get_server_id()
         if server_id is None:
-            raise RuntimeError(f'{self}: Unsubscribing from market history for conid={self.conid!r} without server_id. MarketHistorySubscription must have server_id set before unsubscribing.')
+            raise RuntimeError(
+                f'{self}: Unsubscribing from market history for conid={self.conid!r} without server_id. MarketHistorySubscription must have server_id set before unsubscribing.'
+            )
         return f'umh+{server_id}'
 
     @property
