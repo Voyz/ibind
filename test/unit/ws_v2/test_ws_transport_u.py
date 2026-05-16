@@ -188,7 +188,7 @@ class TestResetWebsocketApp:
 
         ## Act
         with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True, True]):
-            result = transport.reset_websocket_app()
+            transport.reset_websocket_app()
 
         ## Assert
         mock_wsa.close.assert_called_once_with(status=STATUS_UNEXPECTED_CONDITION, timeout=TEST_CONNECTION_TIMEOUT)
@@ -202,7 +202,7 @@ class TestResetWebsocketApp:
 
         ## Act
         with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[False, True]):
-            result = transport.reset_websocket_app()
+            transport.reset_websocket_app()
 
         ## Assert
         assert transport._wsa is None
@@ -317,7 +317,7 @@ class TestFetchCookie:
         mock_get_cookie.return_value = 'session_cookie'
 
         ## Act
-        result = transport.fetch_cookie()
+        transport.fetch_cookie()
 
         ## Assert
         assert transport._session_lacks_authentication is False
@@ -777,7 +777,7 @@ class TestNewWsa:
 
         ## Act
         with patch('ibind.ws_v2.ws_transport.WebSocketApp') as mock_wsa_class:
-            result = transport._new_wsa()
+            transport._new_wsa()
 
         ## Assert
         mock_wsa_class.assert_called_once()

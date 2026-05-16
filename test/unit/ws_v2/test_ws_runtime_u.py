@@ -160,7 +160,7 @@ class TestStateManagement:
         """WsRuntime._set_state emits WsReady when ready_state is reached."""
         ## Arrange
         ready_events = []
-        mock_internal_sink.on(WsReady, lambda e: ready_events.append(e))
+        mock_internal_sink.on(WsReady, ready_events.append)
 
         ## Act
         runtime._set_state(WsState.OPEN)
@@ -177,7 +177,7 @@ class TestAuthentication:
         ## Arrange
         runtime._state = WsState.OPEN
         auth_events = []
-        mock_internal_sink.on(WsAuthenticated, lambda e: auth_events.append(e))
+        mock_internal_sink.on(WsAuthenticated, auth_events.append)
 
         ## Act
         runtime.set_authenticated(True)
@@ -209,7 +209,7 @@ class TestStateDegraded:
         ## Arrange
         runtime._state = WsState.OPEN
         degraded_events = []
-        mock_internal_sink.on(WsDegraded, lambda e: degraded_events.append(e))
+        mock_internal_sink.on(WsDegraded, degraded_events.append)
 
         ## Act
         runtime.state_degraded()
@@ -224,7 +224,7 @@ class TestStateDegraded:
         ## Arrange
         runtime._state = WsState.DEGRADED
         degraded_events = []
-        mock_internal_sink.on(WsDegraded, lambda e: degraded_events.append(e))
+        mock_internal_sink.on(WsDegraded, degraded_events.append)
 
         ## Act
         runtime.state_degraded()
@@ -894,7 +894,7 @@ class TestHandleOnOpen:
         """WsRuntime._handle_on_open sets state to OPEN and emits WsOpen."""
         ## Arrange
         open_events = []
-        mock_internal_sink.on(WsOpen, lambda e: open_events.append(e))
+        mock_internal_sink.on(WsOpen, open_events.append)
 
         ## Act
         runtime._handle_on_open()
@@ -923,7 +923,7 @@ class TestHandleOnReconnect:
         """WsRuntime._handle_on_reconnect sets state to OPEN and emits WsOpen."""
         ## Arrange
         open_events = []
-        mock_internal_sink.on(WsOpen, lambda e: open_events.append(e))
+        mock_internal_sink.on(WsOpen, open_events.append)
 
         ## Act
         runtime._handle_on_reconnect()
@@ -954,7 +954,7 @@ class TestHandleOnError:
         ## Arrange
         error = RuntimeError('test error')
         error_events = []
-        mock_internal_sink.on(WsError, lambda e: error_events.append(e))
+        mock_internal_sink.on(WsError, error_events.append)
 
         ## Act
         runtime._handle_on_error(error)
@@ -984,7 +984,7 @@ class TestHandleOnClose:
         ## Arrange
         runtime._state = WsState.OPEN
         close_events = []
-        mock_internal_sink.on(WsClose, lambda e: close_events.append(e))
+        mock_internal_sink.on(WsClose, close_events.append)
 
         ## Act
         runtime._handle_on_close(1000, 'normal')
