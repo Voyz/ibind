@@ -11,10 +11,11 @@ from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import ibind_logs_initialize
 from ibind.support.py_utils import execute_in_parallel
 from ibind import events, subscriptions
-from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
+from ibind.ws_v2.ws_runtime import WsState
 from ibind.ws_v2._ws_events import LogSink, QueueSink, CallbackSink, CompositeSink, NoopSink, EventSink
-from ibind.ws_v2.ws_subscriptions import SubscriptionHandle
-
+from ibind.ws_v2.ws_subscriptions import SubscriptionHandle, BindingStatus
+from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
+from ibind.ibkr_ws_v2.ibkr_subscriptions import make_binding_key
 
 __all__ = [
     'ibind_logs_initialize',
@@ -37,6 +38,8 @@ __all__ = [
     'events',
     'subscriptions',
     'IbkrWsClientV2',
+    'WsState',
+    'BindingStatus',
     'EventSink',
     'NoopSink',
     'LogSink',
@@ -44,6 +47,5 @@ __all__ = [
     'CallbackSink',
     'CompositeSink',
     'SubscriptionHandle',
+    'make_binding_key',
 ]
-
-# patch_dotenv()

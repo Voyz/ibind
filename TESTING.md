@@ -14,6 +14,10 @@ This document defines how tests are chosen, written, and evaluated.
 - Prefer integration tests for verifying component boundaries and data flow.
 - Capture and assert on logs for error and warning conditions.
 
+## Guidelines
+
+- When `time.time` is used, use `mock_module_time` from `test.test_utils` rather than waiting for the time to pass.
+
 
 ## Test Type Structure
 
