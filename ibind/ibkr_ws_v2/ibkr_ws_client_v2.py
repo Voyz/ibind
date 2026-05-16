@@ -1,6 +1,6 @@
 import json
 from collections import defaultdict
-from typing import Union, List, Dict, Type
+from typing import Union, List, Dict, Type, Optional
 
 from ibind import events
 from ibind import var
@@ -19,7 +19,7 @@ _LOGGER = project_logger('ibkr_ws_client')
 _DEFAULT_CYCLE_INTERVAL = 0.25
 
 
-class IbkrWsClientV2():
+class IbkrWsClientV2:
     def __init__(
         self,
         account_id: str = var.IBIND_ACCOUNT_ID,
@@ -99,6 +99,7 @@ class IbkrWsClientV2():
 
         self._mh_subscriptions: List[MarketHistorySubscription] = []
         self._conid_server_id_pairs: Dict[type[events.IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)
+        self._tic_message = {}
 
     def _register_internal_callbacks(self):
         self._internal_sink.on(events.AuthenticationStatus, self._on_authentication_status)
@@ -180,7 +181,9 @@ class IbkrWsClientV2():
             return
         server_id = self._conid_server_id_pairs.get(subscription.event_type, {}).get(subscription.conid)
         if server_id is None:
-            raise RuntimeError(f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Could not find server_id in memory. Ensure at least one MarketHistory event is received before unsubscribing.')
+            raise RuntimeError(
+                f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Could not find server_id in memory. Ensure at least one MarketHistory event is received before unsubscribing.'
+            )
 
         _LOGGER.warning(
             f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Setting from memory: {server_id!r}. '
@@ -203,6 +206,39 @@ class IbkrWsClientV2():
 
     def get_state(self) -> WsState:
         return self._runtime.get_state()
+
+    def is_ready(self) -> bool:
+        return self._runtime.is_ready()
+
+    def is_subscription_active(self, binding_key: str) -> Optional[bool]:
+        return self._runtime.subscription_controller.is_subscription_active(binding_key)
+
+    def tic(self):
+        """
+        Sends a tic request to the IBKR WebSocket server and waits for the response.
+
+        This method sends a 'tic' message to the server and waits for the server to update
+        the internal tic message with a new timestamp. It uses the 'lastAccessed' field
+        to detect when a fresh response has been received.
+
+        Returns:
+            dict: The tic message dictionary containing server response data, or None if
+                  the send operation failed or the response timed out.
+        """
+        ts = self._tic_message.get('lastAccessed', 0)
+        ret = self._runtime.send('tic')
+
+        if not ret:
+            return None
+
+        def ts_changed():
+            return self._tic_message.get('lastAccessed', 0) != ts
+
+        if not wait_until(ts_changed, timeout=5):
+            _LOGGER.error(f'tic timeout, ts={ts}')
+            return None
+
+        return self._tic_message
 
     def __str__(self):
         return f'{self.__class__.__qualname__}()'
