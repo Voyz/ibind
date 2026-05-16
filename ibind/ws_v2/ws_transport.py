@@ -157,11 +157,12 @@ class WsTransport:
 
         self._wsa.close(status=STATUS_UNEXPECTED_CONDITION, timeout=self._connection_timeout)
 
-        if not wait_until(lambda: self._wsa is None, f'{self}: WebSocket reset close timeout', timeout=self._connection_timeout * 2):
-            _LOGGER.warning(f'{self}: Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
+        if not wait_until(lambda: self._wsa is None, timeout=self._connection_timeout * 2):
+            _LOGGER.warning(f'{self}:  WebSocket reset close timeout. Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
             self._wsa = None
 
-        wait_until(lambda: self._wsa is not None, f'{self}: WebSocket recreation timeout', timeout=self._connection_timeout * 2)
+        if not wait_until(lambda: self._wsa is not None, timeout=self._connection_timeout * 2):
+            _LOGGER.error(f'{self}: WebSocket recreation timeout')
 
         return self._wsa is not None
 

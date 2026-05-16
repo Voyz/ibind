@@ -193,7 +193,9 @@ class WsRuntime():
         if isinstance(self._sink, AsyncSink):
             self._sink.start()
 
-        connection_success = wait_until(lambda: self._state == self._ready_state, f'{self}: Starting timeout', timeout=self._connection_timeout)
+        connection_success = wait_until(lambda: self._state == self._ready_state, timeout=self._connection_timeout)
+        if not connection_success:
+            _LOGGER.error(f'{self}: Starting timeout')
         return connection_success
 
     def stop(self):
