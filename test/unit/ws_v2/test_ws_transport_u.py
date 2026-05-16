@@ -4,9 +4,9 @@ from websocket import STATUS_NORMAL, STATUS_UNEXPECTED_CONDITION
 import pytest
 
 from ibind import ExternalBrokerError
-from support.py_utils import UNDEFINED
+from ibind.support.py_utils import UNDEFINED
 from test.test_utils import capture_logs, mock_module_time
-from ws_v2.ws_transport import (
+from ibind.ws_v2.ws_transport import (
     TransportOpened,
     TransportClosed,
     TransportError,
@@ -163,7 +163,7 @@ class TestResetWebsocketApp:
         transport._tname = 'test_thread'
 
         ## Act / Assert
-        with patch('ws_v2.ws_transport.tname', return_value='test_thread'):
+        with patch('ibind.ws_v2.ws_transport.tname', return_value='test_thread'):
             with pytest.raises(RuntimeError, match='Resetting websocket app called from within transport thread'):
                 transport.reset_websocket_app()
 
@@ -187,7 +187,7 @@ class TestResetWebsocketApp:
         transport._wsa = mock_wsa
 
         ## Act
-        with patch('ws_v2.ws_transport.wait_until', side_effect=[True, True]):
+        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True, True]):
             result = transport.reset_websocket_app()
 
         ## Assert
@@ -201,7 +201,7 @@ class TestResetWebsocketApp:
         transport._wsa = mock_wsa
 
         ## Act
-        with patch('ws_v2.ws_transport.wait_until', side_effect=[False, True]):
+        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[False, True]):
             result = transport.reset_websocket_app()
 
         ## Assert
@@ -243,7 +243,7 @@ class TestCheckPing:
         transport._wsa.last_pong_tm = current_time - TEST_TIME_WITHIN_INTERVAL
 
         ## Act
-        with mock_module_time('ws_v2.ws_transport', time_sequence=[current_time]):
+        with mock_module_time('ibind.ws_v2.ws_transport', time_sequence=[current_time]):
             result = transport.check_ping()
 
         ## Assert
@@ -258,7 +258,7 @@ class TestCheckPing:
         transport._wsa.last_pong_tm = current_time - TEST_TIME_EXCEEDS_INTERVAL
 
         ## Act
-        with mock_module_time('ws_v2.ws_transport', time_sequence=[current_time]):
+        with mock_module_time('ibind.ws_v2.ws_transport', time_sequence=[current_time]):
             result = transport.check_ping()
 
         ## Assert
@@ -273,7 +273,7 @@ class TestCheckPing:
         transport._wsa.last_pong_tm = current_time - TEST_TIME_CUSTOM_CHECK
 
         ## Act
-        with mock_module_time('ws_v2.ws_transport', time_sequence=[current_time]):
+        with mock_module_time('ibind.ws_v2.ws_transport', time_sequence=[current_time]):
             result = transport.check_ping(max_interval=TEST_CUSTOM_MAX_INTERVAL)
 
         ## Assert
@@ -288,7 +288,7 @@ class TestCheckPing:
         transport._wsa.last_pong_tm = current_time - TEST_TIME_SINCE_LAST_PING
 
         ## Act
-        with mock_module_time('ws_v2.ws_transport', time_sequence=[current_time]):
+        with mock_module_time('ibind.ws_v2.ws_transport', time_sequence=[current_time]):
             result = transport.get_time_since_last_ping()
 
         ## Assert
@@ -776,7 +776,7 @@ class TestNewWsa:
         mock_get_header.return_value = {'User-Agent': 'test'}
 
         ## Act
-        with patch('ws_v2.ws_transport.WebSocketApp') as mock_wsa_class:
+        with patch('ibind.ws_v2.ws_transport.WebSocketApp') as mock_wsa_class:
             result = transport._new_wsa()
 
         ## Assert
@@ -797,7 +797,7 @@ class TestConnect:
         transport._running = False
 
         ## Act
-        with patch('ws_v2.ws_transport.tname', return_value='test_thread'):
+        with patch('ibind.ws_v2.ws_transport.tname', return_value='test_thread'):
             with patch.object(transport, '_new_wsa', return_value=None):
                 with patch('time.sleep', side_effect=[None, KeyboardInterrupt]):
                     try:

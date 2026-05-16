@@ -5,10 +5,10 @@ from typing import Callable, Any, cast, List, Union, Dict
 from pydantic import BaseModel, ConfigDict, Field
 from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 
-import var
+from ibind import var
 from ibind import ExternalBrokerError
-from support.logs import project_logger
-from support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
 
 _LOGGER = project_logger('ibkr_ws_client')
 

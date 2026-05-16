@@ -6,9 +6,9 @@ from typing import Protocol, Callable, TypeVar, List, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from base.queue_controller import QueueAccessor
-from support.logs import project_logger
-from support.py_utils import OneOrMany, exception_to_string, tname
+from ibind.base.queue_controller import QueueAccessor
+from ibind.support.logs import project_logger
+from ibind.support.py_utils import OneOrMany, exception_to_string, tname
 
 __all__ = []
 
