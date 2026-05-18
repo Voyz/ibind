@@ -5,7 +5,6 @@ from pydantic import Field
 from ibind.events import WsEvent
 
 
-
 class GenericIbkrEvent(WsEvent):
     message: dict | None
     topic: str | None = None
@@ -16,20 +15,20 @@ class GenericIbkrEvent(WsEvent):
 # ==  Unsolicited  ==
 # ===================
 
+
 class IbkrError(WsEvent):
-    message: str
+    data: dict
 
 
-class WaitingForSession(WsEvent):
-    ...
+class WaitingForSession(WsEvent): ...
 
 
 class Notification(WsEvent):
-    message: str
+    data: dict
 
 
 class Bulletin(WsEvent):
-    message: str
+    data: dict
 
 
 class AccountUpdate(WsEvent):
@@ -49,6 +48,7 @@ class AuthenticationStatus(WsEvent):
 # ===================
 # ==  Topic-based  ==
 # ===================
+
 
 class IbkrTopicEvent(WsEvent):
     topic: ClassVar[str]

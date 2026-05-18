@@ -37,9 +37,9 @@ def parse_raw_message(raw_message: str):
     if topic is UNDEFINED:
         return message, None, None
 
-    data = message.get('args', {})
+    arguments = message.get('args', {})
 
-    return message, topic, data
+    return message, topic, arguments
 
 
 class IbkrRouter:
@@ -76,7 +76,7 @@ class IbkrRouter:
         rv.append(events.MarketHistory(conid=str(conid), data=data))
         return rv
 
-    def _preprocess_account_ledger(self, data):
+    def _preprocess_account_ledger(self, data: dict) -> OneOrMany[WsEvent]:
         rv = []
         for entry in data['result']:
             if 'acctCode' not in entry:
@@ -85,7 +85,7 @@ class IbkrRouter:
             rv.append(event)
         return rv
 
-    def _preprocess_account_summary(self, data):
+    def _preprocess_account_summary(self, data: dict) -> OneOrMany[WsEvent]:
         summary = {}
         timestamp = data['result'][0]['timestamp']
         for entry in data['result']:
@@ -110,6 +110,12 @@ class IbkrRouter:
         event = events.AccountSummary(data=summary, account_id=account_id)
         return event
 
+    def _preprocess_orders(self, data: dict) -> OneOrMany[WsEvent]:
+        for order_data in data.get('args', []):
+            order_data.pop('bgColor', None)
+            order_data.pop('fgColor', None)
+        return events.Orders(data=data)
+
     def _handle_subscribed_message(self, topic: str, data: dict) -> OneOrMany[WsEvent] | None:
         try:
             # ibkr_ws_key = IbkrWsKey.from_topic(topic[1:3])
@@ -129,7 +135,7 @@ class IbkrRouter:
         elif event_type == events.PriceLadder:
             rv = events.PriceLadder(data=data)
         elif event_type == events.Orders:
-            rv = events.Orders(data=data)
+            rv = self._preprocess_orders(data)
         elif event_type == events.Pnl:
             rv = events.Pnl(data=data)
         elif event_type == events.Trades:
@@ -139,10 +145,10 @@ class IbkrRouter:
             rv = None
         return rv
 
-    def _handle_account_update(self, message, arguments) -> OneOrMany[WsEvent]:
+    def _handle_account_update(self, data, arguments) -> OneOrMany[WsEvent]:
         return events.AccountUpdate(data=arguments)
 
-    def _handle_authentication_status(self, message, arguments) -> OneOrMany[WsEvent]:
+    def _handle_authentication_status(self, data, arguments) -> OneOrMany[WsEvent]:
         if 'authenticated' in arguments or 'competing' in arguments:
             return events.AuthenticationStatus(data=arguments, authenticated=arguments.get('authenticated'), competing=arguments.get('competing'))
         elif (  # expected status updates that we ignore
@@ -156,17 +162,17 @@ class IbkrRouter:
 
         return []
 
-    def _handle_bulletin(self, message) -> OneOrMany[WsEvent]:  # pragma: no cover
-        return events.Bulletin(message=message)
+    def _handle_bulletin(self, data) -> OneOrMany[WsEvent]:  # pragma: no cover
+        return events.Bulletin(data=data)
 
-    def _handle_error(self, message) -> OneOrMany[WsEvent]:
-        _LOGGER.error(f'{self}: on_message error: {message}')
-        return events.IbkrError(message=message)
+    def _handle_error(self, data: dict) -> OneOrMany[WsEvent]:
+        _LOGGER.error(f'{self}: on_message error: {data}')
+        return events.IbkrError(data=data)
 
     def _handle_notification(self, data) -> OneOrMany[WsEvent]:  # pragma: no cover
         rv = []
         for notification in data:
-            rv.append(events.Notification(message=notification))
+            rv.append(events.Notification(data=notification))
         return rv
 
     def _handle_market_history_unsubscribe(self, data) -> OneOrMany[WsEvent]:
@@ -185,63 +191,63 @@ class IbkrRouter:
             )
         return []
 
-    def _handle_message_without_topic(self, message: dict) -> OneOrMany[WsEvent]:
-        if 'message' in message:
-            if message['message'] == 'waiting for session':
+    def _handle_message_without_topic(self, data: dict) -> OneOrMany[WsEvent]:
+        if 'message' in data:
+            if data['message'] == 'waiting for session':
                 _LOGGER.info(f'{self}: Waiting for an active IBKR session.')
                 return events.WaitingForSession()
 
-            if 'Unsubscribed' in message['message']:
-                return self._handle_market_history_unsubscribe(message)
+            if 'Unsubscribed' in data['message']:
+                return self._handle_market_history_unsubscribe(data)
 
-        elif 'result' in message:
-            if message['result'] == 'unsubscribed from summary':
+        elif 'result' in data:
+            if data['result'] == 'unsubscribed from summary':
                 return events.Unsubscription(target_event_type=events.AccountSummary)
-            elif message['result'] == 'unsubscribed from ledger':
+            elif data['result'] == 'unsubscribed from ledger':
                 return events.Unsubscription(target_event_type=events.AccountLedger)
 
-        _LOGGER.error(f'{self}: Unrecognised message without a topic: {message}')
-        return GenericIbkrEvent(message=message)
+        _LOGGER.error(f'{self}: Unrecognised message without a topic: {data}')
+        return GenericIbkrEvent(message=data)
 
     def route(self, raw_message: str) -> OneOrMany[WsEvent]:
         if self._log_raw_messages:
-            _LOGGER.debug(f'{self}: Raw message: {raw_message}')
-        message, topic, arguments = parse_raw_message(raw_message)
+            _LOGGER.debug(f'{self}: Raw data: {raw_message}')
+        data, topic, arguments = parse_raw_message(raw_message)
 
-        if 'error' in message:
-            rv = self._handle_error(message)
+        if 'error' in data:
+            rv = self._handle_error(data)
 
         elif topic is None:
-            # in general most message should carry a topic, other than for few exceptions
-            rv = self._handle_message_without_topic(message)
+            # in general most data should carry a topic, other than for few exceptions
+            rv = self._handle_message_without_topic(data)
 
         elif topic == 'tic':
-            # self._tic_message = message
-            rv = events.System(data=message)
+            # self._tic_message = data
+            rv = events.System(data=data)
 
         elif topic == 'system':
-            rv = events.System(data=message)
+            rv = events.System(data=data)
 
         elif topic == 'act':
-            rv = self._handle_account_update(message, arguments)
+            rv = self._handle_account_update(data, arguments)
 
         elif topic == 'blt':
-            rv = self._handle_bulletin(message)
+            rv = self._handle_bulletin(data)
 
         elif topic == 'ntf':
             rv = self._handle_notification(arguments)
 
         elif topic == 'sts':
-            rv = self._handle_authentication_status(message, arguments)
+            rv = self._handle_authentication_status(data, arguments)
 
         elif topic == 'error':
-            rv = self._handle_error(message)
+            rv = self._handle_error(data)
 
         else:
-            rv = self._handle_subscribed_message(topic, message)
+            rv = self._handle_subscribed_message(topic, data)
             if rv is None:
-                _LOGGER.error(f'{self}: topic "{topic}" subscribed but lacking a handler. Message: {message}')
-                rv = GenericIbkrEvent(message=message, topic=topic, data=arguments)
+                _LOGGER.error(f'{self}: topic "{topic}" subscribed but lacking a handler. Message: {data}')
+                rv = GenericIbkrEvent(message=data, topic=topic, data=arguments)
 
         return rv
 
