@@ -92,6 +92,33 @@ def test_lifecycle_events():
 
 class TestCallbackSink:
     @capture_logs()
+    def test_instances_have_independent_callbacks(self):
+        """CallbackSink instances have independent _callbacks dictionaries."""
+        ## Arrange
+        sink1 = CallbackSink()
+        sink2 = CallbackSink()
+        callback = MagicMock()
+
+        ## Act
+        sink1.on(WsOpen, callback)
+
+        ## Assert
+        assert WsOpen in sink1._callbacks
+        assert callback in sink1._callbacks[WsOpen]
+        assert WsOpen not in sink2._callbacks
+        assert sink1._callbacks is not sink2._callbacks
+
+    @capture_logs()
+    def test_instances_have_independent_locks(self):
+        """CallbackSink instances have independent _callbacks_lock objects."""
+        ## Arrange
+        sink1 = CallbackSink()
+        sink2 = CallbackSink()
+
+        ## Assert
+        assert sink1._callbacks_lock is not sink2._callbacks_lock
+
+    @capture_logs()
     def test_on_registers_callback(self, callback_sink):
         """CallbackSink.on registers a callback for an event type."""
         ## Arrange
@@ -213,6 +240,24 @@ class TestCallbackSink:
 
 
 class TestQueueSink:
+    @capture_logs()
+    def test_instances_have_independent_queues(self):
+        """QueueSink instances have independent _queues dictionaries."""
+        ## Arrange
+        sink1 = QueueSink()
+        sink2 = QueueSink()
+        event = WsOpen()
+
+        ## Act
+        sink1.emit(event)
+
+        ## Assert
+        assert WsOpen in sink1._queues
+        assert WsOpen not in sink2._queues
+        assert sink1._queues is not sink2._queues
+        assert sink1.get(WsOpen, block=False) is event
+        assert sink2.get(WsOpen, block=False) is None
+
     @capture_logs()
     def test_new_queue_accessor_creates_accessor(self, queue_sink):
         """QueueSink.new_queue_accessor returns a QueueAccessor for the event type."""

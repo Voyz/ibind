@@ -138,8 +138,9 @@ class CallbackSink:
     Exceptions from callbacks are logged but do not propagate.
     """
 
-    _callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
-    _callbacks_lock = threading.Lock()
+    def __init__(self):
+        self._callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
+        self._callbacks_lock = threading.RLock()
 
     def on(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> None:
         """
@@ -196,7 +197,8 @@ class QueueSink:
     retrieved synchronously or asynchronously via queue accessors.
     """
 
-    _queues = {}
+    def __init__(self):
+        self._queues = {}
 
     def new_queue_accessor(self, event_type: type[WsEvent]) -> QueueAccessor:
         """
