@@ -32,7 +32,8 @@ class TransportEvent(BaseModel):
         return self.attempt[0]
 
     def __str__(self):  # pragma: no cover
-        return f'{self.__class__.__qualname__}()'
+        fields = ', '.join(f'{k}={v!r}' for k, v in self.model_dump().items())
+        return f'{self.__class__.__qualname__}({fields})'
 
 
 class TransportOpened(TransportEvent):
@@ -207,7 +208,7 @@ class WsTransport:
             return cookie
         except Exception as e:
             if isinstance(e, TimeoutError):
-                _LOGGER.info(f'{self}: Timeout retrieving cookie')
+                _LOGGER.info(f'{self}: Timeout retrieving cookie')  # TODO: silence this error if repeats
                 return UNDEFINED
             if isinstance(e, ExternalBrokerError):
                 if e.status_code == 401:
