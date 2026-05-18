@@ -390,8 +390,13 @@ class WsRuntime:
 
     def _process_transport_queue(self):
         retry_events = []
-        while not self._transport_queue.empty():
+        current_events = []
+        while not self._transport_queue.empty() and len(current_events) < 1000:
             te = self._transport_queue.get()
+            current_events.append(te)
+
+        sorted_events = sorted(current_events, key=lambda te: te.received_at)
+        for te in sorted_events:
             try:
                 self._handle_transport_event(te)
             except Exception as e:

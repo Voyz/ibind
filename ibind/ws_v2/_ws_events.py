@@ -400,12 +400,17 @@ class AsyncSink:
                 _LOGGER.warning(f'{self}: Event queue still full; dropping event: {event}')
 
     def _consume_queue(self):
-        while True:
+        current_events = []
+        while len(current_events) < 1000:
             try:
                 event = self._queue.get_nowait()
             except Empty:
                 break
+            current_events.append(event)
 
+        sorted_events = sorted(current_events, key=lambda event: event.received_at)
+
+        for event in sorted_events:
             try:
                 self._sink.emit(event)
             except Exception as e:
