@@ -147,6 +147,57 @@ class TestCallbackSink:
         callback1.assert_called_once_with(sample_event)
         callback2.assert_called_once_with(sample_event)
 
+    @capture_logs()
+    def test_on_idempotent(self, callback_sink):
+        """CallbackSink.on does not register duplicate callbacks."""
+        ## Arrange
+        callback = MagicMock()
+
+        ## Act
+        callback_sink.on(WsOpen, callback)
+        callback_sink.on(WsOpen, callback)
+
+        ## Assert
+        assert callback_sink._callbacks[WsOpen].count(callback) == 1
+
+    @capture_logs()
+    def test_has_callback_returns_true_when_registered(self, callback_sink):
+        """CallbackSink.has_callback returns True when callback is registered."""
+        ## Arrange
+        callback = MagicMock()
+        callback_sink.on(WsOpen, callback)
+
+        ## Act
+        result = callback_sink.has_callback(WsOpen, callback)
+
+        ## Assert
+        assert result is True
+
+    @capture_logs()
+    def test_has_callback_returns_false_when_not_registered(self, callback_sink):
+        """CallbackSink.has_callback returns False when callback is not registered."""
+        ## Arrange
+        callback = MagicMock()
+
+        ## Act
+        result = callback_sink.has_callback(WsOpen, callback)
+
+        ## Assert
+        assert result is False
+
+    @capture_logs()
+    def test_has_callback_returns_false_for_different_event_type(self, callback_sink):
+        """CallbackSink.has_callback returns False when callback is registered for different event type."""
+        ## Arrange
+        callback = MagicMock()
+        callback_sink.on(WsOpen, callback)
+
+        ## Act
+        result = callback_sink.has_callback(WsClose, callback)
+
+        ## Assert
+        assert result is False
+
     @capture_logs(logger_level='ERROR', expected_errors=['Exception emitting event to callback test_fn'], partial_match=True)
     def test_emit_logs_callback_exception(self, callback_sink, sample_event):
         """CallbackSink.emit logs exceptions raised by callbacks without propagating."""

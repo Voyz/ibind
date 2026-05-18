@@ -9,6 +9,7 @@ from ibind.ws_v2.ws_subscriptions import (
     Binding,
     SubscriptionHandle,
     SubscriptionController,
+    SubscriptionUpdated,
 )
 from test.test_utils import capture_logs, mock_module_time
 
@@ -93,9 +94,15 @@ def mock_send_payload():
 
 
 @pytest.fixture
-def sc(mock_send_payload):
+def mock_emit_event():
+    return MagicMock()
+
+
+@pytest.fixture
+def sc(mock_send_payload, mock_emit_event):
     return SubscriptionController(
         send_payload=mock_send_payload,
+        emit_event=mock_emit_event,
         subscription_resolver=MockResolver(),
         subscription_retries=3,
         subscription_timeout=1.0,
@@ -819,3 +826,108 @@ class TestConfirmUnsubscribed:
         """SubscriptionController._confirm_unsubscribed logs warning when binding does not exist."""
         ## Act
         sc._confirm_unsubscribed('nonexistent')
+
+
+class TestSubscriptionUpdatedEvent:
+    @capture_logs()
+    def test_subscription_updated_emitted_on_status_change(self, sc, mock_sub, binding_key, mock_emit_event):
+        """SubscriptionController emits SubscriptionUpdated event when status changes."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+
+        ## Act
+        with sc._condition:
+            sc._confirm_subscribed(binding_key)
+
+        ## Assert
+        mock_emit_event.assert_called_once()
+        event = mock_emit_event.call_args[0][0]
+        assert isinstance(event, SubscriptionUpdated)
+        assert event.subscription == mock_sub
+        assert event.binding_key == binding_key
+        assert event.status == BindingStatus.ACTIVE
+
+    @capture_logs()
+    def test_subscription_updated_emitted_on_unsubscribe(self, sc, mock_sub, binding_key, mock_emit_event):
+        """SubscriptionController emits SubscriptionUpdated event when unsubscribing."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        with sc._condition:
+            sc._confirm_subscribed(binding_key)
+        sc.unsubscribe(mock_sub)
+        mock_emit_event.reset_mock()
+
+        ## Act
+        with sc._condition:
+            sc._confirm_unsubscribed(binding_key)
+
+        ## Assert
+        mock_emit_event.assert_called_once()
+        event = mock_emit_event.call_args[0][0]
+        assert isinstance(event, SubscriptionUpdated)
+        assert event.subscription == mock_sub
+        assert event.binding_key == binding_key
+        assert event.status == BindingStatus.UNSUBSCRIBED
+
+    @capture_logs()
+    def test_subscription_updated_emitted_on_failed_status(self, sc, mock_sub, binding_key, mock_emit_event):
+        """SubscriptionController emits SubscriptionUpdated event when subscription fails."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        mock_emit_event.reset_mock()
+
+        ## Act
+        with mock_module_time('ibind.ws_v2.ws_subscriptions', time_sequence=[1000.0, 1001.1, 1002.2, 1003.3, 1004.4]):
+            for i in range(4):
+                with sc._condition:
+                    sc.reconcile_binding(binding)
+
+        ## Assert
+        assert binding.status == BindingStatus.FAILED
+        mock_emit_event.assert_called_once()
+        event = mock_emit_event.call_args[0][0]
+        assert isinstance(event, SubscriptionUpdated)
+        assert event.status == BindingStatus.FAILED
+
+    @capture_logs()
+    def test_subscription_updated_emitted_on_expired_status(self, sc, test_subscription_with_expiry, mock_emit_event):
+        """SubscriptionController emits SubscriptionUpdated event when subscription expires."""
+        ## Arrange
+        with mock_module_time('ibind.ws_v2.ws_subscriptions', time_sequence=[1000.0, 1011.0]):
+            sc.subscribe(test_subscription_with_expiry)
+            binding = sc._bindings[test_subscription_with_expiry.binding_key()]
+            with sc._condition:
+                sc.reconcile_binding(binding)
+            with sc._condition:
+                sc._confirm_subscribed(test_subscription_with_expiry.binding_key())
+            mock_emit_event.reset_mock()
+
+            ## Act
+            with sc._condition:
+                sc.reconcile_binding(binding)
+
+        ## Assert
+        assert binding.status == BindingStatus.EXPIRED
+        mock_emit_event.assert_called_once()
+        event = mock_emit_event.call_args[0][0]
+        assert isinstance(event, SubscriptionUpdated)
+        assert event.status == BindingStatus.EXPIRED
+
+    @capture_logs()
+    def test_subscription_updated_emitted_on_degraded_status(self, sc, mock_sub, binding_key, mock_emit_event):
+        """SubscriptionController emits SubscriptionUpdated event when subscription is invalidated."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        with sc._condition:
+            sc._confirm_subscribed(binding_key)
+        mock_emit_event.reset_mock()
+
+        ## Act
+        sc.invalidate_subscriptions()
+
+        ## Assert
+        mock_emit_event.assert_called_once()
+        event = mock_emit_event.call_args[0][0]
+        assert isinstance(event, SubscriptionUpdated)
+        assert event.status == BindingStatus.DEGRADED

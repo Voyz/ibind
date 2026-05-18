@@ -101,7 +101,9 @@ class WsRuntime:
 
         self._transport: WsTransport = self._new_transport()
 
-        self.subscription_controller = SubscriptionController(send_payload=self.send, subscription_resolver=subscription_resolver)
+        self.subscription_controller = SubscriptionController(
+            send_payload=self.send, emit_event=self._emit, subscription_resolver=subscription_resolver
+        )
 
     def _new_transport(self):
         return WsTransport(

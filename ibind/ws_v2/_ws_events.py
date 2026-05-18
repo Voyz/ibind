@@ -139,6 +139,7 @@ class CallbackSink:
     """
 
     _callbacks: Dict[type[WsEvent], List[Callable[[WsEvent], None]]] = {}
+    _callbacks_lock = threading.Lock()
 
     def on(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> None:
         """
@@ -148,7 +149,24 @@ class CallbackSink:
             event_type (type[WsEvent]): The event type to listen for.
             callback (Callable): Function to invoke when events of this type are emitted.
         """
-        self._callbacks.setdefault(event_type, []).append(callback)
+        with self._callbacks_lock:
+            callbacks = self._callbacks.setdefault(event_type, [])
+            if callback not in callbacks:
+                callbacks.append(callback)
+
+    def has_callback(self, event_type: type[WsEvent], callback: Callable[[T], None]) -> bool:
+        """
+        Check if a callback is registered for a specific event type.
+
+        Args:
+            event_type (type[WsEvent]): The event type to check.
+            callback (Callable): The callback to look for.
+
+        Returns:
+            bool: True if the callback is registered, False otherwise.
+        """
+        with self._callbacks_lock:
+            return callback in self._callbacks.get(event_type, [])
 
     def emit(self, event: WsEvent) -> None:
         """
@@ -157,7 +175,10 @@ class CallbackSink:
         Args:
             event (WsEvent): The event to emit.
         """
-        for callback in self._callbacks.get(type(event), []):
+        with self._callbacks_lock:
+            callbacks = list(self._callbacks.get(type(event), []))
+
+        for callback in callbacks:
             try:
                 callback(event)
             except Exception as e:

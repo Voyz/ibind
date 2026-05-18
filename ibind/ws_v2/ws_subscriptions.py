@@ -6,6 +6,7 @@ from typing import Dict, Optional, Callable, Protocol, Tuple, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from ibind import events
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
 from ibind.events import WsEvent
@@ -98,6 +99,14 @@ class BindingStatus(Enum):  # pragma: no cover
     DEGRADED = 'DEGRADED'
     UNSUBSCRIBED = 'UNSUBSCRIBED'  # unsubscription successful
     EXPIRED = 'EXPIRED'
+
+
+class SubscriptionUpdated(WsEvent):
+    """Emitted when subscription status changes."""
+
+    subscription: Subscription
+    binding_key: str
+    status: BindingStatus
 
 
 class Binding(BaseModel):
@@ -204,6 +213,7 @@ class SubscriptionController:
     def __init__(
         self,
         send_payload: Callable[[str], bool],
+        emit_event: Callable[[WsEvent], None],
         subscription_resolver: SubscriptionResolver,
         subscription_retries: int = 5,
         subscription_timeout: float = 2,
@@ -214,11 +224,13 @@ class SubscriptionController:
         Args:
             send_payload (Callable[[str], bool]): Function to send payloads through the WebSocket.
                 Returns True if sent successfully.
+            emit_event (Callable[[WsEvent], None]): Function to emit events.
             subscription_resolver (SubscriptionResolver): Resolver to match events to subscriptions.
             subscription_retries (int, optional): Maximum retry attempts per subscription. Default: 5.
             subscription_timeout (float, optional): Seconds to wait between retry attempts. Default: 2.
         """
         self._send_payload = send_payload
+        self._emit_event = emit_event
         self._subscription_resolver = subscription_resolver
         self._subscription_retries = subscription_retries
         self._subscription_timeout = subscription_timeout
@@ -479,10 +491,12 @@ class SubscriptionController:
             }
 
     def _update_status(self, binding: Binding, status: BindingStatus):
-        _LOGGER.info(f'{self}: Updated subscription status: {binding.subscription.binding_key()} {binding.status.value} -> {status.value}')
+        binding_key = binding.subscription.binding_key()
+        _LOGGER.info(f'{self}: Updated subscription status: {binding_key} {binding.status.value} -> {status.value}')
         binding.status = status
         binding.attempts = 0
         self._condition.notify_all()
+        self._emit_event(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status))
 
     def _confirm_subscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):
