@@ -166,7 +166,7 @@ class WsRuntime:
         self._transport_thread.start()
 
     def _new_runtime_thread(self):  # pragma: no cover
-        self._runtime_thread = Thread(target=self._cycle, name='ws_runtime_thread')
+        self._runtime_thread = Thread(target=self._runtime_worker, name='ws_runtime_thread')
         self._runtime_thread.daemon = True
         self._runtime_thread.start()
 
@@ -363,20 +363,15 @@ class WsRuntime:
         self.reset_websocket_app()
         return False
 
-    def _cycle(self):
+    def _runtime_worker(self):
         _LOGGER.debug(f'{self}: Runtime thread started ({tname()})')
         while self._running:
-            self._maintain_transport()
-            self._maintain_subscriptions()
-
-            self._process_transport_queue()
-
-            if time.time() - self._last_health_check > _HEALTH_CHECK_INTERVAL:
-                self._last_health_check = time.time()
-                self.health_check()
-
-            self._wait_event.wait(self._cycle_interval)
-            self._wait_event.clear()
+            try:
+                self._cycle()
+            except ExternalBrokerError as e:
+                _LOGGER.error(f'{self}: External error in runtime thread: {e}')
+            except Exception as e:
+                _LOGGER.error(f'{self}: Runtime thread exception: {exception_to_string(e)}')
 
         # if not stopped or closed yet, attempt to do one last pass before the thread dies
         if self._state not in [WsState.STOPPED, WsState.CLOSED]:
@@ -387,6 +382,19 @@ class WsRuntime:
             self.subscription_controller.reconcile_bindings()
 
         _LOGGER.debug(f'{self}: Runtime thread stopped ({tname()})')
+
+    def _cycle(self):
+        self._maintain_transport()
+        self._maintain_subscriptions()
+
+        self._process_transport_queue()
+
+        if time.time() - self._last_health_check > _HEALTH_CHECK_INTERVAL:
+            self._last_health_check = time.time()
+            self.health_check()
+
+        self._wait_event.wait(self._cycle_interval)
+        self._wait_event.clear()
 
     def _process_transport_queue(self):
         retry_events = []

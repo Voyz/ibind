@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ibind import ExternalBrokerError
 from ibind.events import WsOpen, WsAuthenticated, WsDegraded, WsReady, WsClose, WsError
 from test.test_utils import capture_logs, mock_module_time
 from ibind.ws_v2._ws_events import AsyncSink, CallbackSink, NoopSink
@@ -1071,6 +1072,38 @@ class TestEmit:
         runtime._emit(event)
 
 
+class TestNewRuntimeThread:
+    @capture_logs(logger_level='DEBUG', expected_errors=['Runtime thread started', 'Runtime thread stopped'], partial_match=True)
+    def test_new_runtime_thread_processes_transport_queue_event(self, runtime):
+        """WsRuntime._new_runtime_thread starts thread that processes transport queue events."""
+        ## Arrange
+        runtime._running = True
+        transport_event = TransportOpened()
+        runtime._transport_queue.put(transport_event)
+        runtime._handle_transport_event = MagicMock()
+        runtime._maintain_transport = MagicMock()
+        runtime._maintain_subscriptions = MagicMock()
+        runtime.health_check = MagicMock()
+
+        call_count = [0]
+
+        def stop_after_two_cycles(*args):
+            call_count[0] += 1
+            if call_count[0] >= 2:
+                runtime._running = False
+
+        runtime._wait_event.wait = stop_after_two_cycles
+
+        ## Act
+        runtime._new_runtime_thread()
+
+        ## Assert
+        assert runtime._runtime_thread.is_alive()
+        runtime._runtime_thread.join(timeout=2.0)
+        assert call_count[0] >= 2
+        runtime._handle_transport_event.assert_called_once_with(transport_event)
+
+
 class TestCycle:
     @capture_logs(logger_level='DEBUG', expected_errors=['Runtime thread started', 'Runtime thread stopped'], partial_match=True)
     def test_cycle_runs_one_iteration(self, runtime):
@@ -1084,7 +1117,7 @@ class TestCycle:
         runtime.health_check = MagicMock()
 
         ## Act
-        runtime._cycle()
+        runtime._runtime_worker()
 
         ## Assert
         runtime._maintain_transport.assert_called_once()
@@ -1106,7 +1139,7 @@ class TestCycle:
 
         ## Act
         with mock_module_time('ibind.ws_v2.ws_runtime', time_sequence=[15.0]):
-            runtime._cycle()
+            runtime._runtime_worker()
 
         ## Assert
         runtime.health_check.assert_called_once()
@@ -1122,7 +1155,7 @@ class TestCycle:
         runtime.subscription_controller.reconcile_bindings = MagicMock()
 
         ## Act
-        runtime._cycle()
+        runtime._runtime_worker()
 
         ## Assert
         runtime._process_transport_queue.assert_called_once()
@@ -1138,8 +1171,54 @@ class TestCycle:
         runtime.subscription_controller.reconcile_bindings = MagicMock()
 
         ## Act
-        runtime._cycle()
+        runtime._runtime_worker()
 
         ## Assert
         runtime._process_transport_queue.assert_not_called()
         runtime.subscription_controller.reconcile_bindings.assert_not_called()
+
+
+class TestRuntimeWorkerExceptionHandling:
+    @capture_logs(logger_level='ERROR', expected_errors=['External error in runtime thread'], partial_match=True)
+    def test_runtime_worker_catches_external_broker_error(self, runtime):
+        """WsRuntime._runtime_worker catches ExternalBrokerError and logs it."""
+        ## Arrange
+        call_count = [0]
+        def cycle_side_effect():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise ExternalBrokerError('broker error')
+            runtime._running = False
+        
+        runtime._running = True
+        runtime._cycle = MagicMock(side_effect=cycle_side_effect)
+        runtime._process_transport_queue = MagicMock()
+        runtime.subscription_controller.reconcile_bindings = MagicMock()
+
+        ## Act
+        runtime._runtime_worker()
+
+        ## Assert
+        assert call_count[0] == 2
+
+    @capture_logs(logger_level='ERROR', expected_errors=['Runtime thread exception'], partial_match=True)
+    def test_runtime_worker_catches_generic_exception(self, runtime):
+        """WsRuntime._runtime_worker catches generic Exception and logs it."""
+        ## Arrange
+        call_count = [0]
+        def cycle_side_effect():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise RuntimeError('generic error')
+            runtime._running = False
+        
+        runtime._running = True
+        runtime._cycle = MagicMock(side_effect=cycle_side_effect)
+        runtime._process_transport_queue = MagicMock()
+        runtime.subscription_controller.reconcile_bindings = MagicMock()
+
+        ## Act
+        runtime._runtime_worker()
+
+        ## Assert
+        assert call_count[0] == 2
