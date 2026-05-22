@@ -52,7 +52,6 @@ def runtime(mock_sink, mock_internal_sink, mock_router, mock_resolver):
         internal_sink=mock_internal_sink,
         router=mock_router,
         subscription_resolver=mock_resolver,
-        ready_state=WsState.OPEN,
         connection_timeout=1.0,
         reconnect_timeout=1.0,
         max_ping_interval=20,
@@ -115,7 +114,6 @@ class TestInit:
             internal_sink=mock_internal_sink,
             router=mock_router,
             subscription_resolver=mock_resolver,
-            ready_state=WsState.AUTHENTICATED,
             connection_timeout=10.0,
         )
 
@@ -125,25 +123,10 @@ class TestInit:
         assert runtime._sink is mock_sink
         assert runtime._internal_sink is mock_internal_sink
         assert runtime._router is mock_router
-        assert runtime._ready_state == WsState.AUTHENTICATED
         assert runtime._connection_timeout == 10.0
         assert runtime._state == WsState.STOPPED
         assert runtime._running is False
 
-    @capture_logs()
-    def test_init_raises_when_invalid_ready_state(self, mock_sink, mock_internal_sink, mock_router, mock_resolver):
-        """WsRuntime.__init__ raises ValueError when ready_state is invalid."""
-        ## Act / Assert
-        with pytest.raises(ValueError, match='Invalid ready_state'):
-            WsRuntime(
-                url='wss://test.example.com',
-                cycle_interval=0.5,
-                sink=mock_sink,
-                internal_sink=mock_internal_sink,
-                router=mock_router,
-                subscription_resolver=mock_resolver,
-                ready_state=WsState.STOPPED,
-            )
 
 
 class TestStateManagement:
@@ -157,14 +140,14 @@ class TestStateManagement:
         assert runtime._state == WsState.CONNECTING
 
     @capture_logs(logger_level='INFO', expected_errors=['Websocket ready'], partial_match=True)
-    def test_set_state_emits_ready_when_ready_state_reached(self, runtime, mock_internal_sink):
-        """WsRuntime._set_state emits WsReady when ready_state is reached."""
+    def test_set_state_emits_ready_when_authenticated_reached(self, runtime, mock_internal_sink):
+        """WsRuntime._set_state emits WsReady when AUTHENTICATED state is reached."""
         ## Arrange
         ready_events = []
         mock_internal_sink.on(WsReady, ready_events.append)
 
         ## Act
-        runtime._set_state(WsState.OPEN)
+        runtime._set_state(WsState.AUTHENTICATED)
 
         ## Assert
         assert len(ready_events) == 1
@@ -184,23 +167,22 @@ class TestAuthentication:
         runtime.set_authenticated(True)
 
         ## Assert
-        assert runtime._authenticated is True
+        assert runtime.is_authenticated() is True
         assert len(auth_events) == 1
         assert runtime._state == WsState.AUTHENTICATED
 
     @capture_logs(logger_level='INFO', expected_errors=['Connection unauthenticated'], partial_match=True)
-    def test_set_authenticated_false_when_ready_degrades(self, runtime):
-        """WsRuntime.set_authenticated degrades state when set to False from ready state."""
+    def test_set_authenticated_false_when_authenticated_degrades(self, runtime):
+        """WsRuntime.set_authenticated degrades state when set to False from AUTHENTICATED."""
         ## Arrange
-        runtime._state = WsState.OPEN
-        runtime._authenticated = True
+        runtime._state = WsState.AUTHENTICATED
 
         ## Act
         runtime.set_authenticated(False)
 
         ## Assert
-        assert runtime._authenticated is False
-        assert runtime._state == WsState.DEGRADED
+        assert runtime.is_authenticated() is False
+        assert runtime._state == WsState.OPEN
 
 
 class TestStateDegraded:
@@ -248,9 +230,9 @@ class TestStateDegraded:
 
 
 class TestSend:
-    @capture_logs(logger_level='ERROR', expected_errors=['State must be OPEN before sending'], partial_match=True)
+    @capture_logs(logger_level='ERROR', expected_errors=['State must be AUTHENTICATED before sending'], partial_match=True)
     def test_send_returns_false_when_not_ready(self, runtime):
-        """WsRuntime.send returns False when state is not ready."""
+        """WsRuntime.send returns False when state is not AUTHENTICATED."""
         ## Arrange
         runtime._state = WsState.CONNECTING
 
@@ -262,9 +244,9 @@ class TestSend:
 
     @capture_logs(logger_level='INFO', expected_errors=['Sending payload: test_payload'], partial_match=True)
     def test_send_calls_transport_when_ready(self, runtime):
-        """WsRuntime.send calls transport.send when state is ready."""
+        """WsRuntime.send calls transport.send when state is AUTHENTICATED."""
         ## Arrange
-        runtime._state = WsState.OPEN
+        runtime._state = WsState.AUTHENTICATED
         runtime._transport.send = MagicMock(return_value=True)
 
         ## Act
@@ -618,29 +600,22 @@ class TestMaintainTransport:
 
 class TestMaintainSubscriptions:
     @capture_logs()
-    def test_maintain_subscriptions_reconciles_only_when_ready(self, runtime):
-        """WsRuntime._maintain_subscriptions reconciles bindings when state is ready."""
+    def test_maintain_subscriptions_reconciles_only_when_authenticated(self, runtime):
+        """WsRuntime._maintain_subscriptions reconciles bindings when state is AUTHENTICATED."""
         ## Arrange
         runtime.subscription_controller.reconcile_bindings = MagicMock()
 
-        ## Act & Assert 1 - not OPEN, not ready
+        ## Act & Assert 1 - not AUTHENTICATED, not ready
         runtime._state = WsState.CONNECTING
         runtime._maintain_subscriptions()
         runtime.subscription_controller.reconcile_bindings.assert_not_called()
 
-        ## Act & Assert 2 - OPEN, ready
-        runtime._state = WsState.OPEN
-        runtime._maintain_subscriptions()
-        runtime.subscription_controller.reconcile_bindings.assert_called_once()
-
-        ## Act & Assert 3 - not AUTHENTICATED, not ready
-        runtime.subscription_controller.reconcile_bindings = MagicMock()
-        runtime._ready_state = WsState.AUTHENTICATED
+        ## Act & Assert 2 - OPEN, not ready
         runtime._state = WsState.OPEN
         runtime._maintain_subscriptions()
         runtime.subscription_controller.reconcile_bindings.assert_not_called()
 
-        ## Act & Assert 4 - AUTHENTICATED, ready
+        ## Act & Assert 3 - AUTHENTICATED, ready
         runtime.subscription_controller.reconcile_bindings = MagicMock()
         runtime._state = WsState.AUTHENTICATED
         runtime._maintain_subscriptions()
@@ -697,7 +672,7 @@ class TestCheckShouldReset:
     def test_check_should_reset_returns_true_when_heartbeat_exceeds_interval(self, runtime):
         """WsRuntime.check_should_reset returns True when heartbeat exceeds max_ping_interval."""
         ## Arrange
-        runtime._state = WsState.OPEN
+        runtime._state = WsState.AUTHENTICATED
         runtime._transport.is_ready = MagicMock(return_value=True)
         runtime._transport.check_ping = MagicMock(return_value=True)
         runtime._last_heartbeat = 1000.0
@@ -713,7 +688,7 @@ class TestCheckShouldReset:
     def test_check_should_reset_returns_false_when_heartbeat_within_interval(self, runtime):
         """WsRuntime.check_should_reset returns False when heartbeat is within max_ping_interval."""
         ## Arrange
-        runtime._state = WsState.OPEN
+        runtime._state = WsState.AUTHENTICATED
         runtime._transport.is_ready = MagicMock(return_value=True)
         runtime._transport.check_ping = MagicMock(return_value=True)
 
@@ -890,7 +865,7 @@ class TestHandleTransportEvent:
 
 
 class TestHandleOnOpen:
-    @capture_logs(logger_level='INFO', expected_errors=['Connection open', 'Websocket ready'], partial_match=True)
+    @capture_logs(logger_level='INFO', expected_errors=['Connection open'], partial_match=True)
     def test_handle_on_open_sets_state_and_emits_event(self, runtime, mock_internal_sink):
         """WsRuntime._handle_on_open sets state to OPEN and emits WsOpen."""
         ## Arrange
@@ -904,22 +879,22 @@ class TestHandleOnOpen:
         assert runtime._state == WsState.OPEN
         assert len(open_events) == 1
 
-    @capture_logs()
-    def test_handle_on_open_sets_authenticated_false_when_not_ready_state(self, runtime):
-        """WsRuntime._handle_on_open sets authenticated to False when ready_state is AUTHENTICATED."""
+    @capture_logs(logger_level='INFO', expected_errors=['Connection open'], partial_match=True)
+    def test_handle_on_open_sets_authenticated_false(self, runtime):
+        """WsRuntime._handle_on_open sets authenticated to False."""
         ## Arrange
-        runtime._ready_state = WsState.AUTHENTICATED
-        runtime._authenticated = True
+        runtime._state = WsState.AUTHENTICATED
 
         ## Act
         runtime._handle_on_open()
 
         ## Assert
-        assert runtime._authenticated is False
+        assert runtime.is_authenticated() is False
+        assert runtime._state == WsState.OPEN
 
 
 class TestHandleOnReconnect:
-    @capture_logs(logger_level='INFO', expected_errors=['Connection reopened', 'Websocket ready'], partial_match=True)
+    @capture_logs(logger_level='INFO', expected_errors=['Connection reopened'], partial_match=True)
     def test_handle_on_reconnect_sets_state_and_emits_event(self, runtime, mock_internal_sink):
         """WsRuntime._handle_on_reconnect sets state to OPEN and emits WsOpen."""
         ## Arrange
@@ -933,19 +908,18 @@ class TestHandleOnReconnect:
         assert runtime._state == WsState.OPEN
         assert len(open_events) == 1
 
-    @capture_logs(logger_level='INFO', expected_errors=['Connection reopened', 'Connection unauthenticated'], partial_match=True)
-    def test_handle_on_reconnect_sets_authenticated_false_when_not_ready(self, runtime):
-        """WsRuntime._handle_on_reconnect unauthenticates when ready_state is AUTHENTICATED."""
+    @capture_logs(logger_level='INFO', expected_errors=['Connection reopened'], partial_match=True)
+    def test_handle_on_reconnect_sets_authenticated_false(self, runtime):
+        """WsRuntime._handle_on_reconnect unauthenticates."""
         ## Arrange
-        runtime._ready_state = WsState.AUTHENTICATED
-        runtime._authenticated = True
+        runtime._state = WsState.AUTHENTICATED
 
         ## Act
         runtime._handle_on_reconnect()
 
         ## Assert
         assert runtime._state == WsState.OPEN
-        assert runtime._authenticated is False
+        assert runtime.is_authenticated() is False
 
 
 class TestHandleOnError:
@@ -968,14 +942,14 @@ class TestHandleOnError:
     def test_handle_on_error_degrades_on_connection_lost(self, runtime):
         """WsRuntime._handle_on_error degrades state on connection lost error."""
         ## Arrange
-        runtime._state = WsState.OPEN
+        runtime._state = WsState.AUTHENTICATED
 
         ## Act
         runtime._handle_on_error(Exception('Connection to remote host was lost.'))
 
         ## Assert
         assert runtime._state == WsState.DEGRADED
-        assert runtime._authenticated is False
+        assert runtime.is_authenticated() is False
 
 
 class TestHandleOnClose:
@@ -983,7 +957,7 @@ class TestHandleOnClose:
     def test_handle_on_close_sets_state_and_emits_event(self, runtime, mock_internal_sink):
         """WsRuntime._handle_on_close sets state to CLOSED and emits WsClose."""
         ## Arrange
-        runtime._state = WsState.OPEN
+        runtime._state = WsState.AUTHENTICATED
         close_events = []
         mock_internal_sink.on(WsClose, close_events.append)
 

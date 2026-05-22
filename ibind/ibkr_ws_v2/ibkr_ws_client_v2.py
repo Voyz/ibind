@@ -86,7 +86,6 @@ class IbkrWsClientV2:
         self._runtime = WsRuntime(
             url=url,
             cycle_interval=cycle_interval,
-            ready_state=WsState.AUTHENTICATED,
             cacert=cacert,
             sink=sink,
             internal_sink=self._internal_sink,

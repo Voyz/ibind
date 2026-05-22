@@ -9,7 +9,7 @@ from typing import Union, List, Dict, Callable, Literal
 
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import wait_until, tname, VerboseEnum, exception_to_string, TimeoutLock, OneOrMany, noop
-from ibind import events
+from ibind import events, ExternalBrokerError
 from ibind.events import WsEvent
 from ibind.ws_v2._ws_events import EventSink, Router, CallbackSink, AsyncSink
 from ibind.ws_v2.ws_subscriptions import SubscriptionController, SubscriptionResolver
@@ -61,7 +61,6 @@ class WsRuntime:
         internal_sink: CallbackSink,
         router: Router,
         subscription_resolver: SubscriptionResolver,
-        ready_state: Literal[WsState.OPEN, WsState.AUTHENTICATED] = WsState.OPEN,
         cacert: Union[str, bool] = False,
         connection_timeout: float = _DEFAULT_TIMEOUT,
         reconnect_timeout: float | None = _DEFAULT_TIMEOUT,
@@ -69,20 +68,16 @@ class WsRuntime:
         get_cookie: Callable = noop,
         get_header: Callable = noop,
     ):
-        if ready_state not in [WsState.OPEN, WsState.AUTHENTICATED]:
-            raise ValueError(f'Invalid ready_state: {ready_state}, must be either {WsState.OPEN} or {WsState.AUTHENTICATED}')
         self._url = url
         self._cycle_interval = cycle_interval
         self._sink = sink
         self._internal_sink = internal_sink
         self._router = router
-        self._ready_state = ready_state
         self._connection_timeout = connection_timeout
         self._reconnect_timeout = reconnect_timeout
         self._max_ping_interval = max_ping_interval
 
         self._state = WsState.STOPPED
-        self._authenticated = False
         self._running = False
         self._last_heartbeat = None
         self._last_health_check = time.time()
@@ -122,14 +117,14 @@ class WsRuntime:
         with self._state_lock:
             self._state = value
 
-        if self._state == self._ready_state:
+        if self._state == WsState.AUTHENTICATED:
             self._websocket_ready()
 
     def get_state(self) -> WsState:  # pragma: no cover
         return self._state
 
     def is_ready(self) -> bool:  # pragma: no cover
-        return self._state == self._ready_state
+        return self._state == WsState.AUTHENTICATED
 
     def _websocket_ready(self):
         self._emit(events.WsReady())
@@ -137,15 +132,16 @@ class WsRuntime:
         _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._last_heartbeat}')
 
     def set_authenticated(self, value: bool):
-        previous_value = self._authenticated
-        self._authenticated = value
+        previous_value = self.is_authenticated()
 
         if value and self._state == WsState.OPEN:
             self._emit(events.WsAuthenticated())
             self._set_state(WsState.AUTHENTICATED)
 
-        if value == False and self._state == self._ready_state:
-            self.state_degraded()
+        if value == False and self._state == WsState.AUTHENTICATED:
+            self.subscription_controller.invalidate_subscriptions()
+            self._set_state(WsState.OPEN)
+
         if value != previous_value:
             _LOGGER.info(f'{self}: Connection {"authenticated" if value else "unauthenticated"}')
 
@@ -157,8 +153,8 @@ class WsRuntime:
         if not was_already_degraded:
             self._emit(events.WsDegraded())
 
-    def get_authenticated(self) -> bool:  # pragma: no cover
-        return self._authenticated
+    def is_authenticated(self) -> bool:  # pragma: no cover
+        return self._state == WsState.AUTHENTICATED
 
     def _new_transport_thread(self):  # pragma: no cover
         self._transport_thread = Thread(target=self._transport.connect, name='ws_transport_thread')
@@ -205,7 +201,7 @@ class WsRuntime:
         if isinstance(self._sink, AsyncSink):
             self._sink.start()
 
-        connection_success = wait_until(lambda: self._state == self._ready_state, timeout=self._connection_timeout)
+        connection_success = wait_until(lambda: self._state == WsState.AUTHENTICATED, timeout=self._connection_timeout)
         if not connection_success:
             _LOGGER.error(f'{self}: Starting timeout')
         return connection_success
@@ -246,8 +242,8 @@ class WsRuntime:
         self._set_state(WsState.STOPPED)
 
     def send(self, payload: str) -> bool:
-        if self._state != self._ready_state:
-            _LOGGER.error(f'{self}: State must be {self._ready_state.value} before sending payloads, found {self._state.value}')
+        if self._state != WsState.AUTHENTICATED:
+            _LOGGER.error(f'{self}: State must be {WsState.AUTHENTICATED.value} before sending payloads, found {self._state.value}')
             return False
 
         _LOGGER.info(f'{self}: Sending payload: {payload}')
@@ -313,7 +309,7 @@ class WsRuntime:
             self._new_transport_thread()
 
     def _maintain_subscriptions(self):
-        if self._state != self._ready_state:
+        if self._state != WsState.AUTHENTICATED:
             return
 
         self.subscription_controller.reconcile_bindings()
@@ -456,17 +452,15 @@ class WsRuntime:
         self._last_heartbeat = None
         self._set_state(WsState.OPEN)
         _LOGGER.info(f'{self}: Connection open')
-        if self._state != self._ready_state:
-            self.set_authenticated(False)
+        self.set_authenticated(False)
         self._emit(events.WsOpen())
 
     def _handle_on_reconnect(self):
-        _LOGGER.info(f'{self}: Connection reopened')
         self._last_heartbeat = None
         self._set_state(WsState.OPEN)
-        if self._state != self._ready_state:
-            self.set_authenticated(False)
-        self._emit(events.WsOpen())  # we emit Open since reconnect pretty much equivalent
+        _LOGGER.info(f'{self}: Connection reopened')
+        self.set_authenticated(False)
+        self._emit(events.WsOpen())
 
     def _handle_on_error(self, exception: Exception):
         _LOGGER.error(f'{self}: Connection error: {exception}')
