@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 from websocket import STATUS_NORMAL, STATUS_UNEXPECTED_CONDITION
+import threading
 
 import pytest
 
@@ -27,6 +28,41 @@ TEST_TIME_SINCE_LAST_PING = 5
 TEST_CUSTOM_MAX_INTERVAL = 10
 
 
+class MockWsaFactory:
+    """Factory for creating mock WebSocketApp instances with controlled lifecycle."""
+
+    def __init__(self, transport):
+        self.transport = transport
+        self.wsa_instances = []
+        self.call_count = 0
+        self.first_wsa_ready = threading.Event()
+        self._close_events = []
+
+    def create_mock_wsa(self, **kwargs):
+        wsa = MagicMock()
+        wsa.ready = False
+        close_event = threading.Event()
+        self._close_events.append(close_event)
+
+        wsa.run_forever.side_effect = lambda **kw: self._run_forever_impl(close_event, **kw)
+        wsa.close.side_effect = lambda **kw: close_event.set()
+
+        self.wsa_instances.append(wsa)
+        # if len(self.wsa_instances) == 1:
+        #     self.first_wsa_ready.set()
+        return wsa
+
+    def _run_forever_impl(self, close_event, **kwargs):
+        self.first_wsa_ready.set()
+        self.call_count += 1
+        close_event.wait()
+
+    def stop_transport(self):
+        self.transport._running = False
+        for event in self._close_events:
+            event.set()
+
+
 @pytest.fixture
 def mock_event_callback():
     return MagicMock()
@@ -43,8 +79,13 @@ def mock_get_header():
 
 
 @pytest.fixture
-def transport(mock_event_callback, mock_get_cookie, mock_get_header):
-    return WsTransport(
+def mock_condition():
+    return MagicMock()
+
+
+@pytest.fixture
+def transport(mock_event_callback, mock_get_cookie, mock_get_header, mock_condition):
+    transport = WsTransport(
         url='wss://test.example.com',
         event_callback=mock_event_callback,
         sslopt={'cert_reqs': 0},
@@ -56,6 +97,8 @@ def transport(mock_event_callback, mock_get_cookie, mock_get_header):
         connection_timeout=TEST_CONNECTION_TIMEOUT,
         reconnect_timeout=TEST_RECONNECT_TIMEOUT,
     )
+    transport._wsa_condition = mock_condition
+    return transport
 
 
 @pytest.fixture
@@ -180,32 +223,113 @@ class TestResetWebsocketApp:
         assert result is False
 
     @capture_logs(logger_level='INFO', expected_errors=['Reset'], partial_match=True)
-    def test_reset_closes_and_recreates_wsa(self, transport):
+    def test_reset_closes_and_recreates_wsa(self, transport, mock_condition):
         """WsTransport.reset_websocket_app closes current WebSocketApp and waits for recreation."""
         ## Arrange
         mock_wsa = MagicMock()
         transport._wsa = mock_wsa
 
+        def change_wsa(*args, **kwargs):
+            transport._wsa = MagicMock()
+
+        mock_condition.wait.side_effect = change_wsa
+
         ## Act
-        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True, True]):
-            transport.reset_websocket_app()
+        # with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True, True]):
+        transport.reset_websocket_app()
 
         ## Assert
         mock_wsa.close.assert_called_once_with(status=STATUS_UNEXPECTED_CONDITION, timeout=TEST_CONNECTION_TIMEOUT)
 
-    @capture_logs(logger_level='WARNING', expected_errors=['Abandoning current WebSocketApp'], partial_match=True)
-    def test_reset_abandons_wsa_when_close_times_out(self, transport):
+    @capture_logs(
+        logger_level='WARNING',
+        expected_errors=['WebSocket reset close timeout. Abandoning current WebSocketApp that cannot be closed'],
+        partial_match=True,
+    )
+    def test_reset_abandons_wsa_when_close_times_out(self, transport, mock_condition):
         """WsTransport.reset_websocket_app abandons WebSocketApp when close times out."""
         ## Arrange
         mock_wsa = MagicMock()
         transport._wsa = mock_wsa
 
+        # def change_wsa(*args, **kwargs):
+        #     transport._wsa = MagicMock()
+
+        # mock_condition.wait.side_effect = change_wsa
+
         ## Act
-        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[False, True]):
+        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True]):
             transport.reset_websocket_app()
 
         ## Assert
         assert transport._wsa is None
+
+    @capture_logs(logger_level='INFO', expected_errors=['Reset'], partial_match=True)
+    def test_reset_waits_for_wsa_change_via_condition(self, transport, mock_condition):
+        """WsTransport.reset_websocket_app waits for condition signal when WSA is replaced."""
+        ## Arrange
+        old_wsa = MagicMock()
+        new_wsa = MagicMock()
+        transport._wsa = old_wsa
+
+        def simulate_wsa_change(*args, **kwargs):
+            transport._wsa = new_wsa
+            return True
+
+        mock_condition.wait.side_effect = simulate_wsa_change
+
+        ## Act
+        with patch('ibind.ws_v2.ws_transport.wait_until', side_effect=[True, True]):
+            result = transport.reset_websocket_app()
+
+        ## Assert
+        assert result is True
+        assert transport._wsa is new_wsa
+        old_wsa.close.assert_called_once_with(status=STATUS_UNEXPECTED_CONDITION, timeout=TEST_CONNECTION_TIMEOUT)
+        mock_condition.wait.assert_called_once_with(timeout=TEST_CONNECTION_TIMEOUT * 2)
+
+    @capture_logs(logger_level='ERROR', expected_errors=['WebSocket recreation timeout'], partial_match=True)
+    def test_reset_logs_error_when_recreation_times_out(self, transport):
+        """WsTransport.reset_websocket_app logs error when WebSocket recreation times out."""
+        ## Arrange
+        mock_wsa = MagicMock()
+        transport._wsa = mock_wsa
+
+        ## Act
+        with patch('ibind.ws_v2.ws_transport.wait_until', return_value=False):
+            result = transport.reset_websocket_app()
+
+        ## Assert
+        assert result is False
+
+    @capture_logs(logger_level='INFO', expected_errors=['Reset'], partial_match=True)
+    def test_reset_with_running_transport_thread(self, transport, mock_get_cookie, mock_get_header):
+        """WsTransport.reset_websocket_app waits for WSA change when transport thread is running."""
+        ## Arrange
+        transport._running = True
+        transport._wsa_condition = threading.Condition()
+        factory = MockWsaFactory(transport)
+
+        ## Act
+        with patch('ibind.ws_v2.ws_transport.WebSocketApp', side_effect=factory.create_mock_wsa):
+            transport_thread = threading.Thread(target=transport.connect, daemon=True)
+            transport_thread.start()
+
+            factory.first_wsa_ready.wait(timeout=1)
+
+            old_wsa = transport._wsa
+            result = transport.reset_websocket_app()
+            new_wsa = transport._wsa
+
+            factory.stop_transport()
+            transport_thread.join(timeout=2)
+
+        ## Assert
+        assert result is True
+        assert len(factory.wsa_instances) >= 2
+        assert factory.call_count >= 2
+        assert old_wsa is not new_wsa
+        factory.wsa_instances[0].close.assert_called_once_with(status=STATUS_UNEXPECTED_CONDITION, timeout=TEST_CONNECTION_TIMEOUT)
 
 
 class TestCheckPing:

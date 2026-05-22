@@ -1,3 +1,4 @@
+import threading
 import time
 from datetime import datetime
 from typing import Callable, Any, cast, List, Union, Dict
@@ -121,6 +122,7 @@ class WsTransport:
         self._wsa: WebSocketApp | None = None
         self._degraded = False
         self._tname = None
+        self._wsa_condition = threading.Condition()
 
         self._session_lacks_authentication = False
 
@@ -156,11 +158,13 @@ class WsTransport:
 
         _LOGGER.info(f'{self}: Reset')
 
-        self._wsa.close(status=STATUS_UNEXPECTED_CONDITION, timeout=self._connection_timeout)
-
-        if not wait_until(lambda: self._wsa is None, timeout=self._connection_timeout * 2):
-            _LOGGER.warning(f'{self}:  WebSocket reset close timeout. Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
-            self._wsa = None
+        with self._wsa_condition:
+            old_wsa = self._wsa
+            self._wsa.close(status=STATUS_UNEXPECTED_CONDITION, timeout=self._connection_timeout)
+            self._wsa_condition.wait(timeout=self._connection_timeout * 2)
+            if self._wsa == old_wsa:
+                _LOGGER.warning(f'{self}: WebSocket reset close timeout. Abandoning current WebSocketApp that cannot be closed: {self._wsa}')
+                self._wsa = None
 
         if not wait_until(lambda: self._wsa is not None, timeout=self._connection_timeout * 2):
             _LOGGER.error(f'{self}: WebSocket recreation timeout')
@@ -364,7 +368,9 @@ class WsTransport:
             if wsa is None:
                 time.sleep(1)
                 return
-            self._wsa = wsa
+            with self._wsa_condition:
+                self._wsa = wsa
+                self._wsa_condition.notify_all()
 
         try:
             self._wsa.run_forever(
@@ -381,7 +387,9 @@ class WsTransport:
             else:
                 _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
         finally:
-            self._wsa = None
+            with self._wsa_condition:
+                self._wsa = None
+                self._wsa_condition.notify_all()
 
     def connect(self):
         """Main transport thread loop that maintains the WebSocket connection."""
