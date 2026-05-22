@@ -215,8 +215,8 @@ class SubscriptionController:
         send_payload: Callable[[str], bool],
         emit_event: Callable[[WsEvent], None],
         subscription_resolver: SubscriptionResolver,
-        subscription_retries: int = 5,
-        subscription_timeout: float = 2,
+        subscription_retries: int = 20,
+        subscription_timeout: float = 5,
     ):
         """
         Create a subscription controller.
@@ -358,15 +358,21 @@ class SubscriptionController:
                 self._condition.notify_all()
                 _LOGGER.info(f'{self}: Registered subscription intent: {binding_key}')
 
-            elif binding.intent != BindingStatus.ACTIVE:
-                binding.intent = BindingStatus.ACTIVE
-
-                # If it had previously completed unsubscribe, it now needs work again.
-                if binding.status == BindingStatus.UNSUBSCRIBED:
+            else:
+                if binding.status == BindingStatus.FAILED:
+                    # a repeated call when binding is FAILED means user wants to repeat the attempts
                     binding.reset()
+                    binding.status = BindingStatus.NEW
 
-                self._condition.notify_all()
-                _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.ACTIVE.value}')
+                if binding.intent != BindingStatus.ACTIVE:
+                    binding.intent = BindingStatus.ACTIVE
+
+                    # If it had previously completed unsubscribe, it now needs work again.
+                    if binding.status == BindingStatus.UNSUBSCRIBED:
+                        binding.reset()
+
+                    self._condition.notify_all()
+                    _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.ACTIVE.value}')
 
             return SubscriptionHandle(self, subscription)
 
@@ -392,16 +398,21 @@ class SubscriptionController:
                 self._bindings[binding_key] = Binding(subscription=subscription, intent=BindingStatus.UNSUBSCRIBED)
                 self._condition.notify_all()
                 _LOGGER.info(f'{self}: Registered unsubscription intent: {binding_key}')
-
-            elif binding.intent != BindingStatus.UNSUBSCRIBED:
-                binding.intent = BindingStatus.UNSUBSCRIBED
-
-                # If it had previously completed subscribe, it now needs work again.
-                if binding.status == BindingStatus.ACTIVE:
+            else:
+                if binding.status == BindingStatus.FAILED:
+                    # a repeated call when binding is FAILED means user wants to repeat the attempts
                     binding.reset()
+                    binding.status = BindingStatus.NEW
 
-                self._condition.notify_all()
-                _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
+                if binding.intent != BindingStatus.UNSUBSCRIBED:
+                    binding.intent = BindingStatus.UNSUBSCRIBED
+
+                    # If it had previously completed subscribe, it now needs work again.
+                    if binding.status == BindingStatus.ACTIVE:
+                        binding.reset()
+
+                    self._condition.notify_all()
+                    _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
 
             return SubscriptionHandle(self, subscription)
 

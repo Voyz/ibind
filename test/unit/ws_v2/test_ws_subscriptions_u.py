@@ -272,6 +272,25 @@ class TestInterface:
         assert binding.last_attempt == 0
 
     @capture_logs()
+    def test_subscribe_resets_failed_binding(self, sc, mock_sub, binding_key):
+        """SubscriptionController.subscribe resets and sets NEW status when binding is FAILED."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        binding.status = BindingStatus.FAILED
+        binding.attempts = 5
+        binding.last_attempt = 100.0
+
+        ## Act
+        sc.subscribe(mock_sub)
+
+        ## Assert
+        binding = sc._bindings[binding_key]
+        assert binding.status == BindingStatus.NEW
+        assert binding.attempts == 0
+        assert binding.last_attempt == 0
+
+    @capture_logs()
     def test_unsubscribe_creates_new_binding(self, sc, mock_sub, binding_key):
         """SubscriptionController.unsubscribe creates a new binding with UNSUBSCRIBED intent."""
         ## Act
@@ -313,6 +332,25 @@ class TestInterface:
 
         ## Assert
         binding = sc._bindings[binding_key]
+        assert binding.attempts == 0
+        assert binding.last_attempt == 0
+
+    @capture_logs()
+    def test_unsubscribe_resets_failed_binding(self, sc, mock_sub, binding_key):
+        """SubscriptionController.unsubscribe resets and sets NEW status when binding is FAILED."""
+        ## Arrange
+        sc.unsubscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        binding.status = BindingStatus.FAILED
+        binding.attempts = 5
+        binding.last_attempt = 100.0
+
+        ## Act
+        sc.unsubscribe(mock_sub)
+
+        ## Assert
+        binding = sc._bindings[binding_key]
+        assert binding.status == BindingStatus.NEW
         assert binding.attempts == 0
         assert binding.last_attempt == 0
 
