@@ -11,6 +11,7 @@ from ibind.ws_v2._ws_events import AsyncSink
 from ibind.ws_v2.ws_subscriptions import SubscriptionHandle, BindingStatus
 from ibind.ws_v2.ws_runtime import WsState
 from test.test_utils import capture_logs
+from ibind.ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription
 
 
 @pytest.fixture
@@ -51,7 +52,7 @@ class TestBuildWsUrl:
         result = _build_ws_url(
             url=None,
             use_oauth=True,
-            access_token='token_123',
+            access_token='token_123',  # noqa: S106
             host='127.0.0.1',
             port='5000',
             base_route='/v1/api/ws',
@@ -63,7 +64,7 @@ class TestBuildWsUrl:
         result = _build_ws_url(
             url='wss://example.com/ws',
             use_oauth=True,
-            access_token='my_token_456',
+            access_token='my_token_456',  # noqa: S106
             host='127.0.0.1',
             port='5000',
             base_route='/v1/api/ws',
@@ -160,7 +161,7 @@ class TestIbkrWsClientV2Init:
 
         ## Act
         with patch.object(IbkrWsClientV2, '_register_internal_callbacks'):
-            client = IbkrWsClientV2()
+            IbkrWsClientV2()
 
         ## Assert
         call_kwargs = mock_ws_runtime.call_args[1]
@@ -177,7 +178,7 @@ class TestIbkrWsClientV2Init:
         custom_sink = MagicMock()
 
         ## Act
-        client = IbkrWsClientV2(sink=custom_sink, synchronous_output_events=True)
+        IbkrWsClientV2(sink=custom_sink, synchronous_output_events=True)
 
         ## Assert
         call_kwargs = mock_ws_runtime.call_args[1]
@@ -195,7 +196,7 @@ class TestIbkrWsClientV2Init:
 
         ## Act
         with patch.object(IbkrWsClientV2, '_register_internal_callbacks'):
-            client = IbkrWsClientV2(router=custom_router)
+            IbkrWsClientV2(router=custom_router)
 
         ## Assert
         call_kwargs = mock_ws_runtime.call_args[1]
@@ -213,7 +214,7 @@ class TestIbkrWsClientV2Init:
 
         ## Act
         with patch.object(IbkrWsClientV2, '_register_internal_callbacks'):
-            client = IbkrWsClientV2(subscription_resolver=custom_resolver)
+            IbkrWsClientV2(subscription_resolver=custom_resolver)
 
         ## Assert
         call_kwargs = mock_ws_runtime.call_args[1]
@@ -506,7 +507,6 @@ class TestIbkrWsClientV2Subscribe:
         """subscribe does not add non-MarketHistory subscriptions to list."""
         ## Arrange
         client._runtime = MagicMock()
-        from ibind.ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription
 
         subscription = MarketDataSubscription(conid='12345', fields=['31'])
         handle = MagicMock(spec=SubscriptionHandle)
@@ -570,7 +570,6 @@ class TestIbkrWsClientV2Unsubscribe:
         """unsubscribe handles non-MarketHistory subscriptions normally."""
         ## Arrange
         client._runtime = MagicMock()
-        from ibind.ibkr_ws_v2.ibkr_subscriptions import MarketDataSubscription
 
         subscription = MarketDataSubscription(conid='12345', fields=['31'])
         handle = MagicMock(spec=SubscriptionHandle)

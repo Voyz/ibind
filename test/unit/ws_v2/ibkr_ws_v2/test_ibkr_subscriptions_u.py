@@ -2,7 +2,6 @@ import json
 
 import pytest
 
-from ibind import events
 from ibind.events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, AccountSummary, Unsubscription
 from ibind.ibkr_ws_v2.ibkr_subscriptions import (
     make_binding_key,
@@ -17,20 +16,25 @@ from ibind.ibkr_ws_v2.ibkr_subscriptions import (
     TradesSubscription,
 )
 from test.test_utils import capture_logs
+from ibind.ibkr_ws_v2.ibkr_events import IbkrTopicEvent
+from ibind.events import WsOpen
 
 
 class TestMakeBindingKey:
-    @pytest.mark.parametrize('event_type,kwargs,expected', [
-        (MarketData, {'conid': '12345'}, 'md+12345'),
-        (MarketHistory, {'conid': '67890'}, 'mh+67890'),
-        (AccountLedger, {'account_id': 'ACC123'}, 'ld+ACC123'),
-        (AccountSummary, {'account_id': 'ACC456'}, 'sd+ACC456'),
-        (PriceLadder, {'conid': '11111', 'account_id': 'ACC789'}, 'bd+ACC789+11111'),
-        (PriceLadder, {'conid': '11111', 'account_id': 'ACC789', 'exchange': 'NASDAQ'}, 'bd+ACC789+11111+NASDAQ'),
-        (Orders, {}, 'or'),
-        (Pnl, {}, 'pl'),
-        (Trades, {}, 'tr'),
-    ])
+    @pytest.mark.parametrize(
+        'event_type,kwargs,expected',
+        [
+            (MarketData, {'conid': '12345'}, 'md+12345'),
+            (MarketHistory, {'conid': '67890'}, 'mh+67890'),
+            (AccountLedger, {'account_id': 'ACC123'}, 'ld+ACC123'),
+            (AccountSummary, {'account_id': 'ACC456'}, 'sd+ACC456'),
+            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789'}, 'bd+ACC789+11111'),
+            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789', 'exchange': 'NASDAQ'}, 'bd+ACC789+11111+NASDAQ'),
+            (Orders, {}, 'or'),
+            (Pnl, {}, 'pl'),
+            (Trades, {}, 'tr'),
+        ],
+    )
     @capture_logs()
     def test_binding_key(self, event_type, kwargs, expected):
         """make_binding_key generates correct key for event type."""
@@ -43,6 +47,7 @@ class TestMakeBindingKey:
     @capture_logs()
     def test_unsupported_event_type(self):
         """make_binding_key raises ValueError for unsupported event type."""
+
         ## Arrange
         class UnsupportedEvent:
             topic = 'unsupported'
@@ -57,16 +62,19 @@ class TestIbkrSubscriptionResolver:
     def resolver(self):
         return IbkrSubscriptionResolver(account_id='TEST_ACCOUNT')
 
-    @pytest.mark.parametrize('event_factory,expected_binding_key', [
-        (lambda: MarketData(conid='12345', data={}), 'md+12345'),
-        (lambda: MarketHistory(conid='67890', data={}), 'mh+67890'),
-        (lambda: AccountLedger(account_id='ACC123', data={}), 'ld+ACC123'),
-        (lambda: AccountSummary(account_id='ACC456', data={}), 'sd+ACC456'),
-        (lambda: PriceLadder(account_id='ACC789', conid='11111', exchange='NASDAQ', data={}), 'bd+ACC789+11111+NASDAQ'),
-        (lambda: Orders(data={}), 'or'),
-        (lambda: Pnl(data={}), 'pl'),
-        (lambda: Trades(data={}), 'tr'),
-    ])
+    @pytest.mark.parametrize(
+        'event_factory,expected_binding_key',
+        [
+            (lambda: MarketData(conid='12345', data={}), 'md+12345'),
+            (lambda: MarketHistory(conid='67890', data={}), 'mh+67890'),
+            (lambda: AccountLedger(account_id='ACC123', data={}), 'ld+ACC123'),
+            (lambda: AccountSummary(account_id='ACC456', data={}), 'sd+ACC456'),
+            (lambda: PriceLadder(account_id='ACC789', conid='11111', exchange='NASDAQ', data={}), 'bd+ACC789+11111+NASDAQ'),
+            (lambda: Orders(data={}), 'or'),
+            (lambda: Pnl(data={}), 'pl'),
+            (lambda: Trades(data={}), 'tr'),
+        ],
+    )
     @capture_logs()
     def test_resolve_event(self, resolver, event_factory, expected_binding_key):
         """IbkrSubscriptionResolver resolves event correctly."""
@@ -110,7 +118,6 @@ class TestIbkrSubscriptionResolver:
     def test_resolve_non_ibkr_event(self, resolver):
         """IbkrSubscriptionResolver returns None for non-IBKR events."""
         ## Arrange
-        from ibind.events import WsOpen
         event = WsOpen()
 
         ## Act
@@ -124,7 +131,6 @@ class TestIbkrSubscriptionResolver:
     def test_resolve_unsupported_event(self, resolver):
         """IbkrSubscriptionResolver raises ValueError for unsupported event."""
         ## Arrange
-        from ibind.ibkr_ws_v2.ibkr_events import IbkrTopicEvent
 
         class UnsupportedTopicEvent(IbkrTopicEvent):
             topic = 'unsupported'
@@ -259,26 +265,11 @@ class TestMarketHistorySubscription:
     @capture_logs()
     def test_subscribe_payload_full(self):
         """MarketHistorySubscription generates correct subscribe payload with all params."""
-        sub = MarketHistorySubscription(
-            conid='67890',
-            exchange='NASDAQ',
-            period='1d',
-            bar='5min',
-            outside_rth=True,
-            source='trades',
-            format='json'
-        )
+        sub = MarketHistorySubscription(conid='67890', exchange='NASDAQ', period='1d', bar='5min', outside_rth=True, source='trades', format='json')
         result = sub.subscribe_payload()
         payload_data = json.loads(result.split('+', 2)[2])
         assert result.startswith('smh+67890+')
-        assert payload_data == {
-            'exchange': 'NASDAQ',
-            'period': '1d',
-            'bar': '5min',
-            'outside_rth': True,
-            'source': 'trades',
-            'format': 'json'
-        }
+        assert payload_data == {'exchange': 'NASDAQ', 'period': '1d', 'bar': '5min', 'outside_rth': True, 'source': 'trades', 'format': 'json'}
 
     @capture_logs()
     def test_unsubscribe_payload_with_server_id(self, sub):

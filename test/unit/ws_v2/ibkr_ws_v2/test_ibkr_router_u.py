@@ -339,12 +339,12 @@ class TestIbkrRouterHandleSubscribedMessage:
         """route logs error for unhandled event types in _handle_subscribed_message."""
         ## Arrange
         router = IbkrRouter()
-        
+
         ## Act
         with patch('ibind.ibkr_ws_v2.ibkr_router.get_ibkr_topic_event') as mock_get_event:
             mock_get_event.return_value = type('UnhandledEvent', (), {})
             result = router._handle_subscribed_message('sxx+123', {'data': 'test'})
-        
+
         ## Assert
         assert result is None
 
