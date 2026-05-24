@@ -87,7 +87,6 @@ class WsHealthMonitor:
             if is_authenticated:
                 _LOGGER.warning(f'{self}: State is not ready while reporting authenticated={is_authenticated}')
                 self._state_manager.set_state(WsState.AUTHENTICATED)
-                # self.set_authenticated(True)
                 return False
 
         return False

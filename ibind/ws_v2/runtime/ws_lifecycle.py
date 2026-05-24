@@ -96,9 +96,6 @@ class WsLifecycle:
 
         self._new_runtime_thread()
 
-        # if isinstance(self._sink, AsyncSink):
-        #     self._sink.start()
-
         connection_success = wait_until(self._state_manager.is_authenticated, timeout=self._connection_timeout)
         if not connection_success:
             _LOGGER.error(f'{self}: Starting timeout')
@@ -144,9 +141,6 @@ class WsLifecycle:
 
         self._runtime_thread = None
 
-        # if isinstance(self._sink, AsyncSink):
-        #     self._sink.stop()
-
         self._state_manager.set_state(WsState.STOPPED)
         return True
 
@@ -167,19 +161,6 @@ class WsLifecycle:
         self.stop()
         self.start()
 
-    # def restart_transport(self):
-    #     if threading.current_thread() == self._transport_thread:
-    #         raise RuntimeError(f'{self}: Resetting transport thread called from within transport thread. Ensure it is called from a separate thread')
-    #
-    #     transport_thread_stopped = self._stop_transport_thread()
-    #     if not transport_thread_stopped:
-    #         _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
-    #         self._transport_thread = None
-    #
-    #     self._get_transport().set_degraded(True)
-    #     self._transport = self._transport_factory()
-    #     self.new_transport_thread()
-
     def reset_websocket_app(self):  # pragma: no cover
         """Reset the transport's WebSocketApp."""
         self._transport.reset_websocket_app()
@@ -196,9 +177,7 @@ class WsLifecycle:
             return
 
         if self._transport_thread is None or not self._transport_thread.is_alive():
-            # self._state_manager.set_state(WsState.TRANSPORT_STARTING)
             self.new_transport_thread()
-            # self._new_transport_thread()
 
     def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}()'

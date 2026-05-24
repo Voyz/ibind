@@ -21,6 +21,7 @@ class WsEventHandler:
     and emits domain events to subscribers. Manages state transitions and handles
     connection lifecycle events (open, reconnect, close, error).
     """
+
     def __init__(
         self,
         state_manager: WsStateManager,
@@ -131,11 +132,8 @@ class WsEventHandler:
 
         Sets the state to OPEN and logs the event.
         """
-        # self.state_manager.reset_heartbeat()
         self._state_manager.set_state(WsState.OPEN)
         _LOGGER.info(f'{self}: Connection open')
-        # self.set_authenticated(False)
-        # self._emit(events.WsOpen())
 
     def _handle_on_reconnect(self):  # pragma: no cover
         """
@@ -143,11 +141,8 @@ class WsEventHandler:
 
         Sets the state to OPEN and logs the event.
         """
-        # self.state_manager.reset_heartbeat()
         self._state_manager.set_state(WsState.OPEN)
         _LOGGER.info(f'{self}: Connection reopened')
-        # self.set_authenticated(False)
-        # self._emit(events.WsOpen())
 
     def _handle_on_error(self, exception: Exception):
         """
@@ -162,7 +157,6 @@ class WsEventHandler:
         _LOGGER.error(f'{self}: Connection error: {exception}')
         if str(exception) in ['Connection to remote host was lost.', 'No connection could be made because the target machine actively refused it']:
             self._state_manager.set_state(WsState.DEGRADED)
-            # self.set_authenticated(False)
         self._emitter.emit(events.WsError(error=exception))
 
     def _handle_on_close(self, close_status_code, close_msg):
@@ -182,8 +176,6 @@ class WsEventHandler:
 
         if self._state_manager.get_state() != WsState.STOPPING:
             _LOGGER.info(f'{self}: Connection closed')
-            # self.set_authenticated(False)
-            # self._subscription_controller.invalidate_subscriptions()
         else:
             _LOGGER.info(f'{self}: Connection gracefully closed')
 
