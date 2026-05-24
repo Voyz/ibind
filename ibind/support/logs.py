@@ -27,9 +27,11 @@ def get_logger_children(main_logger) -> List[logging.Logger]:
         return 1 + logger.name.count('.')
 
     d = main_logger.manager.loggerDict
-    return [item for item in d.values()
-            if isinstance(item, logging.Logger) and item.parent is main_logger and
-            _hierlevel(item) == 1 + _hierlevel(item.parent)]
+    return [
+        item
+        for item in d.values()
+        if isinstance(item, logging.Logger) and item.parent is main_logger and _hierlevel(item) == 1 + _hierlevel(item.parent)
+    ]
 
 
 def project_logger(filepath=None):

@@ -20,8 +20,10 @@ _PRECISION_OFFSET = 7
 S = TypeVar('S')
 OneOrMany = Union[S, List[S]]
 
+
 def noop():
     return None
+
 
 _LOGGER = project_logger(__file__)
 
@@ -207,10 +209,10 @@ class TimeoutLock:  # pragma: no cover
     cannot be acquired within the specified timeout, the acquire method fails, preventing indefinite blocking.
 
     Constructor Parameters:
-        timeout (int): The maximum time in seconds to wait for the lock to become available.
+        timeout (float): The maximum time in seconds to wait for the lock to become available.
     """
 
-    def __init__(self, timeout: int):
+    def __init__(self, timeout: float):
         self._lock = threading.RLock()
         self._timeout = timeout
         self._acquired = False
