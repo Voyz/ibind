@@ -176,7 +176,7 @@ class MarketHistorySubscription(IbkrSubscription):
         return len(self.server_id) > 0
 
     def get_server_id(self):
-        return self.server_id[0]
+        return self.server_id[0] if self.has_server_id() else None
 
     def binding_key(self):
         return make_binding_key(self.event_type, conid=self.conid)
