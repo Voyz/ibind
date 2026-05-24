@@ -99,7 +99,7 @@ class WsLifecycle:
         # if isinstance(self._sink, AsyncSink):
         #     self._sink.start()
 
-        connection_success = wait_until(lambda: self._state_manager.is_authenticated(), timeout=self._connection_timeout)
+        connection_success = wait_until(self._state_manager.is_authenticated, timeout=self._connection_timeout)
         if not connection_success:
             _LOGGER.error(f'{self}: Starting timeout')
         return connection_success
