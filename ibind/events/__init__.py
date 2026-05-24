@@ -1,4 +1,16 @@
-from ibind.ws_v2._ws_events import LifecycleEvent, WsOpen, WsAuthenticated, WsDegraded, WsReady, WsClose, WsError, WsEvent
+from ibind.ws_v2._ws_events import (
+    LifecycleEvent,
+    WsOpen,
+    WsAuthenticated,
+    WsDegraded,
+    WsReady,
+    WsClose,
+    WsError,
+    WsEvent,
+    WsStopping,
+    WsStarting,
+    WsStopped,
+)
 from ibind.ibkr_ws_v2.ibkr_events import (
     GenericIbkrEvent,
     IbkrError,
@@ -26,6 +38,9 @@ from ibind.ws_v2.ws_subscriptions import SubscriptionUpdated
 __all__ = [
     'LifecycleEvent',
     'WsEvent',
+    'WsStarting',
+    'WsStopping',
+    'WsStopped',
     'WsOpen',
     'WsAuthenticated',
     'WsDegraded',

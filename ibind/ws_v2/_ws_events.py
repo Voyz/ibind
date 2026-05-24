@@ -63,6 +63,24 @@ class LifecycleEvent(WsEvent):
     pass
 
 
+class WsStarting(LifecycleEvent):
+    """Emitted when the WebSocket connection is starting."""
+
+    pass
+
+
+class WsStopping(LifecycleEvent):
+    """Emitted when the WebSocket connection is stopping."""
+
+    pass
+
+
+class WsStopped(LifecycleEvent):
+    """Emitted when the WebSocket connection is stopped."""
+
+    pass
+
+
 class WsOpen(LifecycleEvent):
     """Emitted when the WebSocket connection is successfully opened."""
 
@@ -190,6 +208,7 @@ class CallbackSink:
 
 
 class QueueSink:
+    # TODO: add queue size limits
     """
     Sink that stores events in separate queues per event type.
 

@@ -99,10 +99,15 @@ def mock_emit_event():
 
 
 @pytest.fixture
-def sc(mock_send_payload, mock_emit_event):
+def emitter(mock_emit_event):
+    return MagicMock(emit=mock_emit_event)
+
+
+@pytest.fixture
+def sc(mock_send_payload, emitter):
     return SubscriptionController(
         send_payload=mock_send_payload,
-        emit_event=mock_emit_event,
+        emitter=emitter,
         subscription_resolver=MockResolver(),
         subscription_retries=3,
         subscription_timeout=1.0,

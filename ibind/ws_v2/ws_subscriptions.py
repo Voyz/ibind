@@ -10,6 +10,7 @@ from ibind import events
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
 from ibind.events import WsEvent
+from ibind.ws_v2.runtime.ws_emitter import WsEmitter
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -213,7 +214,7 @@ class SubscriptionController:
     def __init__(
         self,
         send_payload: Callable[[str], bool],
-        emit_event: Callable[[WsEvent], None],
+        emitter: WsEmitter,
         subscription_resolver: SubscriptionResolver,
         subscription_retries: int = 20,
         subscription_timeout: float = 5,
@@ -230,7 +231,7 @@ class SubscriptionController:
             subscription_timeout (float, optional): Seconds to wait between retry attempts. Default: 2.
         """
         self._send_payload = send_payload
-        self._emit_event = emit_event
+        self._emitter = emitter
         self._subscription_resolver = subscription_resolver
         self._subscription_retries = subscription_retries
         self._subscription_timeout = subscription_timeout
@@ -507,7 +508,7 @@ class SubscriptionController:
         binding.status = status
         binding.attempts = 0
         self._condition.notify_all()
-        self._emit_event(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status))
+        self._emitter.emit(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status))
 
     def _confirm_subscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):
