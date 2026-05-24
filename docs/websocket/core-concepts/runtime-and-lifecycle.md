@@ -28,15 +28,14 @@ In addition to the main starting and shutting down methods, the `reset_websocket
 The changes in lifecycle are represented by the `WsState` enum:
 
 - `STOPPED` - A default "off" state after instantiation and after stopping.
-- `RUNTIME_STARTING` - `start()` has been called and the runtime thread is starting 
-- `TRANSPORT_STARTING` - a transport has been created and the transport thread is starting  
+- `STARTING` - `start()` has been called and the runtime thread is starting 
 - `OPEN` - the connection with the IBKR is open. This state is set on either the first connect, a reconnect, or when the session becomes unauthenticated and degrades from `AUTHENTICATED`. 
 - `AUTHENTICATED` - the connection is open and the session's authentication is confirmed. This is a de-facto 'ready' state.
 - `DEGRADED` - the connection has degraded, usually indicating a WebSocket error or a failed health check 
 - `CLOSED` - the connection has been closed, either due to an issue or during the shut down 
 - `STOPPING` - the connection has been closed and the threads are going to be stopped. This is followed by the `STOPPED` state.
 
-When state changes to `STOPPED`, `RUNTIME_STARTING`, `OPEN`, `AUTHENTICATED`, `DEGRADED` and `CLOSED`, an appropriate WsEvent is emitted.
+When state changes to `STOPPED`, `STARTING`, `OPEN`, `AUTHENTICATED`, `DEGRADED` and `CLOSED`, an appropriate WsEvent is emitted.
 
 Current state can be queried using `get_state()` method. Additionally, the current state of the runtime thread can be queried using `is_running()` method.
 
@@ -44,13 +43,12 @@ Current state can be queried using `get_state()` method. Additionally, the curre
 
 ### Nominal Startup
 
-| Sequence | WsState              | Indicates                           | Event Emitted              |
-|----------|----------------------|-------------------------------------|----------------------------|
-| 1        | `STOPPED`            | Initial state                       |                            |
-| 2        | `RUNTIME_STARTING`   | Runtime will start                  | `events.WsStarting`        |     
-| 3        | `TRANSPORT_STARTING` | Transport will start                |                            |
-| 4        | `OPEN`               | Connection is open                  | `events.WsOpen`            |
-| 5        | `AUTHENTICATED`      | Connection is authenticated         | `events.WsAuthenticated`   |
+| Sequence | WsState              | Indicates                   | Event Emitted              |
+|----------|----------------------|-----------------------------|----------------------------|
+| 1        | `STOPPED`            | Initial state               |                            |
+| 2        | `STARTING`   | Threads will start          | `events.WsStarting`        |     
+| 3        | `OPEN`               | Connection is open          | `events.WsOpen`            |
+| 4        | `AUTHENTICATED`      | Connection is authenticated | `events.WsAuthenticated`   |
 
 ### Nominal Shutdown
 
