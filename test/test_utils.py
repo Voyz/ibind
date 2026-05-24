@@ -444,6 +444,7 @@ class MockTimeController:
             def __init__(self, original_module, mock_time_func):
                 self.original_module = original_module
                 self.time = mock_time_func
+                self.monotonic = mock_time_func
 
             def __getattr__(self, name):
                 return getattr(self.original_module, name)
@@ -470,7 +471,7 @@ def mock_module_time(target_module, time_sequence=None, start_time=0.0):
 
     Example:
         with mock_module_time('mymodule', time_sequence=[1.0, 2.0, 3.0]):
-            # time.time() in mymodule will return 1.0, then 2.0, then 3.0
+            # time.time() and time.monotonic() in mymodule will return 1.0, then 2.0, then 3.0
             pass
     """
     return MockTimeController(target_module, time_sequence=time_sequence, start_time=start_time)
