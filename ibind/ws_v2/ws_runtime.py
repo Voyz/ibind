@@ -55,6 +55,7 @@ class WsRuntime:
     ):
         self._sink = sink
         self._internal_sink = CallbackSink()
+        self._register_internal_callbacks()
 
         self._state_manager = WsStateManager(on_state_change=self._on_state_change)
 
