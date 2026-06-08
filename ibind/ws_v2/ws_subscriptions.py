@@ -103,7 +103,14 @@ class BindingStatus(Enum):  # pragma: no cover
 
 
 class SubscriptionUpdated(WsEvent):
-    """Emitted when subscription status changes."""
+    """
+    Emitted when subscription status changes.
+
+    Attributes:
+        subscription (Subscription): The subscription that changed.
+        binding_key (str): The binding key of the subscription.
+        status (BindingStatus): The new status of the subscription.
+    """
 
     subscription: Subscription
     binding_key: str
