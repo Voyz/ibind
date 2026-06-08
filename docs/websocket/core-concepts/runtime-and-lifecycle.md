@@ -2,15 +2,10 @@ The WebSocket client lifecycle encompasses starting and maintaining the threads 
 
 The lifecycle is autonomously managed between two dedicated threads - transport and runtime threads.
 
-- Transport thread - manages the `WebSocketApp` object handling the WebSocket connetion, monitors inconsistencies between sessions and forwards all messages to the runtime thread as TransportEvents.
+- Transport thread - manages the `WebSocketApp` object handling the WebSocket connection, monitors inconsistencies between sessions and forwards all messages to the runtime thread as TransportEvents.
 - Runtime thread - ensures the transport thread is alive, processes TransportEvents, and performs health checks [FIXME: link to health monitor docs]
 
-Note that there are two distinct event systems in the client:
-
-- TransportEvents - private transport events, facilitating the `WebSocket -> transport -> runtime` communication. These are never propagated outside of the internal transport queue.
-- WsEvents - main events that can be consumed by sinks, such as in reaction to data received from the server or indicating lifecycle changes.
-
-Note that everywhere in this documentation the word "event" is used, it refers to `WsEvents`.
+Note that there are two distinct event systems in the client - see [Events / Internal Event Systems][internal-event-systems] for more
 
 ## Lifecycle Interface
 
@@ -92,4 +87,6 @@ In many such cases, the client will automatically attempt to restore nominal ope
 
 Whenever the client loses its `AUTHENTICATED` state outside of the shut down sequence, all subscriptions will be invalidated. This will cause the client to reattempt subscriptions the next time `AUTHENTICATED` state is reestablished.
 
-Note that IBKR provides no official indication of whether the events would be replayed uppon reconnection, hence it should be assumed some events might have been missed and should be synchronised using the REST interface.
+Note that IBKR provides no official indication of whether the events would be replayed upon reconnection, hence it should be assumed some events might have been missed and should be synchronised using the REST interface.
+
+[internal-event-systems]: ./events.md#internal-event-systems

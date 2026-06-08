@@ -57,12 +57,12 @@ The client handles converting the Subscription models into appropriate payloads 
 
 ## Events Represent WebSocket Data
 
-Incoming WebSocket messages are converted into events before they are propagated to user code. Known message types are parsed into events using a router - which can be overriden for bespoke message parsing -, while unknown types are collated into a single generic event type.
+Incoming WebSocket messages are converted into events before they are propagated to user code. Known message types are parsed into events using a router - which can be overridden for bespoke message parsing -, while unknown types are collated into a single generic event type.
 
 Typical events may include:
 
 - WebSocket connection state changes
-- Subscritption status changes
+- Subscription status changes
 - Market data events
 - Order updates
 - Trade events
@@ -77,10 +77,10 @@ User application receives events through simple consumers called sinks. Implemen
 
 Two main sink types are implemented by default:
 
-- CallbackSink - registering event callbacks that will be invoked upon event consumpition.
+- CallbackSink - registering event callbacks that will be invoked upon event consumption.
 - QueueSink - putting events into thread-safe queues with read-only interface.
 
-Additionally, two utility sinks are provided for convinience:
+Additionally, two utility sinks are provided for convenience:
 - LogSink - logging all events, useful for debugging.
 - CompositeSink - combining several sinks together.
 
@@ -99,7 +99,7 @@ client.start()
 client.shutdown()
 ```
 
-After creating an instance, the client can be started (intialising the internal threads, enabling subscriptions and event propagation) and later shut down (closing the connection gracefully, flushing remaining events and stopping threads).
+After creating an instance, the client can be started (initialising the internal threads, enabling subscriptions and event propagation) and later shut down (closing the connection gracefully, flushing remaining events and stopping threads).
 
 The client has a number of health checks and recovery mechanisms, attempting to provide continuous connectivity and high uptime. IBKR does not provide information on events' replay after downtime, hence user application should assume possible dropped WebSocket events and synchronise through REST API after connection issues where necessary.
 
