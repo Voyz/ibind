@@ -262,7 +262,7 @@ class IbkrWsClientV2:
         Returns:
             BindingStatus: Current status of the binding.
         """
-        return self._runtime.subscription_controller.get_binding_status(binding_key)
+        return self._runtime.subscription_controller.get_status(binding_key)
 
     def get_server_id(self, event_type: Type[IbkrTopicEvent], conid: str) -> str:  # pragma: no cover
         """
