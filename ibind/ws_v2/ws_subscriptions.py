@@ -94,7 +94,6 @@ class BindingStatus(Enum):  # pragma: no cover
     """
 
     NEW = 'NEW'
-    PENDING = 'PENDING'
     ACTIVE = 'ACTIVE'  # subscription successful
     FAILED = 'FAILED'
     DEGRADED = 'DEGRADED'
@@ -207,6 +206,9 @@ class SubscriptionHandle:
         """
         self._controller.unsubscribe(self._subscription)
         return self
+
+    def __str__(self):
+        return f'SubscriptionHandle({self.binding_key}, {self.status})'
 
 
 class SubscriptionController:
