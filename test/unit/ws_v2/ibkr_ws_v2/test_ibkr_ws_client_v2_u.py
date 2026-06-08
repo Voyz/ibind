@@ -589,14 +589,14 @@ class TestIbkrWsClientV2GetStatus:
         ## Arrange
         client._runtime = MagicMock()
         status = MagicMock(spec=BindingStatus)
-        client._runtime.subscription_controller.get_binding_status.return_value = status
+        client._runtime.subscription_controller.get_status.return_value = status
 
         ## Act
         result = client.get_binding_status('md+12345')
 
         ## Assert
         assert result is status
-        client._runtime.subscription_controller.get_binding_status.assert_called_once_with('md+12345')
+        client._runtime.subscription_controller.get_status.assert_called_once_with('md+12345')
 
 
 class TestIbkrWsClientV2WaitAll:

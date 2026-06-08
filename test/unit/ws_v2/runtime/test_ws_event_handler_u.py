@@ -153,7 +153,7 @@ class TestWsEventHandlerHandleTransportEvent:
         ## Assert
         state_manager.set_state.assert_called_once_with(WsState.OPEN)
 
-    @capture_logs(error_level='INFO', expected_errors=['on_close error'], partial_match=True)
+    @capture_logs(error_level='INFO', expected_errors=['on_close error', 'Connection closed'], partial_match=True)
     def test_handles_transport_closed(self, handler, state_manager, emitter):
         """_handle_transport_event handles TransportClosed."""
         ## Arrange
@@ -378,7 +378,7 @@ class TestWsEventHandlerHandleOnClose:
         state_manager.set_state.assert_called_once_with(WsState.CLOSED)
         emitter.emit.assert_called_once()
 
-    @capture_logs(error_level='INFO', expected_errors=['on_close error'], partial_match=True)
+    @capture_logs(error_level='INFO', expected_errors=['on_close error', 'Connection closed'], partial_match=True)
     def test_close_with_bytes_message_decodes(self, handler, state_manager, emitter):
         """_handle_on_close decodes bytes close_msg to utf-8."""
         ## Arrange

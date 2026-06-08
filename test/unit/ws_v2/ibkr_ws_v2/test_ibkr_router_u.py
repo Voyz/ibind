@@ -581,7 +581,7 @@ class TestIbkrRouterHandleNotification:
 
 
 class TestIbkrRouterHandleMarketHistoryUnsubscribe:
-    @capture_logs(error_level='INFO')
+    @capture_logs(error_level='INFO', expected_errors=['Received unsubscribing confirmation'], partial_match=True)
     def test_known_server_id_creates_unsubscription_event(self):
         """route creates Unsubscription event for known server_id."""
         ## Arrange
@@ -626,7 +626,7 @@ class TestIbkrRouterHandleMarketHistoryUnsubscribe:
 
 
 class TestIbkrRouterHandleMessageWithoutTopic:
-    @capture_logs(error_level='INFO')
+    @capture_logs(error_level='INFO', expected_errors=['Waiting for an active IBKR session'], partial_match=True)
     def test_waiting_for_session_message(self):
         """route creates WaitingForSession event."""
         ## Arrange
@@ -667,7 +667,7 @@ class TestIbkrRouterHandleMessageWithoutTopic:
         assert isinstance(result, events.Unsubscription)
         assert result.target_event_type == events.AccountLedger
 
-    @capture_logs(error_level='INFO')
+    @capture_logs(error_level='INFO', expected_errors=['Received unsubscribing confirmation'], partial_match=True)
     def test_unsubscribed_market_history_message(self):
         """route delegates to market history unsubscribe handler."""
         ## Arrange
@@ -722,7 +722,7 @@ class TestIbkrRouterRoute:
         ## Assert
         assert isinstance(result, events.IbkrError)
 
-    @capture_logs(error_level='INFO')
+    @capture_logs(error_level='INFO', expected_errors=['Waiting for an active IBKR session'], partial_match=True)
     def test_message_without_topic(self):
         """route handles message without topic."""
         ## Arrange

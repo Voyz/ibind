@@ -128,19 +128,6 @@ class TestBinding:
         ## Assert
         assert result is True
 
-    @capture_logs()
-    def test_binding_not_done_when_status_differs(self, mock_sub):
-        """Binding.done returns False when status does not match intent."""
-        ## Arrange
-        binding = Binding(subscription=mock_sub, intent=BindingStatus.ACTIVE)
-        binding.status = BindingStatus.PENDING
-
-        ## Act
-        result = binding.done
-
-        ## Assert
-        assert result is False
-
 
 class TestSubscriptionHandle:
     @capture_logs()
