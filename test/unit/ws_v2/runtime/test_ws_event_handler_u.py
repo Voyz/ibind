@@ -10,6 +10,7 @@ from ibind.ws_v2.runtime.ws_state_manager import WsStateManager
 from ibind.ws_v2.ws_subscriptions import SubscriptionController
 from ibind.ws_v2.ws_transport import TransportEvent, TransportOpened, TransportReconnect, TransportClosed, TransportError, TransportMessage
 from test.test_utils import capture_logs
+from test.conftest import configure_logs  # noqa: F401
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def emitter():
 def handler(state_manager, router, subscription_controller, emitter):
     return WsEventHandler(
         state_manager=state_manager,
-        router=router,
+        router=router, # NOQA
         subscription_controller=subscription_controller,
         emitter=emitter,
     )

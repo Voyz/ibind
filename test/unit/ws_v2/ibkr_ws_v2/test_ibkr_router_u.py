@@ -6,6 +6,7 @@ import pytest
 from ibind import events
 from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter, get_ibkr_topic_event, parse_raw_message
 from test.test_utils import capture_logs
+from test.conftest import configure_logs  # noqa: F401
 
 
 class TestGetIbkrTopicEvent:
@@ -176,13 +177,15 @@ class TestIbkrRouterPreprocessAccountLedger:
         """route creates events for ledger entries with acctCode."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'sld+123',
-            'result': [
-                {'acctCode': 'U123', 'balance': 1000},
-                {'acctCode': 'U456', 'balance': 2000},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'sld+123',
+                'result': [
+                    {'acctCode': 'U123', 'balance': 1000},
+                    {'acctCode': 'U456', 'balance': 2000},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -198,13 +201,15 @@ class TestIbkrRouterPreprocessAccountLedger:
         """route skips ledger entries without acctCode."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'sld+123',
-            'result': [
-                {'acctCode': 'U123', 'balance': 1000},
-                {'balance': 2000},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'sld+123',
+                'result': [
+                    {'acctCode': 'U123', 'balance': 1000},
+                    {'balance': 2000},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -220,13 +225,15 @@ class TestIbkrRouterPreprocessAccountSummary:
         """route creates AccountSummary event."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'ssd+123',
-            'result': [
-                {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
-                {'key': 'NetLiquidation', 'value': '50000', 'timestamp': 1234567890},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'ssd+123',
+                'result': [
+                    {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
+                    {'key': 'NetLiquidation', 'value': '50000', 'timestamp': 1234567890},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -242,13 +249,15 @@ class TestIbkrRouterPreprocessAccountSummary:
         """route skips summary entries with no data after key/timestamp removal."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'ssd+123',
-            'result': [
-                {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
-                {'key': 'EmptyKey', 'timestamp': 1234567890},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'ssd+123',
+                'result': [
+                    {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
+                    {'key': 'EmptyKey', 'timestamp': 1234567890},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -262,12 +271,14 @@ class TestIbkrRouterPreprocessAccountSummary:
         """route logs error and returns empty list when AccountCode is missing."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'ssd+123',
-            'result': [
-                {'key': 'NetLiquidation', 'value': '50000', 'timestamp': 1234567890},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'ssd+123',
+                'result': [
+                    {'key': 'NetLiquidation', 'value': '50000', 'timestamp': 1234567890},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -280,13 +291,15 @@ class TestIbkrRouterPreprocessAccountSummary:
         """route returns empty list when all summary entries are empty."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'ssd+123',
-            'result': [
-                {'key': 'EmptyKey1', 'timestamp': 1234567890},
-                {'key': 'EmptyKey2', 'timestamp': 1234567890},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'ssd+123',
+                'result': [
+                    {'key': 'EmptyKey1', 'timestamp': 1234567890},
+                    {'key': 'EmptyKey2', 'timestamp': 1234567890},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -301,13 +314,15 @@ class TestIbkrRouterPreprocessOrders:
         """route removes bgColor and fgColor from order data."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'sor+123',
-            'args': [
-                {'orderId': 1, 'bgColor': '#fff', 'fgColor': '#000'},
-                {'orderId': 2, 'bgColor': '#aaa'},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'sor+123',
+                'args': [
+                    {'orderId': 1, 'bgColor': '#fff', 'fgColor': '#000'},
+                    {'orderId': 2, 'bgColor': '#aaa'},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
@@ -353,12 +368,14 @@ class TestIbkrRouterHandleSubscribedMessage:
         """route handles account summary topic correctly."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({
-            'topic': 'ssd+123',
-            'result': [
-                {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
-            ]
-        })
+        raw_message = json.dumps(
+            {
+                'topic': 'ssd+123',
+                'result': [
+                    {'key': 'AccountCode', 'value': 'U123', 'timestamp': 1234567890},
+                ],
+            }
+        )
 
         ## Act
         result = router.route(raw_message)
