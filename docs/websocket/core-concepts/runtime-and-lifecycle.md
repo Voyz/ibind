@@ -1,3 +1,5 @@
+# Runtime and Lifecycle
+
 The WebSocket client lifecycle encompasses starting and maintaining the threads and the connection necessary for the uninterrupted functionality and health monitoring. 
 
 The lifecycle is autonomously managed between two dedicated threads - transport and runtime threads.
@@ -5,7 +7,9 @@ The lifecycle is autonomously managed between two dedicated threads - transport 
 - Transport thread - manages the `WebSocketApp` object handling the WebSocket connection, monitors inconsistencies between sessions and forwards all messages to the runtime thread as TransportEvents.
 - Runtime thread - ensures the transport thread is alive, processes TransportEvents, and performs health checks [FIXME: link to health monitor docs]
 
-Note that there are two distinct event systems in the client - see [Events / Internal Event Systems][internal-event-systems] for more
+You can read more about the threading model in [Threading Model](./threading-model.md).
+
+Note that there are two distinct event systems in the client - see [Events / Internal Event Systems][internal-event-systems] for more.
 
 ## Lifecycle Interface
 

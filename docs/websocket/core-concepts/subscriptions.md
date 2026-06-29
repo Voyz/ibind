@@ -87,7 +87,28 @@ Upon calling either `subscribe()` or `unsubscribe()` the client registers an int
 
 The WebSocket client regularly scans current bindings and reconciles them until their BindingStatus is equal to the intent. Reconciliation involves resending payloads and validating the status if confirmation is expected from the server. This also ensures that topics are automatically resubscribed to after connectivity drops.
 
-An `events.SubscriptionUpdated` event is emitted each time a status of a binding changes, containing an instance of the Subscription model, its binding key and the new status.
+An `events.SubscriptionUpdated` event is emitted each time a status of a binding changes, containing an instance of the Subscription model, its binding key, the new status, and the previous status.
+
+## Subscription expiry
+
+Every subscription model accepts an optional `expiry_seconds` argument. When set, the subscription controller treats the binding as expired after the specified number of seconds have passed since the last subscription payload was sent. The binding is marked as `EXPIRED` and the subscription payload is reissued automatically on the next reconciliation cycle.
+
+```python
+sub = MarketDataSubscription(conid='265598', fields=['31', '84', '86'], expiry_seconds=60*10)
+client.subscribe(sub)
+```
+
+This is useful for topics that silently stop streaming data after a period of inactivity.
+
+Setting `expiry_seconds` ensures that a fresh subscription payload is sent periodically, keeping the stream alive.
+
+Without `expiry_seconds` (the default), subscriptions are kept active indefinitely once confirmed, and resubscription only happens after a connection drop.
+
+In particular, the Market Data documentation states:
+
+> _"Market data streams will terminate after 15 minutes. Users must send a new request for market data after 10 minutes to continue retrieving data for the instrument."_
+
+The `MarketDataSubscription` sets `expiry_seconds=60*10` by default, ensuring that the stream is refreshed every 10 minutes as per the documentation.
 
 ## Subscription handles
 
