@@ -7,9 +7,9 @@ from typing import Dict, Optional, Callable, Protocol, Tuple, Literal
 from pydantic import BaseModel, ConfigDict
 
 from ibind import events
+from ibind.events import WsEvent
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
-from ibind.events import WsEvent
 from ibind.ws_v2.runtime.ws_emitter import WsEmitter
 
 _LOGGER = project_logger('ibkr_ws_client')
@@ -109,11 +109,13 @@ class SubscriptionUpdated(WsEvent):
         subscription (Subscription): The subscription that changed.
         binding_key (str): The binding key of the subscription.
         status (BindingStatus): The new status of the subscription.
+        previous_status (BindingStatus): The previous status of the subscription.
     """
 
     subscription: Subscription
     binding_key: str
     status: BindingStatus
+    previous_status: BindingStatus
 
 
 class Binding(BaseModel):
@@ -513,11 +515,12 @@ class SubscriptionController:
 
     def _update_status(self, binding: Binding, status: BindingStatus):
         binding_key = binding.subscription.binding_key()
-        _LOGGER.info(f'{self}: Updated subscription status: {binding_key} {binding.status.value} -> {status.value}')
+        previous_status = binding.status
+        _LOGGER.info(f'{self}: Updated subscription status: {binding_key} {previous_status.value} -> {status.value}')
         binding.status = status
         binding.attempts = 0
         self._condition.notify_all()
-        self._emitter.emit(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status))
+        self._emitter.emit(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status, previous_status=previous_status))
 
     def _confirm_subscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):

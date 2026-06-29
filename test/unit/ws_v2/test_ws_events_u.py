@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ibind import WsState
 from ibind.events import (
     WsOpen,
     WsAuthenticated,
@@ -43,7 +44,7 @@ def queue_sink():
 
 @pytest.fixture
 def sample_event():
-    return WsOpen()
+    return WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
 
 class TestWsEvent:
@@ -51,7 +52,7 @@ class TestWsEvent:
     def test_immutability(self):
         """WsEvent instances are immutable after creation."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act / Assert
         with pytest.raises(Exception):
@@ -62,21 +63,21 @@ class TestWsEvent:
         """WsEvent rejects extra fields not in the model."""
         ## Arrange / Act / Assert
         with pytest.raises(Exception):
-            WsOpen(extra_field='value')  # NOQA
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN, extra_field='value')  # NOQA
 
 
 @capture_logs()
 def test_lifecycle_events():
     """Lifecycle events can be created with default received_at and optional fields."""
     ## Arrange / Act
-    ws_open = WsOpen()
-    ws_authenticated = WsAuthenticated()
-    ws_degraded = WsDegraded()
-    ws_ready = WsReady()
-    ws_close_with_fields = WsClose(close_status_code=1000, close_msg='normal closure')
-    ws_close_with_none = WsClose(close_status_code=None, close_msg=None)
+    ws_open = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+    ws_authenticated = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
+    ws_degraded = WsDegraded(previous_state=WsState.AUTHENTICATED, current_state=WsState.DEGRADED)
+    ws_ready = WsReady(previous_state=WsState.AUTHENTICATED, current_state=WsState.AUTHENTICATED)
+    ws_close_with_fields = WsClose(close_status_code=1000, close_msg='normal closure', previous_state=WsState.OPEN, current_state=WsState.CLOSED)
+    ws_close_with_none = WsClose(close_status_code=None, close_msg=None, previous_state=WsState.STOPPING, current_state=WsState.CLOSED)
     error = RuntimeError('connection failed')
-    ws_error = WsError(error=error)
+    ws_error = WsError(error=error, previous_state=WsState.OPEN, current_state=WsState.DEGRADED)
 
     ## Assert
     assert isinstance(ws_open.received_at, datetime)
@@ -150,7 +151,7 @@ class TestCallbackSink:
         ## Arrange
         callback = MagicMock()
         callback_sink.on(WsOpen, callback)
-        event = WsClose(close_status_code=1000, close_msg='')
+        event = WsClose(close_status_code=1000, close_msg='', previous_state=WsState.OPEN, current_state=WsState.CLOSED)
 
         ## Act
         callback_sink.emit(event)
@@ -246,7 +247,7 @@ class TestQueueSink:
         ## Arrange
         sink1 = QueueSink()
         sink2 = QueueSink()
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         sink1.emit(event)
@@ -299,7 +300,7 @@ class TestQueueSink:
     def test_empty_returns_false_when_not_empty(self, queue_sink):
         """QueueSink.empty returns False when events are queued."""
         ## Arrange
-        queue_sink.emit(WsOpen())
+        queue_sink.emit(WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN))
 
         ## Act
         result = queue_sink.empty(WsOpen)
@@ -311,8 +312,8 @@ class TestQueueSink:
     def test_separate_queues_per_event_type(self, queue_sink):
         """QueueSink maintains separate queues for different event types."""
         ## Arrange
-        event1 = WsOpen()
-        event2 = WsClose(close_status_code=1000, close_msg='')
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsClose(close_status_code=1000, close_msg='', previous_state=WsState.OPEN, current_state=WsState.CLOSED)
 
         ## Act
         queue_sink.emit(event1)
@@ -471,8 +472,8 @@ class TestAsyncSink:
         ## Arrange
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=1, drop_oldest=False)
-        event1 = WsOpen()
-        event2 = WsAuthenticated()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
 
         ## Act
 
@@ -485,8 +486,8 @@ class TestAsyncSink:
         ## Arrange
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=1, drop_oldest=True)
-        event1 = WsOpen()
-        event2 = WsAuthenticated()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
 
         ## Act
         sink.emit(event1)
@@ -499,8 +500,8 @@ class TestAsyncSink:
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink)
         sink.start()
-        event1 = WsOpen()
-        event2 = WsAuthenticated()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
 
         ## Act
         sink.emit(event1)
@@ -522,7 +523,7 @@ class TestAsyncSink:
         inner_sink = MagicMock(spec=EventSink)
         inner_sink.emit.side_effect = ValueError('sink error')
         sink = AsyncSink(inner_sink)
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         sink.emit(event)
         sink._consume_queue()
@@ -534,8 +535,8 @@ class TestAsyncSink:
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, cycle_interval=0.5)
         sink.start()
-        event1 = WsOpen()
-        event2 = WsAuthenticated()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
 
         ## Act
         sink.emit(event1)
@@ -551,7 +552,7 @@ class TestAsyncSink:
         ## Arrange
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=10)
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         sink._running = True
@@ -563,7 +564,7 @@ class TestAsyncSink:
         ## Arrange
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=1, drop_oldest=True)
-        event1 = WsOpen()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         with patch.object(sink._queue, 'put_nowait', side_effect=[Full, None]) as mock_put:
@@ -583,8 +584,8 @@ class TestAsyncSink:
         ## Arrange
         inner_sink = MagicMock()
         sink = AsyncSink(inner_sink, maxsize=1, drop_oldest=True)
-        event1 = WsOpen()
-        event2 = WsAuthenticated()
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
 
         ## Act
         with patch.object(sink._queue, 'put_nowait', side_effect=[Full, Full]):

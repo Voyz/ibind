@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from ibind import WsState
 from ibind.events import WsOpen
 from ibind.ws_v2._ws_events import CallbackSink, EventSink
 from ibind.ws_v2.runtime.ws_emitter import WsEmitter
@@ -22,7 +23,7 @@ def external_sink():
 
 @pytest.fixture
 def emitter(internal_sink, external_sink):
-    return WsEmitter(internal_sink=internal_sink, sink=external_sink)
+    return WsEmitter(internal_sink=internal_sink, sink=external_sink)  # NOQA
 
 
 class TestWsEmitterInit:
@@ -30,7 +31,7 @@ class TestWsEmitterInit:
     def test_init_sets_attributes(self, internal_sink, external_sink):
         """WsEmitter.__init__ initializes all attributes correctly."""
         ## Act
-        emitter = WsEmitter(internal_sink=internal_sink, sink=external_sink)
+        emitter = WsEmitter(internal_sink=internal_sink, sink=external_sink)  # NOQA
 
         ## Assert
         assert emitter._internal_sink is internal_sink
@@ -42,7 +43,7 @@ class TestWsEmitterEmit:
     def test_emit_sends_to_both_sinks(self, emitter, internal_sink, external_sink):
         """emit sends event to both internal and external sinks."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         emitter.emit(event)
@@ -55,7 +56,7 @@ class TestWsEmitterEmit:
     def test_emit_logs_internal_sink_exception(self, emitter, internal_sink, external_sink):
         """emit logs exceptions from internal sink and continues to external sink."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
         internal_sink.emit.side_effect = RuntimeError('internal error')
 
         ## Act
@@ -69,7 +70,7 @@ class TestWsEmitterEmit:
     def test_emit_logs_external_sink_exception(self, emitter, internal_sink, external_sink):
         """emit logs exceptions from external sink."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
         external_sink.emit.side_effect = RuntimeError('external error')
 
         ## Act
@@ -83,7 +84,7 @@ class TestWsEmitterEmit:
     def test_emit_logs_both_sink_exceptions(self, emitter, internal_sink, external_sink):
         """emit logs exceptions from both sinks."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
         internal_sink.emit.side_effect = RuntimeError('internal error')
         external_sink.emit.side_effect = RuntimeError('external error')
 

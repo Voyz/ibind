@@ -37,7 +37,7 @@ def emitter():
 def handler(state_manager, router, subscription_controller, emitter):
     return WsEventHandler(
         state_manager=state_manager,
-        router=router, # NOQA
+        router=router,  # NOQA
         subscription_controller=subscription_controller,
         emitter=emitter,
     )
@@ -169,9 +169,10 @@ class TestWsEventHandlerHandleTransportEvent:
         assert emitter.emit.call_count == 1
 
     @capture_logs(expected_errors=['Connection error'], partial_match=True)
-    def test_handles_transport_error(self, handler, emitter):
+    def test_handles_transport_error(self, handler, state_manager, emitter):
         """_handle_transport_event handles TransportError."""
         ## Arrange
+        state_manager.get_state.return_value = WsState.OPEN
         exception = Exception('Connection error')
         event = TransportError(exception=exception)
 
@@ -297,9 +298,10 @@ class TestWsEventHandlerHandleOnReconnect:
 
 class TestWsEventHandlerHandleOnError:
     @capture_logs(expected_errors=['Connection error'], partial_match=True)
-    def test_logs_error_and_emits_event(self, handler, emitter):
+    def test_logs_error_and_emits_event(self, handler, state_manager, emitter):
         """_handle_on_error logs error and emits WsError event."""
         ## Arrange
+        state_manager.get_state.return_value = WsState.OPEN
         exception = Exception('Connection error')
 
         ## Act
@@ -315,6 +317,7 @@ class TestWsEventHandlerHandleOnError:
     def test_connection_lost_sets_degraded_state(self, handler, state_manager, emitter):
         """_handle_on_error sets DEGRADED state for connection lost."""
         ## Arrange
+        state_manager.get_state.return_value = WsState.OPEN
         exception = Exception('Connection to remote host was lost.')
 
         ## Act
@@ -328,6 +331,7 @@ class TestWsEventHandlerHandleOnError:
     def test_connection_refused_sets_degraded_state(self, handler, state_manager, emitter):
         """_handle_on_error sets DEGRADED state for connection refused."""
         ## Arrange
+        state_manager.get_state.return_value = WsState.OPEN
         exception = Exception('No connection could be made because the target machine actively refused it')
 
         ## Act

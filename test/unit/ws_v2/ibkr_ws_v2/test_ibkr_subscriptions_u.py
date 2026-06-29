@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from ibind import WsState
 from ibind.events import AccountLedger, MarketData, MarketHistory, Orders, PriceLadder, Pnl, Trades, AccountSummary, Unsubscription
 from ibind.ibkr_ws_v2.ibkr_subscriptions import (
     make_binding_key,
@@ -118,7 +119,7 @@ class TestIbkrSubscriptionResolver:
     def test_resolve_non_ibkr_event(self, resolver):
         """IbkrSubscriptionResolver returns None for non-IBKR events."""
         ## Arrange
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         is_active, binding_key = resolver.resolve_binding_key(event)

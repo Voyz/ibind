@@ -131,40 +131,37 @@ class WsRuntime:
         _LOGGER.debug(f'{self}: {previous_state} -> {state}')
 
         if state == WsState.STARTING:
-            self._emitter.emit(events.WsStarting())
+            self._emitter.emit(events.WsStarting(previous_state=previous_state, current_state=state))
 
         elif state == WsState.OPEN:
             self._state_manager.last_heartbeat = None
-            self._emitter.emit(events.WsOpen())
+            self._emitter.emit(events.WsOpen(previous_state=previous_state, current_state=state))
 
         elif state == WsState.AUTHENTICATED:
-            self._emitter.emit(events.WsAuthenticated())
-            self._websocket_ready()
+            self._emitter.emit(events.WsAuthenticated(previous_state=previous_state, current_state=state))
+            self._emitter.emit(events.WsReady(previous_state=previous_state, current_state=state))
+            self._state_manager.last_heartbeat = time.time()
+            _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._state_manager.last_heartbeat}')
 
         elif state not in [WsState.AUTHENTICATED, WsState.STOPPING] and previous_state == WsState.AUTHENTICATED:
             self.subscription_controller.invalidate_subscriptions()
 
         elif state == WsState.DEGRADED:
             self.subscription_controller.invalidate_subscriptions()
-            self._emitter.emit(events.WsDegraded())
+            self._emitter.emit(events.WsDegraded(previous_state=previous_state, current_state=state))
 
         elif state == WsState.CLOSED:
             if previous_state != WsState.STOPPING:
                 self.subscription_controller.invalidate_subscriptions()
 
         elif state == WsState.STOPPED:
-            self._emitter.emit(events.WsStopped())
+            self._emitter.emit(events.WsStopped(previous_state=previous_state, current_state=state))
 
     def set_authenticated(self, value):
         if not value and self._state_manager.get_state() == WsState.AUTHENTICATED:
             self._state_manager.set_state(WsState.OPEN)
         elif value and self._state_manager.get_state() == WsState.OPEN:
             self._state_manager.set_state(WsState.AUTHENTICATED)
-
-    def _websocket_ready(self):
-        self._emitter.emit(events.WsReady())
-        self._state_manager.last_heartbeat = time.time()
-        _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._state_manager.last_heartbeat}')
 
     def set_state(self, value):  # pragma: no cover
         self._state_manager.set_state(value)

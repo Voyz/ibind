@@ -17,7 +17,7 @@ class MockRouter:
 
     def route(self, message):
         self.route_calls.append(message)
-        return events.WsOpen()
+        return events.WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
 
 class MockResolver:

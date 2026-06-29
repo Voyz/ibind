@@ -109,6 +109,9 @@ class MarketDataSubscription(IbkrSubscription):
     conid: str
     fields: List[str]
 
+    # IBKR specifies: "Market data streams will terminate after 15 minutes. Users must send a new request for market data after 10 minutes to continue retrieving data for the instrument."
+    expiry_seconds: int | None = 60 * 10 # 10 minutes expiry
+
     def subscribe_payload(self) -> str:
         fields_str = json.dumps({'fields': list(self.fields)}, separators=(',', ':'))
         return f'smd+{self.conid}+{fields_str}'

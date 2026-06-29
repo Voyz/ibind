@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ibind.base.queue_controller import QueueAccessor
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import OneOrMany, exception_to_string, tname
+from ibind.ws_v2.runtime.ws_state_manager import WsState
 
 __all__ = []
 
@@ -58,7 +59,15 @@ class WsEvent(BaseModel):  # pragma: no cover
 
 
 class LifecycleEvent(WsEvent):
-    """Base class for WebSocket connection lifecycle events."""
+    """
+    Base class for WebSocket connection lifecycle events.
+
+    Attributes:
+        previous_state (WsState): The state before the transition.
+        current_state (WsState): The state after the transition.
+    """
+    previous_state: WsState
+    current_state: WsState
 
     pass
 

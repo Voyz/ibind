@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ibind import WsState
 from ibind.events import WsOpen, WsEvent
 from ibind.ws_v2.ws_subscriptions import (
     Subscription,
@@ -437,7 +438,7 @@ class TestObserve:
         """SubscriptionController.observe ignores events with no binding key."""
         ## Arrange
         sc.subscribe(mock_sub)
-        event = WsOpen()
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
 
         ## Act
         sc.observe(event)
@@ -876,6 +877,7 @@ class TestSubscriptionUpdatedEvent:
         assert event.subscription == mock_sub
         assert event.binding_key == binding_key
         assert event.status == BindingStatus.ACTIVE
+        assert event.previous_status == BindingStatus.NEW
 
     @capture_logs()
     def test_subscription_updated_emitted_on_unsubscribe(self, sc, mock_sub, binding_key, mock_emit_event):
@@ -898,6 +900,7 @@ class TestSubscriptionUpdatedEvent:
         assert event.subscription == mock_sub
         assert event.binding_key == binding_key
         assert event.status == BindingStatus.UNSUBSCRIBED
+        assert event.previous_status == BindingStatus.ACTIVE
 
     @capture_logs()
     def test_subscription_updated_emitted_on_failed_status(self, sc, mock_sub, binding_key, mock_emit_event):
@@ -919,6 +922,7 @@ class TestSubscriptionUpdatedEvent:
         event = mock_emit_event.call_args[0][0]
         assert isinstance(event, SubscriptionUpdated)
         assert event.status == BindingStatus.FAILED
+        assert event.previous_status == BindingStatus.NEW
 
     @capture_logs()
     def test_subscription_updated_emitted_on_expired_status(self, sc, test_subscription_with_expiry, mock_emit_event):
@@ -943,6 +947,7 @@ class TestSubscriptionUpdatedEvent:
         event = mock_emit_event.call_args[0][0]
         assert isinstance(event, SubscriptionUpdated)
         assert event.status == BindingStatus.EXPIRED
+        assert event.previous_status == BindingStatus.ACTIVE
 
     @capture_logs()
     def test_subscription_updated_emitted_on_degraded_status(self, sc, mock_sub, binding_key, mock_emit_event):
@@ -961,3 +966,4 @@ class TestSubscriptionUpdatedEvent:
         event = mock_emit_event.call_args[0][0]
         assert isinstance(event, SubscriptionUpdated)
         assert event.status == BindingStatus.DEGRADED
+        assert event.previous_status == BindingStatus.ACTIVE
