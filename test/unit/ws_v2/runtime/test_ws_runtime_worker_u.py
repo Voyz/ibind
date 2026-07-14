@@ -74,6 +74,34 @@ class TestWsRuntimeWorkerMaintainSubscriptions:
         ## Assert
         subscription_controller.reconcile_bindings.assert_called_once()
 
+    @capture_logs(logger_level='ERROR', expected_errors=['Exception reconciling subscriptions'], partial_match=True)
+    def test_maintain_subscriptions_logs_exception_first_time(self, worker, state_manager, subscription_controller):
+        """_maintain_subscriptions logs exception on first occurrence and sets state to DEGRADED."""
+        ## Arrange
+        state_manager.is_authenticated.return_value = True
+        subscription_controller.reconcile_bindings.side_effect = RuntimeError('reconcile error')
+
+        ## Act
+        worker._maintain_subscriptions()
+
+        ## Assert
+        state_manager.set_state.assert_called_once_with(WsState.DEGRADED)
+
+    @capture_logs()
+    def test_maintain_subscriptions_silently_handles_repeated_exception(self, worker, state_manager, subscription_controller):
+        """_maintain_subscriptions silently handles repeated exceptions with same message."""
+        ## Arrange
+        state_manager.is_authenticated.return_value = True
+        error_msg = 'reconcile error'
+        subscription_controller.reconcile_bindings.side_effect = RuntimeError(error_msg)
+        worker._last_error = error_msg
+
+        ## Act
+        worker._maintain_subscriptions()
+
+        ## Assert
+        state_manager.set_state.assert_not_called()
+
 
 class TestWsRuntimeWorkerRun:
     @capture_logs(logger_level='DEBUG', expected_errors=['Runtime thread stopped'], partial_match=True)

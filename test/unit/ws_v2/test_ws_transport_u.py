@@ -434,17 +434,17 @@ class TestFetchCookie:
         mock_get_cookie.assert_called_once()
 
     @capture_logs()
-    def test_fetch_cookie_clears_authentication_flag_on_success(self, transport, mock_get_cookie):
-        """WsTransport.fetch_cookie clears session_lacks_authentication flag on success."""
+    def test_fetch_cookie_clears_last_error_on_success(self, transport, mock_get_cookie):
+        """WsTransport.fetch_cookie clears _last_error on success."""
         ## Arrange
-        transport._session_lacks_authentication = True
+        transport._last_error = 'previous error'
         mock_get_cookie.return_value = 'session_cookie'
 
         ## Act
         transport.fetch_cookie()
 
         ## Assert
-        assert transport._session_lacks_authentication is False
+        assert transport._last_error is None
 
     @capture_logs(logger_level='INFO', expected_errors=['Timeout retrieving cookie'], partial_match=True)
     def test_fetch_cookie_returns_undefined_on_timeout(self, transport, mock_get_cookie):
@@ -458,9 +458,9 @@ class TestFetchCookie:
         ## Assert
         assert result is UNDEFINED
 
-    @capture_logs(logger_level='INFO', expected_errors=['Failed to retrieve cookie due to lack of authentication'], partial_match=True)
+    @capture_logs(logger_level='ERROR', expected_errors=['Failed to retrieve cookie due to lack of authentication'], partial_match=True)
     def test_fetch_cookie_handles_401_error_first_time(self, transport, mock_get_cookie):
-        """WsTransport.fetch_cookie logs and sets flag on first 401 error."""
+        """WsTransport.fetch_cookie logs on first 401 error and sets _last_error."""
         ## Arrange
         mock_get_cookie.side_effect = ExternalBrokerError('Unauthorized', status_code=401)
 
@@ -469,14 +469,40 @@ class TestFetchCookie:
 
         ## Assert
         assert result is UNDEFINED
-        assert transport._session_lacks_authentication is True
+        assert transport._last_error is not None
 
     @capture_logs()
-    def test_fetch_cookie_silently_handles_401_error_when_flag_set(self, transport, mock_get_cookie):
+    def test_fetch_cookie_silently_handles_401_error_when_last_error_set(self, transport, mock_get_cookie):
         """WsTransport.fetch_cookie silently returns UNDEFINED on subsequent 401 errors."""
         ## Arrange
-        transport._session_lacks_authentication = True
+        transport._last_error = 'Unauthorized'
         mock_get_cookie.side_effect = ExternalBrokerError('Unauthorized', status_code=401)
+
+        ## Act
+        result = transport.fetch_cookie()
+
+        ## Assert
+        assert result is UNDEFINED
+
+    @capture_logs(logger_level='ERROR', expected_errors=['Failed to retrieve cookie due to failure in IBKR url resolution'], partial_match=True)
+    def test_fetch_cookie_handles_url_resolution_error_first_time(self, transport, mock_get_cookie):
+        """WsTransport.fetch_cookie logs on first URL resolution error and sets _last_error."""
+        ## Arrange
+        mock_get_cookie.side_effect = ExternalBrokerError('Failed to resolve example.com')
+
+        ## Act
+        result = transport.fetch_cookie()
+
+        ## Assert
+        assert result is UNDEFINED
+        assert transport._last_error is not None
+
+    @capture_logs()
+    def test_fetch_cookie_silently_handles_url_resolution_error_when_last_error_set(self, transport, mock_get_cookie):
+        """WsTransport.fetch_cookie silently returns UNDEFINED on subsequent URL resolution errors."""
+        ## Arrange
+        transport._last_error = 'Failed to resolve example.com'
+        mock_get_cookie.side_effect = ExternalBrokerError('Failed to resolve example.com')
 
         ## Act
         result = transport.fetch_cookie()
@@ -642,18 +668,16 @@ class TestSend:
         ## Assert
         assert result is False
 
-    @capture_logs(logger_level='ERROR', expected_errors=['Sending payload failed'], partial_match=True)
-    def test_send_logs_other_exceptions(self, transport, ready_wsa):
-        """WsTransport.send logs other exceptions."""
+    @capture_logs()
+    def test_send_raises_other_exceptions(self, transport, ready_wsa):
+        """WsTransport.send raises other exceptions."""
         ## Arrange
         transport._wsa = ready_wsa
         transport._wsa.send.side_effect = RuntimeError('unexpected error')
 
-        ## Act
-        result = transport.send('test_payload')
-
-        ## Assert
-        assert result is False
+        ## Act / Assert
+        with pytest.raises(RuntimeError, match='unexpected error'):
+            transport.send('test_payload')
 
 
 class TestCallbackWrapping:

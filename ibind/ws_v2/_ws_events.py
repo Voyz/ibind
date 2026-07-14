@@ -66,6 +66,7 @@ class LifecycleEvent(WsEvent):
         previous_state (WsState): The state before the transition.
         current_state (WsState): The state after the transition.
     """
+
     previous_state: WsState
     current_state: WsState
 
@@ -446,7 +447,7 @@ class AsyncSink:
             except Exception as e:
                 _LOGGER.error(f'{self}: Exception emitting event to sink: {exception_to_string(e)}')
 
-    def _cycle(self):
+    def _cycle(self):  # pragma: no cover
         _LOGGER.debug(f'{self}: AsyncSink thread started ({tname()})')
         while self._running:
             self._wait_event.clear()

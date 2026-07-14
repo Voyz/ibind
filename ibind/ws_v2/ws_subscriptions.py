@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict
 from ibind import events
 from ibind.events import WsEvent
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import exception_to_string
 from ibind.ws_v2.runtime.ws_emitter import WsEmitter
 
 _LOGGER = project_logger('ibkr_ws_client')
@@ -209,7 +208,7 @@ class SubscriptionHandle:
         self._controller.unsubscribe(self._subscription)
         return self
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return f'SubscriptionHandle({self.binding_key}, {self.status})'
 
 
@@ -251,14 +250,10 @@ class SubscriptionController:
         self._condition = Condition(RLock())
 
     def _send(self, payload) -> bool:
-        try:
-            success = self._send_payload(payload)
-            if not success:
-                _LOGGER.info(f'{self}: Sending payload unsuccessful: {payload}')
-            return success
-        except Exception as e:
-            _LOGGER.exception(f'{self}: Exception sending payload: {payload}\n{exception_to_string(e)}')
-            return False
+        success = self._send_payload(payload)
+        if not success:
+            _LOGGER.info(f'{self}: Sending payload unsuccessful: {payload}')
+        return success
 
     def observe(self, event: WsEvent):
         """
@@ -520,7 +515,9 @@ class SubscriptionController:
         binding.status = status
         binding.attempts = 0
         self._condition.notify_all()
-        self._emitter.emit(events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status, previous_status=previous_status))
+        self._emitter.emit(
+            events.SubscriptionUpdated(subscription=binding.subscription, binding_key=binding_key, status=status, previous_status=previous_status)
+        )
 
     def _confirm_subscribed(self, binding_key: str):
         if not self.has_subscription(binding_key):

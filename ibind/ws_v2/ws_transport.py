@@ -124,7 +124,7 @@ class WsTransport:
         self._tname = None
         self._wsa_condition = threading.Condition()
 
-        self._session_lacks_authentication = False
+        self._last_error = None
 
     def disconnect(self):
         """Gracefully disconnect the WebSocket connection."""
@@ -207,8 +207,8 @@ class WsTransport:
         """
         try:
             cookie = self._get_cookie()
-            if self._session_lacks_authentication:
-                self._session_lacks_authentication = False
+            if self._last_error is not None:
+                self._last_error = None
             return cookie
         except Exception as e:
             if isinstance(e, TimeoutError):
@@ -216,10 +216,17 @@ class WsTransport:
                 return UNDEFINED
             if isinstance(e, ExternalBrokerError):
                 if e.status_code == 401:
-                    if not self._session_lacks_authentication:
-                        self._session_lacks_authentication = True
-                        _LOGGER.info(
+                    if self._last_error != str(e):
+                        self._last_error = str(e)
+                        _LOGGER.error(
                             f'{self}: Failed to retrieve cookie due to lack of authentication. Continuing reattempts silently until authentication is reestablished.'
+                        )
+                    return UNDEFINED
+                elif 'Failed to resolve' in str(e):
+                    if self._last_error != str(e):
+                        self._last_error = str(e)
+                        _LOGGER.error(
+                            f'{self}: Failed to retrieve cookie due to failure in IBKR url resolution. Continuing reattempts silently until resolution succeeds.'
                         )
                     return UNDEFINED
             _LOGGER.error(f'{self}: Failed to retrieve cookie: {exception_to_string(e)}')
@@ -271,7 +278,7 @@ class WsTransport:
             if 'Connection is already closed' in str(e):
                 _LOGGER.error(f'{self}: Connection closed while sending payload: {payload}')
             else:
-                _LOGGER.exception(f'{self}: Sending payload failed: {payload}\n{exception_to_string(e)}')
+                raise
             return False
 
         return True

@@ -664,16 +664,17 @@ class TestSend:
         ## Act
         sc.reconcile_binding(binding)
 
-    @capture_logs(logger_level='ERROR', expected_errors=['Exception sending payload'], partial_match=True)
-    def test_send_logs_exception(self, sc, mock_sub, mock_send_payload, binding_key):
-        """SubscriptionController._send logs exceptions from send_payload."""
+    @capture_logs()
+    def test_send_raises_exception(self, sc, mock_sub, mock_send_payload, binding_key):
+        """SubscriptionController._send raises exceptions from send_payload."""
         ## Arrange
         mock_send_payload.side_effect = RuntimeError('send error')
         sc.subscribe(mock_sub)
         binding = sc._bindings[binding_key]
 
-        ## Act
-        sc.reconcile_binding(binding)
+        ## Act / Assert
+        with pytest.raises(RuntimeError, match='send error'):
+            sc.reconcile_binding(binding)
 
 
 class TestWaitFor:

@@ -20,6 +20,7 @@ class WsRuntimeWorker:
     subscription reconciliation, event processing, and health monitoring. Handles
     graceful shutdown with final cleanup passes.
     """
+
     def __init__(
         self,
         state_manager: WsStateManager,
@@ -52,6 +53,7 @@ class WsRuntimeWorker:
         self._wait_event = Event()
         self._cycle_counter = 0
         self._cycle_counter_lock = Lock()
+        self._last_error = None
 
     @property
     def running(self):
@@ -69,8 +71,13 @@ class WsRuntimeWorker:
         """Reconcile subscription bindings if authenticated."""
         if not self._state_manager.is_authenticated():
             return
-
-        self._subscription_controller.reconcile_bindings()
+        try:
+            self._subscription_controller.reconcile_bindings()
+        except Exception as e:
+            if self._last_error != str(e):
+                self._last_error = str(e)
+                _LOGGER.error(f'{self}: Exception reconciling subscriptions: {str(e)}. Silencing further repetitions of this message.')
+                self._state_manager.set_state(WsState.DEGRADED)
 
     def run(self, lifecycle: WsLifecycle):
         """
