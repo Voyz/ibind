@@ -50,6 +50,9 @@ IBIND_AUTO_REGISTER_SHUTDOWN = to_bool(os.environ.get('IBIND_AUTO_REGISTER_SHUTD
 IBIND_LOG_RESPONSES = to_bool(os.environ.get('IBIND_LOG_RESPONSES', False))
 """ Whether to log responses coming from the broker. """
 
+IBIND_VERBOSE_RETRIES = to_bool(os.environ.get('IBIND_VERBOSE_RETRIES', True))
+""" Whether to log repetition attempts. """
+
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))

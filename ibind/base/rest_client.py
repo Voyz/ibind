@@ -86,6 +86,7 @@ class RestClient:
         auto_recreate_session: bool = True,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         log_responses: bool = var.IBIND_LOG_RESPONSES,
+        verbose_retries: bool = var.IBIND_VERBOSE_RETRIES,
     ) -> None:
         """
         Parameters:
@@ -97,6 +98,8 @@ class RestClient:
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
             auto_recreate_session (bool, optional): Whether to automatically recreate the session on connection errors. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
+            log_responses (bool, optional): Whether to log responses from the API. Defaults to False.
+            verbose_retries (bool, optional): Whether to log verbose retry information. Defaults to False.
         """
 
         if url is None:
@@ -112,6 +115,7 @@ class RestClient:
         self._timeout = timeout
         self._max_retries = max_retries
         self._log_responses = log_responses
+        self._verbose_retries = verbose_retries
 
         self._make_logger()
 
@@ -257,7 +261,8 @@ class RestClient:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
                 msg = f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}'
                 self.logger.info(msg)
-                _LOGGER.info(msg)
+                if self._verbose_retries:
+                    _LOGGER.info(msg)
 
                 continue  # Continue to the next iteration for a retry
 
@@ -266,7 +271,9 @@ class RestClient:
                     raise ExternalBrokerError(f'{self}: Connection error {str(e)} for {method} {url} {kwargs}') from e
                 msg = f'{self}: Connection error detected, retrying attempt {attempt + 1}/{self._max_retries} :: {str(e)}'
                 self.logger.warning(msg)
-                _LOGGER.warning(msg)
+                if self._verbose_retries:
+                    _LOGGER.warning(msg)
+
                 time.sleep(1.5 * (attempt + 1))  # small back-off before retry
 
                 if self.use_session and self._auto_recreate_session:
@@ -309,7 +316,6 @@ class RestClient:
 
     def close(self):
         self.close_session()
-
 
     def register_shutdown_handler(self):
         """
