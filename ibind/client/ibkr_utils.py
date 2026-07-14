@@ -9,7 +9,7 @@ from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
+from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany
 from ibind import var
 
 _LOGGER = project_logger(__file__)
