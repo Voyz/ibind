@@ -34,6 +34,17 @@
   * [security\_stocks\_by\_symbol](#client.ibkr_client_mixins.contract_mixin.ContractMixin.security_stocks_by_symbol)
   * [stock\_conid\_by\_symbol](#client.ibkr_client_mixins.contract_mixin.ContractMixin.stock_conid_by_symbol)
   * [trading\_schedule\_by\_symbol](#client.ibkr_client_mixins.contract_mixin.ContractMixin.trading_schedule_by_symbol)
+* [FaMixin](#client.ibkr_client_mixins.fa_mixin.FaMixin)
+  * [fa\_model\_list](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_list)
+  * [fa\_model\_positions](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_positions)
+  * [fa\_model\_summary](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_summary)
+  * [fa\_model\_accounts\_details](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_accounts_details)
+  * [fa\_model\_save](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_save)
+  * [fa\_model\_invest\_divest](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest)
+  * [fa\_model\_invest\_divest\_positions](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest_positions)
+  * [fa\_model\_submit\_transfers](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_submit_transfers)
+  * [fa\_preset\_get](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_preset_get)
+  * [fa\_preset\_save](#client.ibkr_client_mixins.fa_mixin.FaMixin.fa_preset_save)
 * [MarketdataMixin](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin)
   * [live\_marketdata\_snapshot](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot)
   * [live\_marketdata\_snapshot\_by\_symbol](#client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot_by_symbol)
@@ -322,7 +333,7 @@ Searches for broker accounts configured with the DYNACCT property using a specif
 
 Arguments:
 
-- `search_pattern` _str_ - The pattern used to describe credentials to search for. Valid Format: “DU” in order to query all paper accounts.
+- `search_pattern` _str_ - The pattern used to describe credentials to search for. Valid Format: ï¿½DUï¿½ in order to query all paper accounts.
   
 
 Notes:
@@ -360,7 +371,7 @@ Receive a list of all applicant names on the account and for which account and e
 
 Arguments:
 
-- `account_id` _str_ - Pass the account identifier to receive information for. Valid Structure: “U1234567”.
+- `account_id` _str_ - Pass the account identifier to receive information for. Valid Structure: ï¿½U1234567ï¿½.
 
 <a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin.switch_account"></a>
 
@@ -376,7 +387,7 @@ Only available for financial advisors and multi-account structures.
 
 Arguments:
 
-- `acctId` _str_ - Identifier for the unique account to retrieve information from. Value Format: “DU1234567”.
+- `acctId` _str_ - Identifier for the unique account to retrieve information from. Value Format: ï¿½DU1234567ï¿½.
 
 <a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin.receive_brokerage_accounts"></a>
 
@@ -451,7 +462,7 @@ Obtains available currency pairs corresponding to the given target currency.
 
 Arguments:
 
-- `currency` _str_ - Specify the target currency you would like to receive official pairs of. Valid Structure: “USD”.
+- `currency` _str_ - Specify the target currency you would like to receive official pairs of. Valid Structure: ï¿½USDï¿½.
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.currency_exchange_rate"></a>
 
@@ -465,8 +476,8 @@ Obtains the exchange rates of the currency pair.
 
 Arguments:
 
-- `source` _str_ - Specify the base currency to request data for. Valid Structure: “AUD”
-- `target` _str_ - Specify the quote currency to request data for. Valid Structure: “USD”
+- `source` _str_ - Specify the base currency to request data for. Valid Structure: ï¿½AUDï¿½
+- `target` _str_ - Specify the quote currency to request data for. Valid Structure: ï¿½USDï¿½
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.info_and_rules_by_conid"></a>
 
@@ -515,7 +526,7 @@ Request a list of filters relating to a given Bond issuerID.
 
 Arguments:
 
-- `symbol` _str_ - This should always be set to “BOND”
+- `symbol` _str_ - This should always be set to ï¿½BONDï¿½
 - `issuer_id` _str_ - Specifies the issuerId value used to designate the bond issuer type.
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.search_contract_by_symbol"></a>
@@ -534,7 +545,7 @@ Arguments:
 
 - `symbol` _str_ - Underlying symbol of interest. May also pass company name if 'name' is set to true, or bond issuer type to retrieve bonds.
 - `name` _bool, optional_ - Determines if symbol reflects company name or ticker symbol.
-- `sec_type` _str, optional_ - Valid Values: “STK”, “IND”, “BOND”. Declares underlying security type.
+- `sec_type` _str, optional_ - Valid Values: ï¿½STKï¿½, ï¿½INDï¿½, ï¿½BONDï¿½. Declares underlying security type.
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.search_contract_rules"></a>
 
@@ -581,8 +592,8 @@ Arguments:
 - `month` _str_ - Required for Derivatives. Expiration month for the given derivative.
 - `exchange` _str, optional_ - Designate the exchange you wish to receive information for in relation to the contract.
 - `strike` _str_ - Required for Options and Futures Options. Set the strike price for the requested contract details.
-- `right` _str_ - Required for Options. Set the right for the given contract. Value Format: “C” for Call or “P” for Put.
-- `issuer_id` _str_ - Required for Bonds. Set the issuer_id for the given bond issuer type. Example Format: “e1234567”
+- `right` _str_ - Required for Options. Set the right for the given contract. Value Format: ï¿½Cï¿½ for Call or ï¿½Pï¿½ for Put.
+- `issuer_id` _str_ - Required for Bonds. Set the issuer_id for the given bond issuer type. Example Format: ï¿½e1234567ï¿½
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.search_strikes_by_conid"></a>
 
@@ -600,7 +611,7 @@ Query to receive a list of potential strikes supported for a given underlying.
 Arguments:
 
 - `conid` _str_ - Contract Identifier number for the underlying.
-- `sec_type` _str_ - Security type of the derivatives you are looking for. Value Format: “OPT” or “WAR”.
+- `sec_type` _str_ - Security type of the derivatives you are looking for. Value Format: ï¿½OPTï¿½ or ï¿½WARï¿½.
 - `month` _str_ - Expiration month and year for the given underlying. Value Format: {3 character month}{2 character year}. Example: AUG23.
 - `exchange` _str, optional_ - Exchange from which derivatives should be retrieved from. Default value is set to SMART.
 
@@ -711,6 +722,256 @@ Arguments:
 - `exchange` _str, optional_ - Specify the primary exchange of your contract.
 - `exchange_filter` _str, optional_ - Specify all exchanges you want to retrieve data from.
 
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin"></a>
+
+## FaMixin
+
+Financial Advisor model portfolio endpoints ('Trading FA Allocation Management').
+
+* https://www.interactivebrokers.com/campus/ibkr-api-page/web-api/
+
+Covers the `/fa/model/*` and `/fa/fa-preset/*` endpoint group, allowing Financial Advisor accounts to
+list, create, rebalance and monitor model portfolios programmatically.
+
+Notes:
+
+  - These endpoints are defined in IBKR's Web API OpenAPI specification (served from
+    https://api.ibkr.com/gw/api/v3/api-docs) under the 'Trading FA Allocation Management' tag.
+    The specification does not state which base route they are served under. IBind requests them
+    relative to the client's regular base URL (e.g. `https://api.ibkr.com/v1/api/`), consistent with
+    all other endpoint mixins. This has not yet been verified against a live FA account - if calls
+    return 404, the base route may need adjusting.
+  - Several of these endpoints return `subscriptionStatus` (and `invest-divest` a `subscriptionKey`),
+    suggesting results may be delivered asynchronously rather than in the synchronous response.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_list"></a>
+
+### fa\_model\_list
+
+```python
+def fa_model_list(req_id: int) -> Result
+```
+
+POST /fa/model/list
+
+Retrieve summaries for all models under the advisor account.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_positions"></a>
+
+### fa\_model\_positions
+
+```python
+def fa_model_positions(req_id: int,
+                       model: str,
+                       sort_field: str = None,
+                       sort_direction: str = None,
+                       limit: int = None) -> Result
+```
+
+POST /fa/model/positions
+
+Request all positions held within the model.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Name of your model.
+- `sort_field` _str, optional_ - Field to sort the response by. Available values: 'actual', 'actualRangeMax', 'actualRangeMin', 'ccy', 'conid', 'dlv', 'instrumentImbalance', 'instrument', 'mismatchType', 'mv', 'position', 'target'.
+- `sort_direction` _str, optional_ - Direction to sort the request by. Available values: 'ASC', 'DESC'.
+- `limit` _int, optional_ - Maximum number of positions to return.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_summary"></a>
+
+### fa\_model\_summary
+
+```python
+def fa_model_summary(req_id: int, model: str) -> Result
+```
+
+POST /fa/model/summary
+
+Request a summary for a single model.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Name of your model.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_accounts_details"></a>
+
+### fa\_model\_accounts\_details
+
+```python
+def fa_model_accounts_details(req_id: int,
+                              model: str,
+                              calc_pnls: bool = None) -> Result
+```
+
+POST /fa/model/accounts-details
+
+Request all accounts held within a model.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Request model to pull account details from.
+- `calc_pnls` _bool, optional_ - Determine if Profit and Loss values should be calculated.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_save"></a>
+
+### fa\_model\_save
+
+```python
+def fa_model_save(req_id: int, model: str, desc: str, is_static: bool,
+                  cash_targets: List[Dict],
+                  position_targets: List[Dict]) -> Result
+```
+
+POST /fa/model/save
+
+Create or Modify a model's target positions.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Name of your model.
+- `desc` _str_ - Personal description of model to read in IBKR GUI elements.
+- `is_static` _bool_ - Determine if investing and rebalancing should be handled statically or dynamically. Set to True for static models that always use the original targets, or False for dynamic models that adjust allocation in response to market movements.
+- `cash_targets` _List[Dict]_ - Array of target cash objects. Each object may include:
+  - ccy (str): Currency code to hold positions.
+  - target (float): Percentage of model to distribute to the given currency.
+- `position_targets` _List[Dict]_ - List containing all contracts to hold in the model. Each object may include:
+  - conid (int): Contract identifier, conid, to designate which security to hold.
+  - target (float): Percentage of model to distribute to the given contract.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest"></a>
+
+### fa\_model\_invest\_divest
+
+```python
+def fa_model_invest_divest(req_id: int, model: str,
+                           account_list: List[Dict]) -> Result
+```
+
+POST /fa/model/invest-divest
+
+Assign an account and the amount of cash to allocate into a model.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Define the model to invest accounts into.
+- `account_list` _List[Dict]_ - Collection of accounts to invest in a model. Each object may include:
+  - account (str): Account identifier to invest.
+  - amtToInvest (float): Amount of cash to invest in the model from the account. Use a negative amount to divest.
+  
+
+Notes:
+
+  - The response contains `subscriptionKey` and `subscriptionStatus` rather than a synchronous
+    result, suggesting the outcome is delivered asynchronously. Poll `fa_model_invest_divest_positions`
+    or watch the WebSocket stream to monitor progress.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest_positions"></a>
+
+### fa\_model\_invest\_divest\_positions
+
+```python
+def fa_model_invest_divest_positions(req_id: int,
+                                     model: str,
+                                     subscription_status: int = None
+                                     ) -> Result
+```
+
+POST /fa/model/invest-divest-positions
+
+Request the list of all accounts already invested in the provided model and a summary of their investment.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `model` _str_ - Define the model to retrieve accounts from.
+- `subscription_status` _int, optional_ - Describes if the model is in polling mode.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_submit_transfers"></a>
+
+### fa\_model\_submit\_transfers
+
+```python
+def fa_model_submit_transfers(req_id: int, fp_order_id: int) -> Result
+```
+
+POST /fa/model/submit-transfers
+
+Submit all pending orders to the models. This is similar to the Model page's Submit All Orders selection.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `fp_order_id` _int_ - Order identifier to monitor the order transmissions. Per IBKR's specification: 'Will be set to a valid id if and only if any transfers are present in the response. Otherwise, -1 is returned.'
+  
+
+Notes:
+
+  - TODO: The source of a valid `fp_order_id` value is not documented in IBKR's specification and
+    has not been empirically verified. It is presumed to surface after an `fa_model_invest_divest`
+    request, either in the WebSocket stream or via `fa_model_invest_divest_positions`. Verify
+    against a live FA (paper) account before relying on this method.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_preset_get"></a>
+
+### fa\_preset\_get
+
+```python
+def fa_preset_get(req_id: int) -> Result
+```
+
+POST /fa/fa-preset/get
+
+Get the preset behavior for model rebalancing.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+
+<a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_preset_save"></a>
+
+### fa\_preset\_save
+
+```python
+def fa_preset_save(req_id: int,
+                   avoid_negative_cash_in_independent: bool = None,
+                   close_divest_independent_position: bool = None,
+                   fully_invest_existing_long_positions: bool = None,
+                   keep_model_open: bool = None,
+                   prefer_cross_with_independent: bool = None,
+                   prefer_transfer_from_independent: bool = None,
+                   round_allocation_quantity_to_exchange_board_lot: bool = None,
+                   use_non_base_ccy: bool = None,
+                   use_tolerance_range: bool = None) -> Result
+```
+
+POST /fa/fa-preset/save
+
+Set the preset behavior for models.
+
+Arguments:
+
+- `req_id` _int_ - Request identifier to uniquely track a request.
+- `avoid_negative_cash_in_independent` _bool, optional_ - Avoid negative offsetting cash in Independent.
+- `close_divest_independent_position` _bool, optional_ - Close out the full position while divesting.
+- `fully_invest_existing_long_positions` _bool, optional_ - Use the maximum available funds to increase long positions.
+- `keep_model_open` _bool, optional_ - Keep model open for fully divested accounts.
+- `prefer_cross_with_independent` _bool, optional_ - Transfer positions to Independent instead of liquidating.
+- `prefer_transfer_from_independent` _bool, optional_ - Transfer positions from Independent structure when possible.
+- `round_allocation_quantity_to_exchange_board_lot` _bool, optional_ - Determine if allocation quantities should be handled by lot size.
+- `use_non_base_ccy` _bool, optional_ - Use non-base balances when available.
+- `use_tolerance_range` _bool, optional_ - Designate if tolerance ranges should be used for rebalancing.
+
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin"></a>
 
 ## MarketdataMixin
@@ -807,9 +1068,9 @@ Get historical market Data for given conid, length of data is controlled by 'per
 Arguments:
 
 - `conid` _str_ - Contract identifier for the ticker symbol of interest.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `bar` _str_ - Individual bars of data to be returned. Possible valuesï¿½ 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
-- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time periodï¿½ {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
   
@@ -868,9 +1129,9 @@ Get historical market Data for given symbol, length of data is controlled by 'pe
 Arguments:
 
 - `symbol` _Union[str, StockQuery]_ - StockQuery or str symbol for the ticker of interest.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `bar` _str_ - Individual bars of data to be returned. Possible valuesï¿½ 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
-- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time periodï¿½ {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 
@@ -896,8 +1157,8 @@ Arguments:
 
 - `conids` _OneOrMany[str]_ - A list of conids to get market data for.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
-- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time periodï¿½ {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `bar` _str_ - Individual bars of data to be returned. Possible valuesï¿½ 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 - `raise_on_error` _bool, optional_ - If True, raise an exception if an error occurs during the request. Defaults to False.
@@ -931,8 +1192,8 @@ Arguments:
 
 - `queries` _List[StockQuery]_ - A list of StockQuery objects to specify filtering criteria for stocks.
 - `exchange` _str, optional_ - Returns the exchange you want to receive data from.
-- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time period– {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
-- `bar` _str_ - Individual bars of data to be returned. Possible values– 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
+- `period` _str_ - Overall duration for which data should be returned. Default to 1w. Available time periodï¿½ {1-30}min, {1-8}h, {1-1000}d, {1-792}w, {1-182}m, {1-15}y.
+- `bar` _str_ - Individual bars of data to be returned. Possible valuesï¿½ 1min, 2min, 3min, 5min, 10min, 15min, 30min, 1h, 2h, 3h, 4h, 8h, 1d, 1w, 1m.
 - `outside_rth` _bool, optional_ - Determine if you want data after regular trading hours.
 - `start_time` _datetime.datetime, optional_ - Starting date of the request duration.
 - `raise_on_error` _bool, optional_ - If True, raise an exception if an error occurs during the request. Defaults to False.
@@ -1175,7 +1436,7 @@ Disables a messageId, or series of messageIds, that will no longer prompt the us
 
 Arguments:
 
-- `message_ids` _List[str]_ - The identifier for each warning message to suppress. The array supports up to 51 messages sent in a single request. Any additional values will result in a system error. The majority of the message IDs are based on the TWS API Error Codes with a “o” prepended to the id.
+- `message_ids` _List[str]_ - The identifier for each warning message to suppress. The array supports up to 51 messages sent in a single request. Any additional values will result in a system error. The majority of the message IDs are based on the TWS API Error Codes with a ï¿½oï¿½ prepended to the id.
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.reset_suppressed_messages"></a>
 
@@ -1285,7 +1546,7 @@ Returns a list of positions for the given account. The endpoint supports paging,
 Arguments:
 
 - `account_id` _str, optional_ - The account ID for which account should place the order.
-- `page_id` _str, optional_ - The “page” of positions that should be returned. One page contains a maximum of 100 positions. Pagination starts at 0.
+- `page_id` _str, optional_ - The ï¿½pageï¿½ of positions that should be returned. One page contains a maximum of 100 positions. Pagination starts at 0.
 - `model` _str, optional_ - Code for the model portfolio to compare against.
 - `sort` _str, optional_ - Declare the table to be sorted by which column.
 - `direction` _str, optional_ - The order to sort by. 'a' means ascending 'd' means descending.
@@ -1336,7 +1597,7 @@ Arguments:
 def invalidate_backend_portfolio_cache(account_id: str = None) -> Result
 ```
 
-Invalidates the cached value for your portfolio’s positions and calls the /portfolio/{accountId}/positions/0 endpoint automatically.
+Invalidates the cached value for your portfolioï¿½s positions and calls the /portfolio/{accountId}/positions/0 endpoint automatically.
 
 Arguments:
 
@@ -1350,7 +1611,7 @@ Arguments:
 def portfolio_summary(account_id: str = None) -> Result
 ```
 
-Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
+Information regarding settled cash, cash balances, etc. in the accountï¿½s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
 Arguments:
 
@@ -1364,7 +1625,7 @@ Arguments:
 def get_ledger(account_id: str = None) -> Result
 ```
 
-Information regarding settled cash, cash balances, etc. in the account’s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
+Information regarding settled cash, cash balances, etc. in the accountï¿½s base currency and any other cash balances hold in other currencies. /portfolio/accounts or /portfolio/subaccounts must be called prior to this endpoint. The list of supported currencies is available at https://www.interactivebrokers.com/en/index.php?f=3185.
 
 Arguments:
 
@@ -1398,7 +1659,7 @@ Returns the performance (MTM) for the given accounts, if more than one account i
 Arguments:
 
 - `account_ids` _OneOrMany[str]_ - Include each account ID to receive data for.
-- `period` _str_ - Specify the period for which the account should be analyzed. Available Values: “1D”, “7D”, “MTD”, “1M”, “YTD”, “1Y”.
+- `period` _str_ - Specify the period for which the account should be analyzed. Available Values: ï¿½1Dï¿½, ï¿½7Dï¿½, ï¿½MTDï¿½, ï¿½1Mï¿½, ï¿½YTDï¿½, ï¿½1Yï¿½.
 
 <a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.transaction_history"></a>
 
@@ -1453,12 +1714,12 @@ Users can receive a maximum of 50 contracts from 1 request.
 
 Arguments:
 
-- `instrument` _str_ - Instrument type as the target of the market scanner request. Found in the “instrument_list” section of the /iserver/scanner/params response.
-- `type` _str_ - Scanner value the market scanner is sorted by. Based on the “scan_type_list” section of the /iserver/scanner/params response.
-- `location` _str_ - Location value the market scanner is searching through. Based on the “location_tree” section of the /iserver/scanner/params response.
+- `instrument` _str_ - Instrument type as the target of the market scanner request. Found in the ï¿½instrument_listï¿½ section of the /iserver/scanner/params response.
+- `type` _str_ - Scanner value the market scanner is sorted by. Based on the ï¿½scan_type_listï¿½ section of the /iserver/scanner/params response.
+- `location` _str_ - Location value the market scanner is searching through. Based on the ï¿½location_treeï¿½ section of the /iserver/scanner/params response.
 - `filter` _List[Dict[str, str]]_ - Contains any additional filters that should apply to response. Each filter object may include:
-  - code (str): Code value of the filter. Based on the “code” value within the “filter_list” section of the /iserver/scanner/params response.
-  - value (int): Value corresponding to the input for “code”.
+  - code (str): Code value of the filter. Based on the ï¿½codeï¿½ value within the ï¿½filter_listï¿½ section of the /iserver/scanner/params response.
+  - value (int): Value corresponding to the input for ï¿½codeï¿½.
 
 <a id="client.ibkr_client_mixins.scanner_mixin.ScannerMixin.hmds_scanner_parameters"></a>
 
@@ -1488,11 +1749,11 @@ Can return a maximum of 250 contracts.
 
 Arguments:
 
-- `instrument` _str_ - Specify the type of instrument for the request. Found under the “instrument_list” value of the /hmds/scanner/params request.
-- `locations` _str_ - Specify the type of location for the request. Found under the “location_tree” value of the /hmds/scanner/params request.
-- `scanCode` _str_ - Specify the scanner type for the request. Found under the “scan_type_list” value of the /hmds/scanner/params request.
-- `secType` _str_ - Specify the type of security type for the request. Found under the “location_tree” value of the /hmds/scanner/params request.
-- `filters` _List[Dict[str, str]]_ - Array of objects containing all filters upon the scanner request. While “filters” must be specified in the body, no content in the array needs to be passed.
+- `instrument` _str_ - Specify the type of instrument for the request. Found under the ï¿½instrument_listï¿½ value of the /hmds/scanner/params request.
+- `locations` _str_ - Specify the type of location for the request. Found under the ï¿½location_treeï¿½ value of the /hmds/scanner/params request.
+- `scanCode` _str_ - Specify the scanner type for the request. Found under the ï¿½scan_type_listï¿½ value of the /hmds/scanner/params request.
+- `secType` _str_ - Specify the type of security type for the request. Found under the ï¿½location_treeï¿½ value of the /hmds/scanner/params request.
+- `filters` _List[Dict[str, str]]_ - Array of objects containing all filters upon the scanner request. While ï¿½filtersï¿½ must be specified in the body, no content in the array needs to be passed.
 - `maxItems` _int, optional_ - Specify how many items should be returned. Default and maximum set to 250.
 
 <a id="client.ibkr_client_mixins.session_mixin.SessionMixin"></a>

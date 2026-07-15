@@ -8,6 +8,7 @@ from ibind import var
 from ibind.base.rest_client import RestClient, Result
 from ibind.client.ibkr_client_mixins.accounts_mixin import AccountsMixin
 from ibind.client.ibkr_client_mixins.contract_mixin import ContractMixin
+from ibind.client.ibkr_client_mixins.fa_mixin import FaMixin
 from ibind.client.ibkr_client_mixins.marketdata_mixin import MarketdataMixin
 from ibind.client.ibkr_client_mixins.order_mixin import OrderMixin
 from ibind.client.ibkr_client_mixins.portfolio_mixin import PortfolioMixin
@@ -25,7 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class IbkrClient(RestClient, AccountsMixin, ContractMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
+class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
     """
     A client class for interfacing with the IBKR API, extending the RestClient class.
 

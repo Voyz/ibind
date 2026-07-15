@@ -56,6 +56,7 @@ Features:
   * [Parallel requests][wiki-parallel-requests]
   * [Rate limiting][wiki-rate-limiting]
   * [Conid unpacking][wiki-conid-unpacking]
+  * [Financial Advisor model portfolios][api-fa-mixin]
   * [and more][wiki-advanced-api]
 * WebSocket:
   * [WebSocket thread lifecycle handling][wiki-ws-lifecycle]
@@ -176,6 +177,7 @@ Thanks and have an awesome day 👋
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
 [api-ibkr-client]: https://github.com/Voyz/ibind/wiki/API-Reference-%E2%80%90-IbkrClient
+[api-fa-mixin]: https://github.com/Voyz/ibind/wiki/API-Reference-%E2%80%90-IbkrClient#famixin
 [ibkr-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
 [ibkr-ws-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
 
