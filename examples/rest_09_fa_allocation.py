@@ -35,9 +35,10 @@ for model in model_list['models']:
 for model_name in mismatched_models:
     print(f'\n#### fa_model_positions ({model_name}) ####')
     positions = client.fa_model_positions(req_id=2, model=model_name, sort_field='instrumentImbalance', sort_direction='DESC').data
+    # allocation values are fractions in [0, 1] - format them as percentages for display
     for position in positions['positionList']:
         print(
-            f'\t {position["instrument"]}: target={position["target"]}%, actual={position["actual"]}%, imbalance={position["instrumentImbalance"]}%'
+            f'\t {position["instrument"]}: target={position["target"]:.1%}, actual={position["actual"]:.1%}, imbalance={position["instrumentImbalance"]:+.1%}'
         )
 
 print('\n#### fa_preset_get ####')

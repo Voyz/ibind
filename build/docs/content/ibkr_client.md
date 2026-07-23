@@ -785,6 +785,14 @@ Arguments:
 - `sort_field` _str, optional_ - Field to sort the response by. Available values: 'actual', 'actualRangeMax', 'actualRangeMin', 'ccy', 'conid', 'dlv', 'instrumentImbalance', 'instrument', 'mismatchType', 'mv', 'position', 'target'.
 - `sort_direction` _str, optional_ - Direction to sort the request by. Available values: 'ASC', 'DESC'.
 - `limit` _int, optional_ - Maximum number of positions to return.
+  
+
+Notes:
+
+  - Allocation values in the response (`target`, `actual`, `actualRangeMin`/`actualRangeMax`,
+    `instrumentImbalance`) are fractions in [0, 1], not percentages as IBKR's specification
+    describes (observed against a live FA account) - consistent with the targets accepted
+    by `fa_model_save`.
 
 <a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_summary"></a>
 

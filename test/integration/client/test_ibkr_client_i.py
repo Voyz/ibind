@@ -532,7 +532,7 @@ def test_fa_model_rebalance_check_flow(client, requests_mock):
     assert positions_result.data['mismatched'] is True
 
     imbalances = {position['instrument']: position['instrumentImbalance'] for position in positions_result.data['positionList']}
-    assert imbalances == {'AAPL': 5.0, 'SPY': -5.0}
+    assert imbalances == {'AAPL': 0.05, 'SPY': -0.05}
 
     list_call, positions_call = requests_mock.request.call_args_list
     assert list_call.args[1] == f'{_URL}/fa/model/list'

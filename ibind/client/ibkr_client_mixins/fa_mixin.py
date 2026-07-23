@@ -62,6 +62,12 @@ class FaMixin:  # pragma: no cover
             sort_field (str, optional): Field to sort the response by. Available values: 'actual', 'actualRangeMax', 'actualRangeMin', 'ccy', 'conid', 'dlv', 'instrumentImbalance', 'instrument', 'mismatchType', 'mv', 'position', 'target'.
             sort_direction (str, optional): Direction to sort the request by. Available values: 'ASC', 'DESC'.
             limit (int, optional): Maximum number of positions to return.
+
+        Note:
+            - Allocation values in the response (`target`, `actual`, `actualRangeMin`/`actualRangeMax`,
+              `instrumentImbalance`) are fractions in [0, 1], not percentages as IBKR's specification
+              describes (observed against a live FA account) - consistent with the targets accepted
+              by `fa_model_save`.
         """
         params = params_dict(
             {'reqID': req_id, 'model': model},
