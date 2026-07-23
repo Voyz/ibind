@@ -739,8 +739,12 @@ Notes:
     https://api.ibkr.com/gw/api/v3/api-docs) under the 'Trading FA Allocation Management' tag.
     IBind requests them relative to the client's regular base URL (e.g. `https://api.ibkr.com/v1/api/`),
     consistent with all other endpoint mixins - verified against a live FA account.
-  - Several of these endpoints return `subscriptionStatus` (and `invest-divest` a `subscriptionKey`),
-    suggesting results may be delivered asynchronously rather than in the synchronous response.
+  - Several of these endpoints include `subscriptionStatus` fields suggesting asynchronous delivery;
+    in live testing however, `invest-divest` returned its transfer draft synchronously rather than
+    via a WebSocket push.
+  - The `/fa/model/*` endpoints do not validate model names: an unknown or wrong-case model name
+    returns empty 'ghost' data (zero NLV, no accounts) with no error, rather than a 404. Model names
+    are case-sensitive in effect - resolve them against `fa_model_list` before use.
 
 <a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_list"></a>
 
@@ -841,10 +845,22 @@ Arguments:
 - `is_static` _bool_ - Determine if investing and rebalancing should be handled statically or dynamically. Set to True for static models that always use the original targets, or False for dynamic models that adjust allocation in response to market movements.
 - `cash_targets` _List[Dict]_ - Array of target cash objects. Each object may include:
   - ccy (str): Currency code to hold positions.
-  - target (float): Percentage of model to distribute to the given currency.
+  - target (float): Fraction of the model to allocate to the given currency, in [0, 1].
 - `position_targets` _List[Dict]_ - List containing all contracts to hold in the model. Each object may include:
   - conid (int): Contract identifier, conid, to designate which security to hold.
-  - target (float): Percentage of model to distribute to the given contract.
+  - target (float): Fraction of the model to allocate to the given contract, in [0, 1].
+  
+
+Notes:
+
+  The following behaviors were observed against a live FA account and differ from or extend IBKR's specification:
+
+  - `target` values are fractions in [0, 1] and must sum to 1.0 across cash_targets and position_targets
+    combined. IBKR's OpenAPI schema describes them as percentages, but 0-100 values are rejected with a 400.
+  - Omitting `desc` results in a bare 400 response with no body.
+  - `is_static` cannot be changed on a model that already has invested accounts (400) - use the IBKR GUI instead.
+  - On an invested dynamic model, a save can succeed silently with no effect. Read the targets back
+    (`fa_model_list` / `fa_model_positions`) to verify the save took effect.
 
 <a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest"></a>
 
@@ -870,11 +886,15 @@ Arguments:
 
 Notes:
 
-  - The response contains `subscriptionKey` and `subscriptionStatus` rather than a synchronous
-    result, suggesting the outcome is delivered asynchronously. Poll `fa_model_invest_divest_positions`
-    or watch the WebSocket stream to monitor progress.
-  - A zero `amtToInvest` is rejected with an error (observed against a live FA account) - it cannot
-    be used to trigger a rebalance of previously modified allocation targets.
+  The following behaviors were observed against a live FA account:
+
+  - Despite the `subscriptionKey`/`subscriptionStatus` fields suggesting asynchronous delivery, the
+    response returns the drafted transfers synchronously, including a `transfersInstructionId` -
+    pass it as `fp_order_id` to `fa_model_submit_transfers` to transmit the draft.
+  - A zero `amtToInvest` is rejected with an HTTP 500 - it cannot be used to trigger a rebalance of
+    previously modified allocation targets.
+  - The draft only allocates the incremental cash amount toward targets; it does not liquidate
+    existing off-target positions.
 
 <a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_model_invest_divest_positions"></a>
 
@@ -912,15 +932,16 @@ Submit all pending orders to the models. This is similar to the Model page's Sub
 Arguments:
 
 - `req_id` _int_ - Request identifier to uniquely track a request.
-- `fp_order_id` _int_ - Order identifier to monitor the order transmissions. Per IBKR's specification: 'Will be set to a valid id if and only if any transfers are present in the response. Otherwise, -1 is returned.'
+- `fp_order_id` _int_ - Order identifier to monitor the order transmissions. Use the `transfersInstructionId`
+  returned synchronously by `fa_model_invest_divest` (this sourcing is not documented in IBKR's
+  specification but was confirmed against a live FA account).
   
 
 Notes:
 
-  - TODO: The source of a valid `fp_order_id` value is not documented in IBKR's specification and
-    has not been empirically verified. It is presumed to surface after an `fa_model_invest_divest`
-    request, either in the WebSocket stream or via `fa_model_invest_divest_positions`. Verify
-    against a live FA (paper) account before relying on this method.
+  - Calling with `fp_order_id=-1` (or with no pending transfer draft) results in an HTTP 500.
+  - Verified live as reachable and authenticated; a successful `{reqID, success}` response requires
+    a real pending transfer draft from `fa_model_invest_divest`.
 
 <a id="client.ibkr_client_mixins.fa_mixin.FaMixin.fa_preset_get"></a>
 

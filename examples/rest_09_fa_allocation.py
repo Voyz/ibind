@@ -10,8 +10,8 @@ In this example we:
 
 Assumes a Financial Advisor account and that the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 
-Note: the FA model endpoints respond under the standard base route against a live FA account, but the
-transfer-submission flow (fpOrderId) has not been fully verified. See the FaMixin documentation for details.
+Note: these endpoints have been verified against a live FA account. See the FaMixin documentation for
+empirically-observed behaviors that differ from IBKR's specification.
 """
 
 import os
@@ -50,11 +50,11 @@ print(presets)
 # invest_result = client.fa_model_invest_divest(
 #     req_id=4,
 #     model='Sample-Model',
-#     account_list=[{'account': 'DU1234567', 'amtToInvest': 1000.0}],
+#     account_list=[{'account': 'DU1234567', 'amtToInvest': 1000.0}],  # a zero amount is rejected with an HTTP 500
 # ).data
 # print(invest_result)
 #
 # print(client.fa_model_invest_divest_positions(req_id=5, model='Sample-Model').data)
 #
-# The source of a valid fp_order_id is not yet confirmed - see the fa_model_submit_transfers documentation.
-# print(client.fa_model_submit_transfers(req_id=6, fp_order_id=-1).data)
+# The drafted transfers are returned synchronously - pass their transfersInstructionId to transmit them.
+# print(client.fa_model_submit_transfers(req_id=6, fp_order_id=invest_result['transfersInstructionId']).data)
