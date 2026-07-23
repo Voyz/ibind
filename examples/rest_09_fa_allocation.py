@@ -44,8 +44,10 @@ print('\n#### fa_preset_get ####')
 presets = client.fa_preset_get(req_id=3).data
 print(presets)
 
-# To rebalance a mismatched model, invest or divest accounts and submit the resulting transfers.
-# These calls modify the account - uncomment only when you intend to trade, ideally on a paper account first.
+# To invest or divest funds according to the model allocation, draft the transfers and submit them.
+# Note: this only allocates the specified cash amount toward the targets - it does not rebalance existing
+# off-target holdings. These calls modify the account - uncomment only when you intend to trade, ideally
+# on a paper account first.
 #
 # invest_result = client.fa_model_invest_divest(
 #     req_id=4,

@@ -421,8 +421,9 @@ def test_fa_model_accounts_details(client, result):
 def test_fa_model_save(client, result):
     # Arrange
     client.post = MagicMock(return_value=result)
-    cash_targets = [{'ccy': 'USD', 'target': 5.0}]
-    position_targets = [{'conid': 265598, 'target': 50.0}, {'conid': 756733, 'target': 45.0}]
+    # targets are fractions in [0, 1] summing to 1.0 across cash and position targets - see fa_model_save
+    cash_targets = [{'ccy': 'USD', 'target': 0.05}]
+    position_targets = [{'conid': 265598, 'target': 0.50}, {'conid': 756733, 'target': 0.45}]
 
     # Act
     client.fa_model_save(
