@@ -10,7 +10,8 @@ In this example we:
 
 Assumes a Financial Advisor account and that the IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
 
-Note: the FA model endpoints have not yet been verified against a live FA account. See the FaMixin documentation for details.
+Note: the FA model endpoints respond under the standard base route against a live FA account, but the
+transfer-submission flow (fpOrderId) has not been fully verified. See the FaMixin documentation for details.
 """
 
 import os

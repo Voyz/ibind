@@ -22,10 +22,8 @@ class FaMixin:  # pragma: no cover
     Note:
         - These endpoints are defined in IBKR's Web API OpenAPI specification (served from
           https://api.ibkr.com/gw/api/v3/api-docs) under the 'Trading FA Allocation Management' tag.
-          The specification does not state which base route they are served under. IBind requests them
-          relative to the client's regular base URL (e.g. `https://api.ibkr.com/v1/api/`), consistent with
-          all other endpoint mixins. This has not yet been verified against a live FA account - if calls
-          return 404, the base route may need adjusting.
+          IBind requests them relative to the client's regular base URL (e.g. `https://api.ibkr.com/v1/api/`),
+          consistent with all other endpoint mixins - verified against a live FA account.
         - Several of these endpoints return `subscriptionStatus` (and `invest-divest` a `subscriptionKey`),
           suggesting results may be delivered asynchronously rather than in the synchronous response.
     """
@@ -155,6 +153,8 @@ class FaMixin:  # pragma: no cover
             - The response contains `subscriptionKey` and `subscriptionStatus` rather than a synchronous
               result, suggesting the outcome is delivered asynchronously. Poll `fa_model_invest_divest_positions`
               or watch the WebSocket stream to monitor progress.
+            - A zero `amtToInvest` is rejected with an error (observed against a live FA account) - it cannot
+              be used to trigger a rebalance of previously modified allocation targets.
         """
         params = params_dict({'reqID': req_id, 'model': model, 'accountList': account_list})
         return self.post('fa/model/invest-divest', params)
