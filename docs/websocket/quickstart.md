@@ -93,7 +93,7 @@ ws_client.subscribe(subscription)
 
 Callbacks are invoked in order they're added to the sink and in the order in which the events are received. Invocation is synchronously carried out from a single dedicated thread. This means later callbacks will not run until earlier ones complete. Use QueueSink with dedicated reading threads if your application requires events to be consumed independently of each other.
 
-If your application code is consuming events slower than they're received from IBKR, the WebSocket client will start dropping them after a certain number is reached to avoid out of memory errors. For more see [FIXME: link docs on AsyncSink].
+If your application code is consuming events slower than they're received from IBKR, the WebSocket client will start dropping them after a certain number is reached to avoid out of memory errors. For more see [Sinks](./core-concepts/sinks.md).
 
 ## Checking Lifecycle and Subscription States 
 
@@ -126,7 +126,7 @@ ws_client.shutdown()
 # Should print 'WebSocket client stopped'
 ```
 
-A range of lifecycle events allows your application respond to changes in connection state. See lifecycle events [FIXME: link to docs].
+A range of lifecycle events allows your application respond to changes in connection state. See [Runtime and Lifecycle](./core-concepts/runtime-and-lifecycle.md).
 
 Likewise you can react to changes in subscription statuses:
 
@@ -137,4 +137,4 @@ def on_subscription_updated(event: events.SubscriptionUpdated):
 sink.on(events.SubscriptionUpdated, on_subscription_updated)
 ```
 
-For more, see subscription [FIXME: link to docs].
+For more, see [Subscription Interface](./core-concepts/subscriptions.md).

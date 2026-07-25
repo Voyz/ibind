@@ -1,3 +1,5 @@
+# WebSocket Client Overview
+
 The IBind WebSocket client provides a high-level interface to the IBKR WebSocket API.
 
 It facilitates streaming live updates such as market data, order updates, account updates, PnLs or trades, without needing to manually manage WebSocket lifecycle, payloads, or subscription states.
@@ -20,10 +22,10 @@ It does not replace the REST client (`IbkrClient`), and some WebSocket functiona
 The WebSocket client encompasses 5 concepts:
 
 * IbkrWsClient - the core interface, managing lifecycle and event forwarding
-* Events - Pydantic models encapsulating parsed incoming messages and connection state changes
-* Subscriptions - Typed representation of topics available for subscription
-* Sinks - User-defined event consumers, providing high degree of customizability
-* Routers - Parsing incoming messages into events
+* [Events](./core-concepts/events.md) - Pydantic models encapsulating parsed incoming messages and connection state changes
+* [Subscriptions](./core-concepts/subscriptions.md) - Typed representation of topics available for subscription
+* [Sinks](./core-concepts/sinks.md) - User-defined event consumers, providing high degree of customizability
+* [Routers](./core-concepts/router.md) - Parsing incoming messages into events
 
 The client is implemented using two layers:
 
@@ -69,7 +71,7 @@ Typical events may include:
 - Errors
 - Account updates
 
-For exact types of events see [FIXME: link to events doc]
+For exact types of events see [Events](./core-concepts/events.md)
 
 ## Sinks Consume Events
 
@@ -86,7 +88,7 @@ Additionally, two utility sinks are provided for convenience:
 
 Any custom object implementing the sink protocol can be used instead.
 
-For more on sinks, see [FIXME: link to sinks doc]
+For more on sinks, see [Sinks](./core-concepts/sinks.md)
 
 ## Connection Lifecycle
 
@@ -107,7 +109,7 @@ The client has a number of health checks and recovery mechanisms, attempting to 
 
 IBKR WebSocket behaviour is not fully uniform across topics. Some confirm subscription, some confirm unsubscription - for others subscription state is assumed after sending the appropriate payload. Some send partial updates. Some require REST pre-flight calls before subscribing. Some messages contain server-side identifiers that need to be tracked internally.
 
-IBind handles these quirks where practical, but it does not pretend the IBKR WebSocket API is simpler than it is. Broker-specific behaviour is documented separately under `IBKR-Specific Behaviour` [FIXME: docs link] so users can distinguish IBind design from IBKR quirks.
+IBind handles these quirks where practical, but it does not pretend the IBKR WebSocket API is simpler than it is. Broker-specific behaviour is documented separately under [IBKR-Specific Behaviour](./ibkr-specific-behaviour/) so users can distinguish IBind design from IBKR quirks.
 
 ## When to use the WebSocket client
 

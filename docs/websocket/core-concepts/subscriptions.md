@@ -12,7 +12,7 @@ For brevity, this document will speak primarily of topic subscription, given tha
 
 Topics are represented by typed Pydantic models. Each class accepts arguments expected by its topic.  
 
-For some topics, IBKR usually sends a message that can validate that the subscription was successful. In such cases, the WebSocket client will repeatedly send the payload until such signal is received or all attempts are spent, marking the subscription attempt as failed. For remaining topics the subscription is assumed as active immediately after sending the payload.
+For some topics, IBKR usually sends a message that can validate that the subscription was successful. In such cases, the WebSocket client will repeatedly send the payload until such signal is received or all attempts are spent, marking the subscription attempt as failed. For remaining topics the subscription is assumed as active immediately after sending the payload. See [Events](./events.md) for details on subscription confirmation signals.
 
 Full list of Subscription models can be found later in this document.
 
@@ -48,7 +48,7 @@ Additionally, bindings hold the current state of the subscription as `BindingSta
 - `UNSUBSCRIBED` - successfully unsubscribed (either confirmed or assumed)
 - `EXPIRED` - exceeded specified time since last subscription payload was sent, triggering a prompt resubscription
 
-Changes in a binding's BindingStatus reflect its state and that of its corresponding subscription.
+Changes in a binding's BindingStatus reflect its state and that of its corresponding subscription. Status changes are reported via [SubscriptionUpdated events](./events.md#internal).
 
 ## Binding key identifies unique subscriptions
 
@@ -181,7 +181,7 @@ Arguments:
 
 **Note on order updates:**
 
-The data received through the 'orders' channel is affected by the calls to Live Orders endpoint. See [FIXME: link to order-update-caveats.md] for more.
+The data received through the 'orders' channel is affected by the calls to Live Orders endpoint. See [Order Update Caveats](../ibkr-specific-behaviour/order-update-caveats.md) for more.
 
 ### PriceLadderSubscription
 Topic: 'price ladder'  

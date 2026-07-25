@@ -40,7 +40,7 @@ The runtime thread is the main event processing loop. On each cycle it:
 5. Reconciles subscription bindings.
 6. Runs health checks, and resets the WebSocket connection if they fail.
 
-By default, the runtime thread emits each event to an internal `AsyncSink` queue and returns immediately. The actual delivery to user-configured sinks happens on the AsyncSink thread (see below). This functionality can be disabled by setting `synchronous_output_events=True` on the client constructor, which will cause the runtime thread to emit events directly to user sinks.
+By default, the runtime thread emits each event to an internal `AsyncSink` queue and returns immediately. The actual delivery to user-configured sinks happens on the AsyncSink thread (see below). This functionality can be disabled by setting `synchronous_output_events=True` on the client constructor, which will cause the runtime thread to emit events directly to user sinks. See [Sinks](./sinks.md) for more on sink implementations.
 
 The runtime thread sleeps between cycles for a configurable interval (`cycle_interval`). When the transport thread receives a new message, it wakes the runtime thread immediately to minimise latency.
 

@@ -45,7 +45,7 @@ sink = CallbackSink()
 sink.on(events.MarketData, on_market_data)
 ```
 
-By default, callbacks are invoked in sequence they're received, from a dedicated event propagation `async_sink_thread`. This is to ensure that a slow callback will not delay the runtime and lifecycle management functionalities of the client. If you'd like to receive events directly from the runtime thread instead, pass, `synchronous_output_events=True` to the Websocket client constructor.
+By default, callbacks are invoked in sequence they're received, from a dedicated event propagation `async_sink_thread`. This is to ensure that a slow callback will not delay the runtime and lifecycle management functionalities of the client. See [Threading Model](./threading-model.md) for details on execution contexts. If you'd like to receive events directly from the runtime thread instead, pass, `synchronous_output_events=True` to the Websocket client constructor.
 
 Exceptions raised inside callbacks are caught and logged but do not propagate - a failing callback will not prevent remaining callbacks from being invoked.
 

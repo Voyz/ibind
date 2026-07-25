@@ -1,6 +1,6 @@
 # Router
 
-The router is responsible for translating raw WebSocket messages into typed `WsEvent` instances. Every message received from the WebSocket passes through the router before it reaches the user-configured sinks.
+The router is responsible for translating raw WebSocket messages into typed [WsEvent](./events.md) instances. Every message received from the WebSocket passes through the router before it reaches the user-configured sinks.
 
 The router sits at the boundary between the runtime and the event sinks. Its job is to parse raw message strings and return one or more events.
 
