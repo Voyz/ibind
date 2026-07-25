@@ -41,7 +41,7 @@ def close(wsa_mock: MagicMock, status: str = None):
     wsa_mock._on_close(wsa_mock, None, None)
 
 
-def run_forever(wsa_mock: MagicMock, sslopt: dict = None, ping_interval: float = 0, ping_timeout: Optional[float] = None):
+def run_forever(wsa_mock: MagicMock, sslopt: dict = None, ping_interval: float = 0, ping_timeout: Optional[float] = None, skip_utf8_validation: bool = False):
     wsa_mock.keep_running = True
     wsa_mock._on_open(wsa_mock)
 

@@ -359,3 +359,188 @@ def test_marketdata_unsubscribe_raises_exception_on_failure(client, mocker):
 
     # Assert
     assert excinfo.value.status_code == 500
+
+def test_fa_model_list(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_list(req_id=540607)
+
+    # Assert
+    client.post.assert_called_with('fa/model/list', {'reqID': 540607})
+
+
+def test_fa_model_positions_with_optional_parameters(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_positions(req_id=540609, model='Sample-Model', sort_field='instrumentImbalance', sort_direction='DESC', limit=10)
+
+    # Assert
+    client.post.assert_called_with(
+        'fa/model/positions',
+        {'reqID': 540609, 'model': 'Sample-Model', 'sortField': 'instrumentImbalance', 'sortDirection': 'DESC', 'limit': 10},
+    )
+
+
+def test_fa_model_positions_without_optional_parameters(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_positions(req_id=540609, model='Sample-Model')
+
+    # Assert
+    client.post.assert_called_with('fa/model/positions', {'reqID': 540609, 'model': 'Sample-Model'})
+
+
+def test_fa_model_summary(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_summary(req_id=540609, model='Sample-Model')
+
+    # Assert
+    client.post.assert_called_with('fa/model/summary', {'reqID': 540609, 'model': 'Sample-Model'})
+
+
+def test_fa_model_accounts_details(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_accounts_details(req_id=540608, model='Sample-Model', calc_pnls=True)
+
+    # Assert
+    client.post.assert_called_with('fa/model/accounts-details', {'reqID': 540608, 'model': 'Sample-Model', 'calcPnls': True})
+
+
+def test_fa_model_save(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+    # targets are fractions in [0, 1] summing to 1.0 across cash and position targets - see fa_model_save
+    cash_targets = [{'ccy': 'USD', 'target': 0.05}]
+    position_targets = [{'conid': 265598, 'target': 0.50}, {'conid': 756733, 'target': 0.45}]
+
+    # Act
+    client.fa_model_save(
+        req_id=540607,
+        model='Sample-Model',
+        desc='Balanced test model',
+        is_static=True,
+        cash_targets=cash_targets,
+        position_targets=position_targets,
+    )
+
+    # Assert
+    client.post.assert_called_with(
+        'fa/model/save',
+        {
+            'reqID': 540607,
+            'model': 'Sample-Model',
+            'desc': 'Balanced test model',
+            'isStatic': True,
+            'cashTargets': cash_targets,
+            'positionTargets': position_targets,
+        },
+    )
+
+
+def test_fa_model_invest_divest(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+    account_list = [{'account': 'DUMMY_ACCOUNT_ID123', 'amtToInvest': 1000.0}, {'account': 'DUMMY_ACCOUNT_ID456', 'amtToInvest': -500.0}]
+
+    # Act
+    client.fa_model_invest_divest(req_id=540610, model='Sample-Model', account_list=account_list)
+
+    # Assert
+    client.post.assert_called_with('fa/model/invest-divest', {'reqID': 540610, 'model': 'Sample-Model', 'accountList': account_list})
+
+
+def test_fa_model_invest_divest_positions(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_invest_divest_positions(req_id=540611, model='Sample-Model')
+
+    # Assert
+    client.post.assert_called_with('fa/model/invest-divest-positions', {'reqID': 540611, 'model': 'Sample-Model'})
+
+
+def test_fa_model_submit_transfers(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_model_submit_transfers(req_id=540612, fp_order_id=987654)
+
+    # Assert
+    client.post.assert_called_with('fa/model/submit-transfers', {'reqID': 540612, 'fpOrderId': 987654})
+
+
+def test_fa_preset_get(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_preset_get(req_id=540613)
+
+    # Assert
+    client.post.assert_called_with('fa/fa-preset/get', {'reqID': 540613})
+
+
+def test_fa_preset_save(client, result):
+    # Arrange
+    client.post = MagicMock(return_value=result)
+
+    # Act
+    client.fa_preset_save(req_id=540614, use_tolerance_range=True, fully_invest_existing_long_positions=False)
+
+    # Assert
+    client.post.assert_called_with(
+        'fa/fa-preset/save',
+        {'reqID': 540614, 'fullyInvestExistingLongPositions': False, 'useToleranceRange': True},
+    )
+
+
+def _fa_rebalance_check_request(method, url, *args, **kwargs):
+    leaf = url.split('/')[-1]
+    if leaf == 'list':
+        return MagicMock(json=lambda: ibkr_responses.responses['fa_model_list'])
+    elif leaf == 'positions':
+        return MagicMock(json=lambda: ibkr_responses.responses['fa_model_positions'])
+    raise RuntimeError(f'Unexpected URL: {url}')
+
+
+def test_fa_model_rebalance_check_flow(client, requests_mock):
+    """Chains fa_model_list and fa_model_positions to detect models whose actual allocation drifted from the target."""
+    # Arrange
+    requests_mock.request.side_effect = _fa_rebalance_check_request
+
+    # Act
+    models_result = client.fa_model_list(req_id=540607)
+    mismatched_models = [model['model'] for model in models_result.data['models'] if model['mismatch']]
+    positions_result = client.fa_model_positions(req_id=540609, model=mismatched_models[0], sort_field='instrumentImbalance', sort_direction='DESC')
+
+    # Assert
+    assert mismatched_models == ['Sample-Model']
+    assert positions_result.data['mismatched'] is True
+
+    imbalances = {position['instrument']: position['instrumentImbalance'] for position in positions_result.data['positionList']}
+    assert imbalances == {'AAPL': 0.05, 'SPY': -0.05}
+
+    list_call, positions_call = requests_mock.request.call_args_list
+    assert list_call.args[1] == f'{_URL}/fa/model/list'
+    assert list_call.kwargs['json'] == {'reqID': 540607}
+    assert positions_call.args[1] == f'{_URL}/fa/model/positions'
+    assert positions_call.kwargs['json'] == {
+        'reqID': 540609,
+        'model': 'Sample-Model',
+        'sortField': 'instrumentImbalance',
+        'sortDirection': 'DESC',
+    }

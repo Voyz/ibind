@@ -95,6 +95,7 @@ def _verify_started(ws_client: WsClient, wsa_mock: MagicMock):
         sslopt=ws_client._sslopt,
         ping_interval=ws_client._ping_interval,
         ping_timeout=0.95 * ws_client._ping_interval,
+        skip_utf8_validation=True,
     )
     wsa_mock._on_open.assert_called_with(wsa_mock)
 
@@ -260,6 +261,7 @@ def test_open_exception(ws_client, wsa_mock, thread_mock, thread_ctor_mock, patc
         sslopt: dict = None,
         ping_interval: float = 0,
         ping_timeout: Optional[float] = None,
+        skip_utf8_validation: bool = False,
     ):
         wsa_mock.run_forever.side_effect = old_run_forever
         raise RuntimeError(_ERROR_MESSAGE)

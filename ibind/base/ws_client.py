@@ -162,7 +162,14 @@ class WsClient(SubscriptionController):
 
         try:
             # the timeout is set to a little sooner than the interval
-            wsa.run_forever(ping_interval=self._ping_interval, ping_timeout=self._ping_interval * 0.95, sslopt=self._sslopt)
+            # skip_utf8_validation=True: IBKR occasionally emits non-UTF-8 bytes (e.g. 0x99) in text frames,
+            # which crashes the run_forever thread before on_close fires. Decoding is handled above this layer.
+            wsa.run_forever(
+                ping_interval=self._ping_interval,
+                ping_timeout=self._ping_interval * 0.95,
+                sslopt=self._sslopt,
+                skip_utf8_validation=True,
+            )
 
         except ValueError as e:
             if 'url is invalid' in str(e):
