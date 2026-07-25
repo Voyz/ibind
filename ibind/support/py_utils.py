@@ -337,6 +337,40 @@ def print_table(my_dict, column_order=None):
         print(formatter.format(*item))
 
 
+def sanitize_url(url: str) -> str:
+    """
+    Sanitize a URL by obfuscating sensitive parameters like access tokens.
+
+    Replaces the value of 'oauth_token' parameter with '...' followed by the last 6 characters.
+    For example: 'wss://host:5000/v1/api/ws?oauth_token=abc123def456' becomes
+    'wss://host:5000/v1/api/ws?oauth_token=...def456'
+
+    Args:
+        url (str): The URL to sanitize.
+
+    Returns:
+        str: The sanitized URL with sensitive parameters obfuscated.
+    """
+    if not url or 'oauth_token=' not in url:
+        return url
+
+    parts = url.split('oauth_token=')
+    if len(parts) != 2:
+        return url
+
+    prefix, token_and_rest = parts
+    token_end = token_and_rest.find('&')
+    if token_end == -1:
+        token = token_and_rest
+        rest = ''
+    else:
+        token = token_and_rest[:token_end]
+        rest = token_and_rest[token_end:]
+
+    obfuscated_token = f'...{token[-6:]}' if len(token) > 6 else f'...{token}'
+    return f'{prefix}oauth_token={obfuscated_token}{rest}'
+
+
 def patch_dotenv():
     try:
         import dotenv

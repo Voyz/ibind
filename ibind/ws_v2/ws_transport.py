@@ -9,7 +9,7 @@ from websocket import WebSocketApp, STATUS_UNEXPECTED_CONDITION, STATUS_NORMAL
 from ibind import var
 from ibind import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop
+from ibind.support.py_utils import exception_to_string, tname, wait_until, UNDEFINED, noop, sanitize_url
 
 _LOGGER = project_logger('ibkr_ws_client')
 
@@ -244,7 +244,7 @@ class WsTransport:
             return False
 
         if cookie != self._cookie:
-            _LOGGER.warning(f'{self}: Cookie changed, current: {cookie}, previous: {self._cookie}')
+            _LOGGER.warning(f'{self}: Cookie changed, current: ...{cookie[-6:]}, previous: ...{self._cookie[-6:]}')
             return False
         return True
 
@@ -365,7 +365,7 @@ class WsTransport:
             cookie=self._cookie,
             header=self._header,
         )
-        _LOGGER.debug(f'{self}: Created new WebSocketApp instance{f", cookie: {cookie}" if cookie is not None else ""}')
+        _LOGGER.debug(f'{self}: Created new WebSocketApp instance{f", cookie: ...{cookie[-6:]}" if cookie is not None else ""}')
 
         return wsa
 
@@ -390,7 +390,7 @@ class WsTransport:
             _LOGGER.debug(f'{self}: WebSocketApp stopped gracefully')
         except Exception as e:
             if 'url is invalid' in str(e):
-                _LOGGER.error(f'{self}: URL is invalid: {self._url}')
+                _LOGGER.error(f'{self}: URL is invalid: {sanitize_url(self._url)}')
             else:
                 _LOGGER.exception(f'{self}: Unexpected error while running WebSocketApp: {e}')
         finally:

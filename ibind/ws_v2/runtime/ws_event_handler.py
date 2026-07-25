@@ -179,7 +179,7 @@ class WsEventHandler:
         self._state_manager.last_heartbeat = None
 
         previous_state = self._state_manager.get_state()
-        
+
         if previous_state != WsState.STOPPING:
             _LOGGER.info(f'{self}: Connection closed')
         else:
@@ -194,12 +194,9 @@ class WsEventHandler:
             _LOGGER.error(f'{self}: on_close error: {close_status_code} | {msg}')
 
         self._state_manager.set_state(WsState.CLOSED)
-        self._emitter.emit(events.WsClose(
-            close_status_code=close_status_code,
-            close_msg=close_msg,
-            previous_state=previous_state,
-            current_state=WsState.CLOSED
-        ))
+        self._emitter.emit(
+            events.WsClose(close_status_code=close_status_code, close_msg=close_msg, previous_state=previous_state, current_state=WsState.CLOSED)
+        )
 
     def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}()'

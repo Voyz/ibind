@@ -712,7 +712,7 @@ class TestOnOpen:
         event = mock_event_callback.call_args[0][0]
         assert isinstance(event, TransportOpened)
 
-    @capture_logs(logger_level='WARNING', expected_errors=['Cookie changed, current: new_cookie, previous: old_cookie'], partial_match=True)
+    @capture_logs(logger_level='WARNING', expected_errors=['Cookie changed, current: ...cookie, previous: ...cookie'], partial_match=True)
     def test_on_open_closes_connection_when_cookie_invalid(self, transport, mock_get_cookie):
         """WsTransport._on_open closes connection when cookie check fails."""
         ## Arrange
@@ -850,7 +850,7 @@ class TestOnReconnect:
         event = mock_event_callback.call_args[0][0]
         assert isinstance(event, TransportReconnect)
 
-    @capture_logs(logger_level='WARNING', expected_errors=['Cookie changed, current: new_cookie, previous: old_cookie'], partial_match=True)
+    @capture_logs(logger_level='WARNING', expected_errors=['Cookie changed, current: ...cookie, previous: ...cookie'], partial_match=True)
     def test_on_reconnect_closes_connection_when_cookie_invalid(self, transport, mock_get_cookie):
         """WsTransport._on_reconnect closes connection when cookie check fails."""
         ## Arrange
