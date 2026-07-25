@@ -89,6 +89,7 @@ class WsLifecycle:
             _LOGGER.error(f'{self}: Runtime thread must be stopped and joined before starting')
             return
 
+        self._transport.set_degraded(False)
         _LOGGER.info(f'{self}: Starting WebSocket runtime')
 
         self._state_manager.set_state(WsState.STARTING)

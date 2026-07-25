@@ -143,6 +143,9 @@ class WsRuntime:
             self._state_manager.last_heartbeat = time.time()
             _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._state_manager.last_heartbeat}')
 
+        elif state == WsState.STOPPING:
+            self.subscription_controller.invalidate_active_subscriptions()
+
         elif state not in [WsState.AUTHENTICATED, WsState.STOPPING] and previous_state == WsState.AUTHENTICATED:
             self.subscription_controller.invalidate_subscriptions()
 

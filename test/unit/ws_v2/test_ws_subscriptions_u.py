@@ -529,6 +529,29 @@ class TestReconcile:
         ## Assert
         assert binding.status == BindingStatus.UNSUBSCRIBED
 
+    @pytest.mark.parametrize(
+        ('operation', 'subscription'),
+        [
+            ('subscribe', MockSubscriptionNoConfirm()),
+            ('unsubscribe', MockSubscription()),
+        ],
+    )
+    @capture_logs(logger_level='INFO', expected_errors=['Sending payload unsuccessful'], partial_match=True)
+    def test_reconcile_binding_does_not_auto_confirm_failed_send(self, sc, mock_send_payload, operation, subscription):
+        """No-confirmation operations remain pending when their payload was not sent."""
+        ## Arrange
+        mock_send_payload.return_value = False
+        getattr(sc, operation)(subscription)
+        binding = sc._bindings[subscription.binding_key()]
+
+        ## Act
+        with sc._condition:
+            sc.reconcile_binding(binding)
+
+        ## Assert
+        assert binding.status == BindingStatus.NEW
+        assert binding.attempts == 1
+
     @capture_logs()
     def test_reconcile_binding_respects_timeout(self, sc, mock_sub, binding_key):
         """SubscriptionController.reconcile_binding waits for timeout before retrying."""

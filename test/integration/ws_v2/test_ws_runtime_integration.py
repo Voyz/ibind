@@ -4,9 +4,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ibind import events
+from ibind.subscriptions import OrdersSubscription
 from ibind.ws_v2._ws_events import CallbackSink, NoopSink, AsyncSink
 from ibind.ws_v2.ws_runtime import WsRuntime
 from ibind.ws_v2.runtime.ws_state_manager import WsState
+from ibind.ws_v2.ws_subscriptions import BindingStatus
 from ibind.ws_v2.ws_transport import TransportOpened, TransportClosed, TransportError, TransportMessage
 from test.test_utils import capture_logs
 
@@ -381,3 +383,122 @@ class TestEndToEndScenarios:
         assert runtime.get_state() == WsState.STOPPED
         stopped_events = [e for e in event_collector['events'] if isinstance(e, events.WsStopped)]
         assert len(stopped_events) == 1
+
+
+class TestRestartAndHardResetScenarios:
+    """Integration tests for restarting a runtime instance and handling failed shutdowns."""
+
+    @staticmethod
+    def _install_stopped_runtime_thread(runtime):
+        runtime_thread = MagicMock()
+        runtime_thread.is_alive.return_value = False
+        runtime._lifecycle._runtime_thread = runtime_thread
+        return runtime_thread
+
+    @staticmethod
+    def _install_unstoppable_threads(runtime):
+        transport_thread = MagicMock()
+        transport_thread.is_alive.return_value = True
+        runtime_thread = MagicMock()
+        runtime_thread.is_alive.return_value = True
+
+        runtime._lifecycle._transport_thread = transport_thread
+        runtime._lifecycle._runtime_thread = runtime_thread
+        return transport_thread, runtime_thread
+
+    @capture_logs()
+    def test_hard_reset_reenables_transport_callbacks(self, runtime):
+        """A hard reset must leave the recreated transport able to emit callbacks."""
+        ## Arrange
+        runtime.set_state(WsState.AUTHENTICATED)
+        self._install_stopped_runtime_thread(runtime)
+
+        with (
+            patch.object(runtime._runtime_worker, 'wait_for_one_cycle'),
+            patch.object(runtime._lifecycle, '_new_runtime_thread'),
+            patch('ibind.ws_v2.runtime.ws_lifecycle.wait_until', return_value=True),
+        ):
+            ## Act
+            runtime.hard_reset()
+
+        event_callback = MagicMock()
+        runtime._transport._event_callback = event_callback
+        with patch.object(runtime._transport, 'check_cookie', return_value=True):
+            runtime._transport._on_open(MagicMock())
+
+        # The mocked startup does not create a worker, so restore a stopped fixture state.
+        runtime._runtime_worker.running = False
+        runtime.set_state(WsState.STOPPED)
+        runtime._lifecycle._runtime_thread = None
+
+        ## Assert
+        event_callback.assert_called_once()
+        assert isinstance(event_callback.call_args.args[0], TransportOpened)
+
+    @capture_logs()
+    def test_shutdown_then_start_resubscribes_previously_active_bindings(self, runtime):
+        """Restarting the same runtime must re-send subscriptions active before shutdown."""
+        ## Arrange
+        runtime.set_state(WsState.AUTHENTICATED)
+        subscription = OrdersSubscription()
+        runtime.subscription_controller.subscribe(subscription)
+        runtime.subscription_controller.reconcile_bindings()
+        assert runtime.subscription_controller.get_status(subscription.binding_key()) == BindingStatus.ACTIVE
+
+        runtime._transport.send.reset_mock()
+        self._install_stopped_runtime_thread(runtime)
+
+        with (
+            patch.object(runtime._runtime_worker, 'wait_for_one_cycle'),
+            patch.object(runtime._lifecycle, '_new_runtime_thread'),
+            patch('ibind.ws_v2.runtime.ws_lifecycle.wait_until', return_value=True),
+        ):
+            ## Act
+            assert runtime.stop() is True
+            assert runtime.start() is True
+
+        # Simulate the open/authenticated events that would follow a successful reconnect.
+        runtime.set_state(WsState.OPEN)
+        runtime.set_state(WsState.AUTHENTICATED)
+        runtime.subscription_controller.reconcile_bindings()
+
+        # The mocked startup does not create a worker, so restore a stopped fixture state.
+        runtime._runtime_worker.running = False
+        runtime.set_state(WsState.STOPPED)
+        runtime._lifecycle._runtime_thread = None
+
+        ## Assert
+        runtime._transport.send.assert_called_once_with(subscription.subscribe_payload())
+
+    @capture_logs(
+        logger_level='ERROR',
+        expected_errors=['Failed to stop transport thread', 'Runtime thread failed to stop'],
+        partial_match=True,
+    )
+    def test_restart_replaces_threads_that_failed_to_stop(self, runtime):
+        """A restart must create replacement workers after old threads time out."""
+        ## Arrange
+        runtime.set_state(WsState.AUTHENTICATED)
+        old_transport_thread, old_runtime_thread = self._install_unstoppable_threads(runtime)
+
+        with (
+            patch.object(runtime._runtime_worker, 'wait_for_one_cycle'),
+            patch.object(runtime._lifecycle, '_new_runtime_thread') as new_runtime_thread,
+            patch.object(runtime._lifecycle, 'new_transport_thread') as new_transport_thread,
+            patch('ibind.ws_v2.runtime.ws_lifecycle.wait_until', return_value=True),
+        ):
+            ## Act
+            assert runtime.stop() is True
+            assert runtime.start() is True
+            runtime._lifecycle.maintain_transport()
+
+        # The mocked startup does not create workers, so restore a stopped fixture state.
+        runtime._runtime_worker.running = False
+        runtime.set_state(WsState.STOPPED)
+        runtime._lifecycle._runtime_thread = None
+
+        ## Assert
+        old_transport_thread.join.assert_called_once()
+        old_runtime_thread.join.assert_called_once()
+        new_runtime_thread.assert_called_once_with()
+        new_transport_thread.assert_called_once_with()

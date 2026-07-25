@@ -285,15 +285,15 @@ class SubscriptionController:
         subscription = binding.subscription
         if binding.intent == BindingStatus.ACTIVE:
             payload = subscription.subscribe_payload()
-            self._send(payload)
-            if not subscription.confirms_subscribe:
+            sent = self._send(payload)
+            if sent and not subscription.confirms_subscribe:
                 _LOGGER.info(f'{self}: Subscribed: {payload} without confirmation.')
                 self._confirm_subscribed(subscription.binding_key())
 
         elif binding.intent == BindingStatus.UNSUBSCRIBED:
             payload = subscription.unsubscribe_payload()
-            self._send(payload)
-            if not subscription.confirms_unsubscribe:
+            sent = self._send(payload)
+            if sent and not subscription.confirms_unsubscribe:
                 _LOGGER.info(f'{self}: Unsubscribed: {payload} without confirmation.')
                 self._confirm_unsubscribed(subscription.binding_key())
 
@@ -429,6 +429,19 @@ class SubscriptionController:
             for binding_key, binding in self._bindings.items():
                 if binding.status != BindingStatus.DEGRADED:
                     self._update_status(binding, BindingStatus.DEGRADED)
+
+    def invalidate_active_subscriptions(self):
+        """Prepare active subscription intents to be replayed on a new connection."""
+        with self._condition:
+            for binding in self._bindings.values():
+                if binding.intent != BindingStatus.ACTIVE:
+                    continue
+
+                binding.reset()
+                if binding.status != BindingStatus.DEGRADED:
+                    self._update_status(binding, BindingStatus.DEGRADED)
+                else:
+                    self._condition.notify_all()
 
     def is_subscription_active(self, binding_key: str) -> Optional[bool]:  # pragma: no cover
         """Check if a subscription is currently active.
