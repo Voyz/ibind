@@ -10,7 +10,8 @@ requires-python = ">=3.8"
 license-files=["LICENSE"]
 dependencies = [
     "requests>=2.31",
-    "websocket-client>=1.7"
+    "websocket-client>=1.7",
+    "pycryptodome>=3.21" # Essential for OAuth 2.0 JWT signing
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -26,9 +27,7 @@ classifiers = [
 keywords=['interactive brokers', 'rest api', 'python api', 'ibkr python api', 'ibkr web api', 'ib api', 'ibkr api', 'algo trading', 'algorithmic trading', 'quant', 'trading']
 
 [project.optional-dependencies]
-oauth = [
-    'pycryptodome>=3.21',
-    'urllib3>=2.3',
+dev = [
 ]
 
 [project.urls]

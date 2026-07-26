@@ -20,7 +20,7 @@ wrong? [Create an issue and let us know!][issues]*
     </a>
 </p>
 
-IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with [OAuth 1.0a][wiki-oauth1a] support.
+IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with support for [OAuth 1.0a][wiki-oauth1a] and OAuth 2.0.
 
 _Note: IBind currently supports only the Web API 1.0 since the [newer Web API][web-api] seems to be still in beta and is not fully documented. Some of its features may work, but it is recommended to use the Web API 1.0's documentation for the time being. Once a complete version of the new Web API is released IBind will be extended to support it._
 
@@ -32,7 +32,7 @@ pip install ibind
 
 ## Authentication
 
-IBind supports fully headless authentication using [OAuth 1.0a][wiki-oauth1a]. This means no longer needing to run any type software to communicate with IBKR API.
+IBind supports fully headless authentication using [OAuth 1.0a][wiki-oauth1a] and OAuth 2.0. This means no longer needing to run any type of software to communicate with IBKR API.
 
 Alternatively, use [IBeam][ibeam] along with this library for easier setup and maintenance of the CP Gateway.
 

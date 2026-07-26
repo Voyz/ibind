@@ -15,7 +15,7 @@ The library is structured around two main client classes:
 - **Purpose**: REST API client extending `RestClient` base class
 - **Mixins**: Functionality is organized into mixins in `ibind/client/ibkr_client_mixins/`:
   - `accounts_mixin.py` - Account operations
-  - `contract_mixin.py` - Contract/security operations  
+  - `contract_mixin.py` - Contract/security operations
   - `marketdata_mixin.py` - Market data operations
   - `order_mixin.py` - Order management
   - `portfolio_mixin.py` - Portfolio operations

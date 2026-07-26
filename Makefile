@@ -33,7 +33,7 @@ else
 	PYTHONPATH=.:test $(PYTHON) -m pytest test/unit/ test/integration/ -v
 endif
 
-.PHONY: test-unit  
+.PHONY: test-unit
 test-unit:  ## Run only unit tests
 ifeq ($(OS),Windows_NT)
 	cmd /c "set PYTHONPATH=.;test && $(PYTHON) -m pytest test/unit/ -v"
@@ -63,4 +63,3 @@ check-all: lint scan format test  ## Run all checks (lint, scan, format, test)
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
 	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
-
