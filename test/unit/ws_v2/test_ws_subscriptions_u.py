@@ -11,6 +11,7 @@ from ibind.ws_v2.ws_subscriptions import (
     SubscriptionHandle,
     SubscriptionController,
     SubscriptionUpdated,
+    SubscriptionConflictError,
 )
 from test.test_utils import capture_logs, mock_module_time
 
@@ -67,6 +68,14 @@ class MockSubscriptionNoConfirm(Subscription):
     @property
     def confirms_unsubscribe(self) -> bool:
         return True
+
+
+class MockKeyedSubscription(MockSubscription):
+    binding_key_value: str = 'shared_binding'
+
+    def binding_key(self):
+        return self.binding_key_value
+
 
 
 @pytest.fixture
@@ -282,6 +291,142 @@ class TestInterface:
         assert binding.status == BindingStatus.NEW
         assert binding.attempts == 0
         assert binding.last_attempt == 0
+
+    @capture_logs()
+    def test_subscribe_identical_existing_binding_is_idempotent(self, sc):
+        """Repeating an equivalent subscription keeps the existing active binding."""
+        ## Arrange
+        subscription = MockKeyedSubscription(payload_value='old_payload')
+        sc.subscribe(subscription)
+        binding = sc._bindings[subscription.binding_key()]
+        with sc._condition:
+            sc._confirm_subscribed(subscription.binding_key())
+
+        ## Act
+        handle = sc.subscribe(subscription.model_copy())
+
+        ## Assert
+        assert binding.subscription is subscription
+        assert binding.status == BindingStatus.ACTIVE
+        assert handle.status == BindingStatus.ACTIVE
+
+    @capture_logs()
+    def test_subscribe_replaces_pristine_unattempted_binding(self, sc):
+        """Changed parameters may replace a binding before any send attempt."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='old_payload')
+        new_subscription = MockKeyedSubscription(payload_value='new_payload')
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+
+        ## Act
+        sc.subscribe(new_subscription)
+
+        ## Assert
+        assert binding.subscription is new_subscription
+        assert binding.status == BindingStatus.NEW
+        assert binding.attempts == 0
+
+    @capture_logs()
+    def test_subscribe_replaces_binding_after_completed_unsubscribe(self, sc, mock_send_payload):
+        """Changed parameters may be installed once the old subscription is inactive."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='old_payload')
+        new_subscription = MockKeyedSubscription(payload_value='new_payload')
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+        with sc._condition:
+            sc._confirm_subscribed(old_subscription.binding_key())
+        sc.unsubscribe(old_subscription)
+        with sc._condition:
+            sc._confirm_unsubscribed(old_subscription.binding_key())
+        mock_send_payload.reset_mock()
+
+        ## Act
+        sc.subscribe(new_subscription)
+        sc.reconcile_binding(binding)
+
+        ## Assert
+        assert binding.subscription is new_subscription
+        assert binding.intent == BindingStatus.ACTIVE
+        mock_send_payload.assert_called_once_with('new_payload')
+
+    @pytest.mark.parametrize(
+        'status',
+        [BindingStatus.ACTIVE, BindingStatus.DEGRADED, BindingStatus.EXPIRED, BindingStatus.FAILED],
+    )
+    @capture_logs()
+    def test_subscribe_rejects_changed_parameters_in_ambiguous_state(self, sc, status):
+        """Changed parameters require an explicit completed unsubscribe."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='old_payload')
+        new_subscription = MockKeyedSubscription(payload_value='new_payload')
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+        binding.status = status
+
+        ## Act / Assert
+        with pytest.raises(SubscriptionConflictError, match='must be unsubscribed first'):
+            sc.subscribe(new_subscription)
+
+        assert binding.subscription is old_subscription
+
+    @capture_logs()
+    def test_subscribe_rejects_changed_parameters_after_attempt(self, sc):
+        """An attempted NEW binding is ambiguous and cannot be silently replaced."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='old_payload')
+        new_subscription = MockKeyedSubscription(payload_value='new_payload')
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+        binding.attempts = 1
+
+        ## Act / Assert
+        with pytest.raises(SubscriptionConflictError, match='must be unsubscribed first'):
+            sc.subscribe(new_subscription)
+
+        assert binding.subscription is old_subscription
+
+    @capture_logs()
+    def test_subscribe_rejects_changed_expiry_for_active_binding(self, sc):
+        """Local subscription settings cannot silently replace an active object."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='payload', expiry_seconds=10)
+        new_subscription = MockKeyedSubscription(payload_value='payload', expiry_seconds=20)
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+        with sc._condition:
+            sc._confirm_subscribed(old_subscription.binding_key())
+
+        ## Act / Assert
+        with pytest.raises(SubscriptionConflictError, match='must be unsubscribed first'):
+            sc.subscribe(new_subscription)
+
+        assert binding.subscription is old_subscription
+
+    @capture_logs()
+    def test_unsubscribe_changed_object_uses_existing_subscription(self, sc, mock_send_payload):
+        """Unsubscribe retains the stored object needed to build the old payload."""
+        ## Arrange
+        old_subscription = MockKeyedSubscription(payload_value='old_payload')
+        new_subscription = MockKeyedSubscription(payload_value='new_payload')
+        sc.subscribe(old_subscription)
+        binding = sc._bindings[old_subscription.binding_key()]
+        with sc._condition:
+            sc._confirm_subscribed(old_subscription.binding_key())
+        mock_send_payload.reset_mock()
+
+        ## Act
+        handle = sc.unsubscribe(new_subscription)
+        with sc._condition:
+            sc.reconcile_binding(binding)
+
+        ## Assert
+        assert binding.subscription is old_subscription
+        assert handle._subscription is old_subscription
+        mock_send_payload.assert_called_once_with('unsub_old_payload')
+
+
 
     @capture_logs()
     def test_unsubscribe_creates_new_binding(self, sc, mock_sub, binding_key):

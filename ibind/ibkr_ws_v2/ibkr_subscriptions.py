@@ -15,7 +15,7 @@ def make_binding_key(event_type: type[IbkrTopicEvent], conid: str = None, accoun
     elif event_type in [events.AccountLedger, events.AccountSummary]:
         return f'{event_type.topic}+{account_id}'
     elif event_type in [events.PriceLadder]:
-        return f'{event_type.topic}+{account_id}+{conid}' + (f'+{exchange}' if exchange is not None else '')
+        return f'{event_type.topic}+{account_id}'
     elif event_type in [events.Orders, events.Pnl, events.Trades]:
         return event_type.topic
     else:
@@ -33,7 +33,7 @@ class IbkrSubscriptionResolver(SubscriptionResolver):
         elif event_type in [events.AccountLedger, events.AccountSummary]:
             return make_binding_key(event_type, account_id=event.account_id)
         elif event_type in [events.PriceLadder]:
-            return make_binding_key(event_type, conid=event.conid, account_id=event.account_id, exchange=event.exchange)
+            return make_binding_key(event_type, account_id=event.account_id)
         elif event_type in [events.Orders, events.Pnl, events.Trades]:
             return make_binding_key(event_type)
         else:
@@ -212,10 +212,10 @@ class PriceLadderSubscription(IbkrSubscription):
     event_type: type[IbkrTopicEvent] = PriceLadder
     conid: str
     account_id: str
-    exchange: str
+    exchange: str | None = None
 
     def subscribe_payload(self) -> str:
-        return f'sbd+{self.account_id}+{self.conid}+{self.exchange}'
+        return f'sbd+{self.account_id}+{self.conid}' + (f'+{self.exchange}' if self.exchange is not None else '')
 
     def unsubscribe_payload(self) -> str:
         return f'ubd+{self.account_id}'

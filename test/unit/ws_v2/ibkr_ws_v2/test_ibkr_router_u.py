@@ -477,15 +477,54 @@ class TestIbkrRouterHandleSubscribedMessage:
         ## Assert
         assert isinstance(result, events.GenericIbkrEvent)
 
-    def test_price_ladder_topic_unhandled(self):
-        """route raises error for PriceLadder (missing required fields)."""
+    @capture_logs()
+    def test_price_ladder_topic_without_exchange(self):
+        """route parses the account and contract from a Price Ladder topic."""
         ## Arrange
         router = IbkrRouter()
-        raw_message = json.dumps({'topic': 'sbd+123', 'data': 'value'})
+        rows = [{'row': 0, 'focus': 0, 'price': '100.00', 'bid': '12'}]
+        raw_message = json.dumps({'topic': 'sbd+ACC789+11111', 'data': rows})
 
-        ## Act / Assert
-        with pytest.raises(Exception):
-            router.route(raw_message)
+        ## Act
+        result = router.route(raw_message)
+
+        ## Assert
+        assert isinstance(result, events.PriceLadder)
+        assert result.account_id == 'ACC789'
+        assert result.conid == '11111'
+        assert result.exchange is None
+        assert result.data == rows
+
+    @capture_logs()
+    def test_price_ladder_topic_with_exchange(self):
+        """route preserves an exchange when IBKR echoes it in the topic."""
+        ## Arrange
+        router = IbkrRouter()
+        rows = [{'row': 1, 'focus': 0, 'price': '100.01', 'ask': '8'}]
+        raw_message = json.dumps({'topic': 'sbd+ACC789+11111+NASDAQ', 'data': rows})
+
+        ## Act
+        result = router.route(raw_message)
+
+        ## Assert
+        assert isinstance(result, events.PriceLadder)
+        assert result.account_id == 'ACC789'
+        assert result.conid == '11111'
+        assert result.exchange == 'NASDAQ'
+        assert result.data == rows
+
+    @capture_logs(expected_errors=['topic "sbd+ACC789" subscribed but lacking a handler'], partial_match=True)
+    def test_malformed_price_ladder_topic_creates_generic_event(self):
+        """Malformed Price Ladder messages are surfaced without raising."""
+        ## Arrange
+        router = IbkrRouter()
+        raw_message = json.dumps({'topic': 'sbd+ACC789', 'data': []})
+
+        ## Act
+        result = router.route(raw_message)
+
+        ## Assert
+        assert isinstance(result, events.GenericIbkrEvent)
 
 
 class TestIbkrRouterHandleAccountUpdate:

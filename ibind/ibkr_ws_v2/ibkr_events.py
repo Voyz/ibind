@@ -199,15 +199,15 @@ class PriceLadder(IbkrTopicEvent):
     Attributes:
         account_id (str): The account the ladder is requested for.
         conid (str): The contract identifier the ladder applies to.
-        exchange (str): The exchange the ladder is sourced from.
-        data (dict): The price ladder payload.
+        exchange (str | None): The exchange echoed by IBKR, when present.
+        data (list[dict]): The price ladder rows.
     """
 
     topic: ClassVar[str] = 'bd'
     account_id: str
     conid: str
-    exchange: str
-    data: dict
+    exchange: str | None = None
+    data: list[dict]
 
 
 class Pnl(IbkrTopicEvent):

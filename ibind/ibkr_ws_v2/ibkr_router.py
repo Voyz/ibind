@@ -116,6 +116,24 @@ class IbkrRouter:
             order_data.pop('fgColor', None)
         return events.Orders(data=data)
 
+
+    def _preprocess_price_ladder_message(self, topic: str, data: dict) -> OneOrMany[WsEvent] | None:
+        parts = topic.split('+')
+        if len(parts) not in (3, 4) or parts[0] != 'sbd' or not parts[1] or not parts[2]:
+            return None
+
+        rows = data.get('data')
+        if not isinstance(rows, list):
+            return None
+
+        exchange = parts[3] or None if len(parts) == 4 else None
+        return events.PriceLadder(
+            account_id=parts[1],
+            conid=parts[2],
+            exchange=exchange,
+            data=rows,
+        )
+
     def _handle_subscribed_message(self, topic: str, data: dict) -> OneOrMany[WsEvent] | None:
         try:
             # ibkr_ws_key = IbkrWsKey.from_topic(topic[1:3])
@@ -133,7 +151,7 @@ class IbkrRouter:
         elif event_type == events.MarketHistory:
             rv = self._preprocess_market_history_message(data)
         elif event_type == events.PriceLadder:
-            rv = events.PriceLadder(data=data)
+            rv = self._preprocess_price_ladder_message(topic, data)
         elif event_type == events.Orders:
             rv = self._preprocess_orders(data)
         elif event_type == events.Pnl:

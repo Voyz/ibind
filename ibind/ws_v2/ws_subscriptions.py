@@ -61,6 +61,11 @@ class Subscription(BaseModel):  # pragma: no cover
         return f'{self.__class__.__qualname__}({self.binding_key()})'
 
 
+class SubscriptionConflictError(ValueError):
+    """Raised when changed parameters conflict with an existing subscription binding."""
+
+
+
 class SubscriptionResolver(Protocol):  # pragma: no cover
     """
     Protocol for resolving subscription binding keys from events.
@@ -354,6 +359,10 @@ class SubscriptionController:
 
         Returns:
             SubscriptionHandle: Handle for tracking and controlling this subscription.
+
+        Raises:
+            SubscriptionConflictError: If changed parameters conflict with a binding that
+                may still be active and must be unsubscribed first.
         """
         binding_key = subscription.binding_key()
 
@@ -361,11 +370,31 @@ class SubscriptionController:
             binding = self._bindings.get(binding_key)
 
             if binding is None:
-                self._bindings[binding_key] = Binding(subscription=subscription, intent=BindingStatus.ACTIVE)
+                binding = Binding(subscription=subscription, intent=BindingStatus.ACTIVE)
+                self._bindings[binding_key] = binding
                 self._condition.notify_all()
                 _LOGGER.info(f'{self}: Registered subscription intent: {binding_key}')
 
             else:
+                if binding.subscription != subscription:
+                    is_pristine = (
+                        binding.status == BindingStatus.NEW and binding.attempts == 0 and binding.last_attempt == 0
+                    )
+                    is_unsubscribed = binding.status == BindingStatus.UNSUBSCRIBED
+
+                    if not (is_pristine or is_unsubscribed):
+                        raise SubscriptionConflictError(
+                            f'A different subscription already exists for binding {binding_key!r} and must be unsubscribed first. '
+                            f'Wait until its status is {BindingStatus.UNSUBSCRIBED.value} before subscribing with new parameters.'
+                        )
+
+                    binding.subscription = subscription
+                    binding.intent = BindingStatus.ACTIVE
+                    binding.status = BindingStatus.NEW
+                    binding.reset()
+                    self._condition.notify_all()
+                    _LOGGER.info(f'{self}: Replaced subscription for binding: {binding_key}')
+
                 if binding.status == BindingStatus.FAILED:
                     # a repeated call when binding is FAILED means user wants to repeat the attempts
                     binding.reset()
@@ -381,7 +410,7 @@ class SubscriptionController:
                     self._condition.notify_all()
                     _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.ACTIVE.value}')
 
-            return SubscriptionHandle(self, subscription)
+            return SubscriptionHandle(self, binding.subscription)
 
     def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
         """
@@ -402,7 +431,8 @@ class SubscriptionController:
             binding = self._bindings.get(binding_key)
 
             if binding is None:
-                self._bindings[binding_key] = Binding(subscription=subscription, intent=BindingStatus.UNSUBSCRIBED)
+                binding = Binding(subscription=subscription, intent=BindingStatus.UNSUBSCRIBED)
+                self._bindings[binding_key] = binding
                 self._condition.notify_all()
                 _LOGGER.info(f'{self}: Registered unsubscription intent: {binding_key}')
             else:
@@ -421,7 +451,7 @@ class SubscriptionController:
                     self._condition.notify_all()
                     _LOGGER.info(f'{self}: Updated subscription intent: {binding_key} -> {BindingStatus.UNSUBSCRIBED.value}')
 
-            return SubscriptionHandle(self, subscription)
+            return SubscriptionHandle(self, binding.subscription)
 
     def invalidate_subscriptions(self):
         """Mark all subscriptions as degraded, typically after connection loss."""

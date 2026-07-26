@@ -1,4 +1,5 @@
 import json
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,6 +17,7 @@ from ibind.ibkr_ws_v2.ibkr_subscriptions import (
     PnlSubscription,
     TradesSubscription,
 )
+from ibind.ws_v2.ws_subscriptions import BindingStatus, SubscriptionConflictError, SubscriptionController
 from test.test_utils import capture_logs
 from ibind.ibkr_ws_v2.ibkr_events import IbkrTopicEvent
 from ibind.events import WsOpen
@@ -29,8 +31,8 @@ class TestMakeBindingKey:
             (MarketHistory, {'conid': '67890'}, 'mh+67890'),
             (AccountLedger, {'account_id': 'ACC123'}, 'ld+ACC123'),
             (AccountSummary, {'account_id': 'ACC456'}, 'sd+ACC456'),
-            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789'}, 'bd+ACC789+11111'),
-            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789', 'exchange': 'NASDAQ'}, 'bd+ACC789+11111+NASDAQ'),
+            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789'}, 'bd+ACC789'),
+            (PriceLadder, {'conid': '11111', 'account_id': 'ACC789', 'exchange': 'NASDAQ'}, 'bd+ACC789'),
             (Orders, {}, 'or'),
             (Pnl, {}, 'pl'),
             (Trades, {}, 'tr'),
@@ -70,7 +72,7 @@ class TestIbkrSubscriptionResolver:
             (lambda: MarketHistory(conid='67890', data={}), 'mh+67890'),
             (lambda: AccountLedger(account_id='ACC123', data={}), 'ld+ACC123'),
             (lambda: AccountSummary(account_id='ACC456', data={}), 'sd+ACC456'),
-            (lambda: PriceLadder(account_id='ACC789', conid='11111', exchange='NASDAQ', data={}), 'bd+ACC789+11111+NASDAQ'),
+            (lambda: PriceLadder(account_id='ACC789', conid='11111', exchange=None, data=[]), 'bd+ACC789'),
             (lambda: Orders(data={}), 'or'),
             (lambda: Pnl(data={}), 'pl'),
             (lambda: Trades(data={}), 'tr'),
@@ -381,6 +383,13 @@ class TestPriceLadderSubscription:
         """PriceLadderSubscription generates correct subscribe payload."""
         assert sub.subscribe_payload() == 'sbd+ACC789+11111+NASDAQ'
 
+
+    @capture_logs()
+    def test_subscribe_payload_without_exchange(self):
+        """PriceLadderSubscription omits the optional exchange cleanly."""
+        sub = PriceLadderSubscription(conid='11111', account_id='ACC789')
+        assert sub.subscribe_payload() == 'sbd+ACC789+11111'
+
     @capture_logs()
     def test_unsubscribe_payload(self, sub):
         """PriceLadderSubscription generates correct unsubscribe payload."""
@@ -404,7 +413,31 @@ class TestPriceLadderSubscription:
     @capture_logs()
     def test_binding_key(self, sub):
         """PriceLadderSubscription generates correct binding key."""
-        assert sub.binding_key() == 'bd+ACC789+11111+NASDAQ'
+        assert sub.binding_key() == 'bd+ACC789'
+
+    @capture_logs()
+    def test_different_sources_for_same_account_share_binding(self):
+        """Only one Price Ladder source can be active for an account."""
+        first = PriceLadderSubscription(conid='11111', account_id='ACC789', exchange='NASDAQ')
+        second = PriceLadderSubscription(conid='22222', account_id='ACC789', exchange='NYSE')
+        assert first.binding_key() == second.binding_key() == 'bd+ACC789'
+
+    @capture_logs()
+    def test_different_source_for_active_account_raises_conflict(self):
+        """Changing ladder source requires first unsubscribing the account binding."""
+        controller = SubscriptionController(
+            send_payload=MagicMock(return_value=True),
+            emitter=MagicMock(),
+            subscription_resolver=IbkrSubscriptionResolver(account_id='ACC789'),
+        )
+        first = PriceLadderSubscription(conid='11111', account_id='ACC789', exchange='NASDAQ')
+        second = PriceLadderSubscription(conid='22222', account_id='ACC789', exchange='NYSE')
+        controller.subscribe(first)
+        controller._bindings[first.binding_key()].status = BindingStatus.ACTIVE
+
+        with pytest.raises(SubscriptionConflictError, match='must be unsubscribed first'):
+            controller.subscribe(second)
+
 
 
 class TestPnlSubscription:
