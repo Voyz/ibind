@@ -10,7 +10,7 @@ Pass a `QueueSink` to the client at construction time:
 from ibind import QueueSink, IbkrWsClientV2, events
 
 sink = QueueSink()
-ws_client = IbkrWsClientV2(account_id='...', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='...', sink=sink)
 ws_client.start()
 ```
 

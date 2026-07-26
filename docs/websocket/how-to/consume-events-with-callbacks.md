@@ -13,7 +13,7 @@ def on_market_data(event: events.MarketData):
 sink = CallbackSink()
 sink.on(events.MarketData, on_market_data)
 
-ws_client = IbkrWsClientV2(account_id='...', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='...', sink=sink)
 ws_client.start()
 ```
 

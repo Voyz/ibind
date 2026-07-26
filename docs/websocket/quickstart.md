@@ -16,20 +16,21 @@ For local Client Portal Gateway usage, IBind normally connects to the local Gate
 ## Minimal example
 
 ```python
-from ibind import QueueSink, IbkrWsClientV2, MarketDataSubscription, snapshot_keys_to_ids, events
+from ibind import QueueSink, IbkrWsClientV2, snapshot_keys_to_ids, events
+from ibind.subscriptions import MarketDataSubscription
 
 # Enables queue-based consumption
 sink = QueueSink()
 
 # Initialise the client
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 
 # Start the client
 ws_client.start()
 
 # Create the subscription intent object
 subscription = MarketDataSubscription(
-    conids=['265598'], # AAPL
+    conid='265598', # AAPL
     fields=snapshot_keys_to_ids(['last_price', 'bid_price', 'ask_price']), # convert fields to numeric representation
 )
 
@@ -70,7 +71,8 @@ In production code, replace `print(event)` with your own event handling logic. F
 ## Callback example
 
 ```python
-from ibind import CallbackSink, IbkrWsClientV2, MarketDataSubscription, snapshot_keys_to_ids, events
+from ibind import CallbackSink, IbkrWsClientV2, snapshot_keys_to_ids, events
+from ibind.subscriptions import MarketDataSubscription
 
 def on_market_data(event: events.MarketData):
     print(event)
@@ -78,11 +80,11 @@ def on_market_data(event: events.MarketData):
 sink = CallbackSink()
 sink.on(events.MarketData, on_market_data) # can be called before or after passing the sink to the client
     
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 ws_client.start()
 
 subscription = MarketDataSubscription(
-    conids=['265598'],
+    conid='265598',
     fields=snapshot_keys_to_ids(['last_price', 'bid_price', 'ask_price']),
 )
 
@@ -99,6 +101,7 @@ If your application code is consuming events slower than they're received from I
 
 
 ```python
+import time
 from ibind import CallbackSink, IbkrWsClientV2, events
 
 def on_authenticated(event: events.WsAuthenticated):
@@ -115,7 +118,7 @@ sink.on(events.WsAuthenticated, on_authenticated)
 sink.on(events.WsDegraded, on_degraded)
 sink.on(events.WsStopped, on_stopped)
     
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 
 ws_client.start()
 # Should print 'WebSocket client ready'
@@ -132,7 +135,7 @@ Likewise you can react to changes in subscription statuses:
 
 ```python
 def on_subscription_updated(event: events.SubscriptionUpdated):
-    print(f'{event.subscription} status changed to {event.status})
+    print(f'{event.subscription} status changed to {event.status}')
     
 sink.on(events.SubscriptionUpdated, on_subscription_updated)
 ```

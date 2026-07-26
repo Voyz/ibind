@@ -1,12 +1,12 @@
 # Sinks
 
-Sinks are event consumers receiving events emitted by the WebSocket client. Every event is passed to all sinks provided to the client.
+Sinks are event consumers receiving events emitted by the WebSocket client. Every event is passed to the sink configured on the client.
 
-Sinks are passed to the client at construction time:
+The sink is passed to the client at construction time:
 
 ```python
 sink = QueueSink()
-ws_client = IbkrWsClientV2(account_id='...', sinks=[sink])
+ws_client = IbkrWsClientV2(account_id='...', sink=sink)
 ```
 
 
@@ -104,7 +104,7 @@ callback_sink = CallbackSink()
 queue_sink = QueueSink()
 
 composite = CompositeSink(callback_sink, queue_sink)
-ws_client = IbkrWsClientV2(account_id='...', sinks=[composite])
+ws_client = IbkrWsClientV2(account_id='...', sink=composite)
 ```
 
 Exceptions raised within a child sink are caught and logged, so a failure in one sink does not prevent the others from recieving the event.
@@ -126,7 +126,7 @@ class MySink:
         # custom handling
         ...
 
-ws_client = IbkrWsClientV2(account_id='...', sinks=[MySink()])
+ws_client = IbkrWsClientV2(account_id='...', sink=MySink())
 ```
 
 [events]: ./events.md

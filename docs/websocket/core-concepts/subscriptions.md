@@ -59,19 +59,21 @@ As a result, for some topics there could be a separate binding instance for each
 For example, the following two MarketDataSubscriptions would result in two separate binding keys, hence resulting in two bindings being created:
 
 ```python
->>> MarketDataSubscriptions(conid='123', fields=[...]).binding_key()
-md+123
->>> MarketDataSubscriptions(conid='456', fields=[...]).binding_key()
-md+456
+MarketDataSubscription(conid='123', fields=[...]).binding_key()
+# md+123 
+
+MarketDataSubscription(conid='456', fields=[...]).binding_key()
+# md+456
 ```
 
 While two OrdersSubscriptions would still be represented as a single binding:
 
-```python
->>> OrdersSubscription().binding_key()
-or
->>> OrdersSubscription(filter='Submitted').binding_key()
-or
+```pycon
+OrdersSubscription().binding_key()
+# or
+
+OrdersSubscription(filter='Submitted').binding_key()
+# or
 ```
 
 The binding key is used to query information about a binding, using the following methods:
