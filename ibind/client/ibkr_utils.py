@@ -9,7 +9,7 @@ from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
 from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import project_logger
-from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany, exception_to_string
+from ibind.support.py_utils import UNDEFINED, ensure_list_arg, VerboseEnum, OneOrMany
 from ibind import var
 
 _LOGGER = project_logger(__file__)
@@ -640,19 +640,33 @@ class Tickler:
         self._interval = interval
         self._stop_event = threading.Event()
         self._thread = None
+        self._last_error = None
 
     def _worker(self):
         _LOGGER.info(f'Tickler starts with interval={self._interval} seconds.')
         while not self._stop_event.wait(self._interval):
             try:
                 self._client.tickle()
+                if self._last_error is not None:
+                    self._last_error = None
             except KeyboardInterrupt:
                 _LOGGER.info('Tickler interrupted')
                 break
-            except TimeoutError:
-                _LOGGER.warning('Tickler encountered a timeout error. This could indicate the servers are restarting. Investigate further if you see this log repeat frequently.')
+            except TimeoutError as e:
+                if self._last_error != str(e):
+                    self._last_error = str(e)
+                    _LOGGER.error(
+                        'Tickler encountered a timeout error. This could indicate the servers are restarting. Investigate further if you see this log repeat frequently. Silencing further repetitions of this message.'
+                    )
             except Exception as e:
-                _LOGGER.error(f'Tickler error: {exception_to_string(e)}')
+                if self._last_error != str(e):
+                    self._last_error = str(e)
+                    if 'Failed to resolve' in str(e):
+                        _LOGGER.error(
+                            'Tickler encountered a resolution error. This could indicate lack of connectivity to IBKR servers. Silencing further repetitions of this message.'
+                        )
+                    else:
+                        _LOGGER.error(f'Tickler error: {str(e)}')
 
         _LOGGER.info('Tickler gracefully stopped.')
 

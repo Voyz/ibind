@@ -1,10 +1,9 @@
-from enum import Enum
 from queue import Queue, Empty
-from typing import TypeVar, Generic, Any
+from typing import TypeVar, Generic, Any, Hashable
 
 from ibind.support.py_utils import ensure_list_arg, OneOrMany
 
-T = TypeVar('T', str, Enum)
+T = TypeVar('T', bound=Hashable)
 
 
 class QueueAccessor(Generic[T]):  # pragma: no cover

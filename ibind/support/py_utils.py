@@ -20,6 +20,11 @@ _PRECISION_OFFSET = 7
 S = TypeVar('S')
 OneOrMany = Union[S, List[S]]
 
+
+def noop():
+    return None
+
+
 _LOGGER = project_logger(__file__)
 
 
@@ -204,10 +209,10 @@ class TimeoutLock:  # pragma: no cover
     cannot be acquired within the specified timeout, the acquire method fails, preventing indefinite blocking.
 
     Constructor Parameters:
-        timeout (int): The maximum time in seconds to wait for the lock to become available.
+        timeout (float): The maximum time in seconds to wait for the lock to become available.
     """
 
-    def __init__(self, timeout: int):
+    def __init__(self, timeout: float):
         self._lock = threading.RLock()
         self._timeout = timeout
         self._acquired = False
@@ -279,8 +284,8 @@ def wait_until(condition: callable, timeout_message: str = None, timeout: float 
          bool: True if the condition becomes True within the timeout period, False otherwise.
     """
 
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if condition():
             return True
         time.sleep(sleep)
@@ -330,6 +335,40 @@ def print_table(my_dict, column_order=None):
     formatter = '   '.join(['{{:>{}}}'.format(i) for i in column_size])
     for i, item in enumerate(rv):
         print(formatter.format(*item))
+
+
+def sanitize_url(url: str) -> str:
+    """
+    Sanitize a URL by obfuscating sensitive parameters like access tokens.
+
+    Replaces the value of 'oauth_token' parameter with '...' followed by the last 6 characters.
+    For example: 'wss://host:5000/v1/api/ws?oauth_token=abc123def456' becomes
+    'wss://host:5000/v1/api/ws?oauth_token=...def456'
+
+    Args:
+        url (str): The URL to sanitize.
+
+    Returns:
+        str: The sanitized URL with sensitive parameters obfuscated.
+    """
+    if not url or 'oauth_token=' not in url:
+        return url
+
+    parts = url.split('oauth_token=')
+    if len(parts) != 2:
+        return url
+
+    prefix, token_and_rest = parts
+    token_end = token_and_rest.find('&')
+    if token_end == -1:
+        token = token_and_rest
+        rest = ''
+    else:
+        token = token_and_rest[:token_end]
+        rest = token_and_rest[token_end:]
+
+    obfuscated_token = f'...{token[-6:]}' if len(token) > 6 else f'...{token}'
+    return f'{prefix}oauth_token={obfuscated_token}{rest}'
 
 
 def patch_dotenv():

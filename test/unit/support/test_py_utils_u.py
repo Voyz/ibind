@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ibind.support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until
+from ibind.support.py_utils import ensure_list_arg, execute_in_parallel, execute_with_key, wait_until, sanitize_url
 
 
 @ensure_list_arg('arg')
@@ -226,3 +226,75 @@ def test_wait_until_timeout():
     assert result is False
     duration = time.time() - start_time
     assert duration == pytest.approx(timeout, abs=0.02)
+
+
+def test_sanitize_url_with_oauth_token():
+    """Obfuscates oauth_token parameter with last 6 characters."""
+    # Arrange
+    url = 'wss://host:5000/v1/api/ws?oauth_token=abc123def456'
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result == 'wss://host:5000/v1/api/ws?oauth_token=...def456'
+
+
+def test_sanitize_url_with_short_token():
+    """Handles tokens shorter than 6 characters."""
+    # Arrange
+    url = 'wss://host:5000/v1/api/ws?oauth_token=abc'
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result == 'wss://host:5000/v1/api/ws?oauth_token=...abc'
+
+
+def test_sanitize_url_with_additional_params():
+    """Preserves additional query parameters after oauth_token."""
+    # Arrange
+    url = 'wss://host:5000/v1/api/ws?oauth_token=abc123def456&other_param=value'
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result == 'wss://host:5000/v1/api/ws?oauth_token=...def456&other_param=value'
+
+
+def test_sanitize_url_without_oauth_token():
+    """Returns URL unchanged if no oauth_token parameter."""
+    # Arrange
+    url = 'wss://host:5000/v1/api/ws'
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result == url
+
+
+def test_sanitize_url_with_none():
+    """Returns None if URL is None."""
+    # Arrange
+    url = None
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result is None
+
+
+def test_sanitize_url_with_empty_string():
+    """Returns empty string if URL is empty."""
+    # Arrange
+    url = ''
+
+    # Act
+    result = sanitize_url(url)
+
+    # Assert
+    assert result == ''

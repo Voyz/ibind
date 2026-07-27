@@ -57,6 +57,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
         auto_recreate_session: bool = True,
         auto_register_shutdown: bool = var.IBIND_AUTO_REGISTER_SHUTDOWN,
         log_responses: bool = var.IBIND_LOG_RESPONSES,
+        verbose_retries: bool = var.IBIND_VERBOSE_RETRIES,
         use_oauth: bool = var.IBIND_USE_OAUTH,
         oauth_config: 'OAuthConfig' = None,
     ) -> None:
@@ -78,6 +79,8 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             use_session (bool, optional): Whether to use a persistent session for making requests. Defaults to True.
             auto_recreate_session (bool, optional): Whether to automatically recreate the session on connection errors. Defaults to True.
             auto_register_shutdown (bool, optional): Whether to automatically register a shutdown handler for this client. Defaults to True.
+            log_responses (bool, optional): Whether to log responses from the API. Defaults to False.
+            verbose_retries (bool, optional): Whether to log verbose retry information. Defaults to False.
             use_oauth (bool, optional): Whether to use OAuth authentication. Defaults to False.
             oauth_config (OAuthConfig, optional): The configuration for the OAuth authentication. OAuth1aConfig is used if not specified.
         """
@@ -106,6 +109,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             auto_recreate_session=auto_recreate_session,
             auto_register_shutdown=auto_register_shutdown,
             log_responses=log_responses,
+            verbose_retries=verbose_retries,
         )
 
         self.logger.info('#################')
@@ -162,6 +166,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             ExternalBrokerError: If the token request fails.
         """
         from ibind.oauth.oauth1a import req_live_session_token
+
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(
             self, self.oauth_config
         )
@@ -237,7 +242,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             self._tickler = Tickler(self, interval)
         self._tickler.start()
 
-    def stop_tickler(self, timeout:float=None):
+    def stop_tickler(self, timeout: float = None):
         """
         Stops the Tickler thread if the Tickler is running.
 
@@ -268,7 +273,11 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
         self.logout()
 
     def handle_health_status(self, raise_exceptions: bool = False) -> bool:
-        warnings.warn("'handle_health_status' is deprecated. Calling it on a frequent basis is not recommended as IBKR expects /tickle call at most every 60 seconds. Use 'handle_auth_status' which utilises authentication_status() instead of tickle(), and use Tickler or manually ensure you call tickle() on a 60-second interval.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "'handle_health_status' is deprecated. Calling it on a frequent basis is not recommended as IBKR expects /tickle call at most every 60 seconds. Use 'handle_auth_status' which utilises authentication_status() instead of tickle(), and use Tickler or manually ensure you call tickle() on a 60-second interval.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return self._attempt_health_check(self.check_health, raise_exceptions)
 
@@ -289,7 +298,6 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
     def _attempt_health_check(self, method: callable, raise_exceptions: bool = False) -> bool:
         max_attempts = 3
         for attempt in range(max_attempts):
-
             healthy = method()
             if healthy:
                 # All good, do nothing.
@@ -317,17 +325,21 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             )
         except ExternalBrokerError as e:
             if "Failed to resolve 'api.ibkr.com'" in str(e):
-                _LOGGER.error('Connection to IBKR servers failed during reauthentication. Check internet connection between IBind and \'api.ibkr.com\'')
+                _LOGGER.error("Connection to IBKR servers failed during reauthentication. Check internet connection between IBind and 'api.ibkr.com'")
             elif 'An attempt was made to access a socket in a way forbidden by its access permissions' in str(e):
-                _LOGGER.error('Connection to IBKR servers blocked during reauthentication. Check that nothing is blocking connectivity of the application')
+                _LOGGER.error(
+                    'Connection to IBKR servers blocked during reauthentication. Check that nothing is blocking connectivity of the application'
+                )
             elif e.status_code == 410 and 'gone' in str(e):
-                _LOGGER.error('OAuth 410 gone: recreate a new live session token, or try a different server, eg. "1.api.ibkr.com", "2.api.ibkr.com", etc.')
+                _LOGGER.error(
+                    'OAuth 410 gone: recreate a new live session token, or try a different server, eg. "1.api.ibkr.com", "2.api.ibkr.com", etc.'
+                )
             else:
                 _LOGGER.error(f'Unknown error checking IBKR connection during reauthentication: {exception_to_string(e)}')
 
             if raise_exceptions:
                 raise
-        except Exception as e: # pragma: no cover
+        except Exception as e:  # pragma: no cover
             _LOGGER.error(f'Error reauthenticating OAuth during reauthentication: {exception_to_string(e)}')
             if raise_exceptions:
                 raise
