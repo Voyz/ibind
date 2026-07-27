@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ibind import events
-from ibind.ws_v2._ws_events import NoopSink, AsyncSink
+from ibind.ws_v2._ws_events import NoopSink, AsyncSink, QueueSink
 from ibind.ws_v2.ws_runtime import WsRuntime, make_sslopt
 from ibind.ws_v2.runtime.ws_state_manager import WsState
 from test.test_utils import capture_logs, mock_module_time
@@ -155,6 +155,26 @@ class TestOnStateChange:
         assert len(degraded_events) == 1
         runtime.subscription_controller.invalidate_subscriptions.assert_called_once()
 
+    @capture_logs(logger_level='DEBUG', expected_errors=['OPEN -> AUTHENTICATED', 'AUTHENTICATED -> DEGRADED'], partial_match=True)
+    def test_on_state_change_emits_degraded_event_when_leaving_authenticated(self, runtime):
+        """_on_state_change emits WsDegraded and invalidates subscriptions when an authenticated connection degrades."""
+        ## Arrange
+        degraded_events = []
+        runtime._internal_sink.on(events.WsDegraded, degraded_events.append)
+        runtime.subscription_controller.invalidate_subscriptions = MagicMock()
+        runtime._state_manager.set_state(WsState.OPEN)
+        with mock_module_time('ibind.ws_v2.ws_runtime', time_sequence=[1000.0]):
+            runtime._state_manager.set_state(WsState.AUTHENTICATED)
+
+        ## Act
+        runtime._state_manager.set_state(WsState.DEGRADED)
+
+        ## Assert
+        assert len(degraded_events) == 1
+        assert degraded_events[0].previous_state == WsState.AUTHENTICATED
+        assert degraded_events[0].current_state == WsState.DEGRADED
+        runtime.subscription_controller.invalidate_subscriptions.assert_called_once()
+
     @capture_logs()
     def test_on_state_change_does_not_emit_degraded_when_already_degraded(self, runtime):
         """_on_state_change does not emit WsDegraded when already in DEGRADED state."""
@@ -185,6 +205,22 @@ class TestOnStateChange:
         ## Assert
         mock_invalidate.assert_called_once()
 
+    @capture_logs(logger_level='DEBUG', expected_errors=['OPEN -> AUTHENTICATED', 'AUTHENTICATED -> OPEN'], partial_match=True)
+    def test_on_state_change_invalidates_subscriptions_when_authentication_is_lost(self, runtime):
+        """_on_state_change invalidates subscriptions when an authenticated connection returns to OPEN."""
+        ## Arrange
+        mock_invalidate = MagicMock()
+        runtime.subscription_controller.invalidate_subscriptions = mock_invalidate
+        runtime._state_manager.set_state(WsState.OPEN)
+        with mock_module_time('ibind.ws_v2.ws_runtime', time_sequence=[1000.0]):
+            runtime._state_manager.set_state(WsState.AUTHENTICATED)
+
+        ## Act
+        runtime._state_manager.set_state(WsState.OPEN)
+
+        ## Assert
+        mock_invalidate.assert_called_once()
+
     @capture_logs(logger_level='DEBUG', expected_errors=['OPEN -> CLOSED'], partial_match=True)
     def test_on_state_change_invalidates_subscriptions_on_close_when_not_stopping(self, runtime):
         """_on_state_change invalidates subscriptions when state becomes CLOSED (not from STOPPING)."""
@@ -210,6 +246,22 @@ class TestOnStateChange:
 
         ## Assert
         runtime.subscription_controller.invalidate_subscriptions.assert_not_called()
+
+    @capture_logs(logger_level='DEBUG', expected_errors=['OPEN -> STOPPING'], partial_match=True)
+    def test_on_state_change_emits_stopping_event(self, runtime):
+        """_on_state_change emits WsStopping when state becomes STOPPING."""
+        ## Arrange
+        runtime._state_manager.set_state(WsState.OPEN)
+        stopping_events = []
+        runtime._internal_sink.on(events.WsStopping, stopping_events.append)
+
+        ## Act
+        runtime._state_manager.set_state(WsState.STOPPING)
+
+        ## Assert
+        assert len(stopping_events) == 1
+        assert stopping_events[0].previous_state == WsState.OPEN
+        assert stopping_events[0].current_state == WsState.STOPPING
 
     @capture_logs(logger_level='DEBUG', expected_errors=['OPEN -> STOPPED'], partial_match=True)
     def test_on_state_change_emits_stopped_event(self, runtime):
@@ -336,3 +388,33 @@ class TestAsyncSinkHandling:
 
         ## Assert
         async_sink.stop.assert_called_once()
+
+    @capture_logs(
+        logger_level='DEBUG',
+        expected_errors=['STOPPED -> STARTING', 'STARTING -> OPEN', 'OPEN -> STOPPED'],
+        partial_match=True,
+    )
+    def test_on_stopped_delivers_event_before_stopping_async_sink(self, mock_router, mock_resolver):
+        """WsStopped reaches the wrapped sink during AsyncSink's final queue drain."""
+        ## Arrange
+        queue_sink = QueueSink()
+        async_sink = AsyncSink(sink=queue_sink, stop_timeout=1, cycle_interval=0.01)
+        runtime = WsRuntime(
+            url='wss://test.example.com',
+            cycle_interval=0.01,
+            sink=async_sink,
+            router=mock_router,
+            subscription_resolver=mock_resolver,
+        )
+        runtime._state_manager.set_state(WsState.STARTING)
+        runtime._state_manager.set_state(WsState.OPEN)
+
+        ## Act
+        runtime._state_manager.set_state(WsState.STOPPED)
+
+        ## Assert
+        stopped_event = queue_sink.get(events.WsStopped)
+        assert stopped_event is not None
+        assert stopped_event.previous_state == WsState.OPEN
+        assert stopped_event.current_state == WsState.STOPPED
+        assert async_sink._running is False

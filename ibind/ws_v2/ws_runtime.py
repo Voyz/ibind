@@ -120,8 +120,9 @@ class WsRuntime:
         if isinstance(self._sink, AsyncSink):
             self._sink.start()
 
-    def _on_stopped(self, _):
+    def _on_stopped(self, event):
         if isinstance(self._sink, AsyncSink):
+            self._sink.emit(event)
             self._sink.stop()
 
     def _on_state_change(self, previous_state: WsState, state: WsState):
@@ -129,6 +130,18 @@ class WsRuntime:
             return
 
         _LOGGER.debug(f'{self}: {previous_state} -> {state}')
+
+        if state == WsState.STOPPING:
+            self.subscription_controller.invalidate_active_subscriptions()
+
+        elif previous_state == WsState.AUTHENTICATED:
+            self.subscription_controller.invalidate_subscriptions()
+
+        elif state == WsState.DEGRADED:
+            self.subscription_controller.invalidate_subscriptions()
+
+        elif state == WsState.CLOSED and previous_state != WsState.STOPPING:
+            self.subscription_controller.invalidate_subscriptions()
 
         if state == WsState.STARTING:
             self._emitter.emit(events.WsStarting(previous_state=previous_state, current_state=state))
@@ -144,18 +157,10 @@ class WsRuntime:
             _LOGGER.info(f'{self}: Websocket ready, setting last_heartbeat to {self._state_manager.last_heartbeat}')
 
         elif state == WsState.STOPPING:
-            self.subscription_controller.invalidate_active_subscriptions()
-
-        elif state not in [WsState.AUTHENTICATED, WsState.STOPPING] and previous_state == WsState.AUTHENTICATED:
-            self.subscription_controller.invalidate_subscriptions()
+            self._emitter.emit(events.WsStopping(previous_state=previous_state, current_state=state))
 
         elif state == WsState.DEGRADED:
-            self.subscription_controller.invalidate_subscriptions()
             self._emitter.emit(events.WsDegraded(previous_state=previous_state, current_state=state))
-
-        elif state == WsState.CLOSED:
-            if previous_state != WsState.STOPPING:
-                self.subscription_controller.invalidate_subscriptions()
 
         elif state == WsState.STOPPED:
             self._emitter.emit(events.WsStopped(previous_state=previous_state, current_state=state))
