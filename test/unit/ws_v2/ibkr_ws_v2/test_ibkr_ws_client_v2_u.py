@@ -5,6 +5,8 @@ from collections import defaultdict
 import pytest
 
 from ibind import events, var, IbkrClient
+from ibind.ibkr_ws_v2.ibkr_events import System
+from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2, _build_ws_url
 from ibind.ibkr_ws_v2.ibkr_subscriptions import MarketHistorySubscription
 from ibind.ws_v2._ws_events import AsyncSink
@@ -645,21 +647,50 @@ class TestIbkrWsClientV2WaitAll:
         ## Assert
         assert result == []
 
-    @capture_logs()
-    def test_wait_all_with_timeout(self, client):
-        """wait_all passes timeout to handle.wait."""
+    def test_wait_all_with_timeout_each(self, client):
+        """wait_all applies timeout_each independently to every handle."""
         ## Arrange
-        handle = MagicMock(spec=SubscriptionHandle)
-        handle.wait.return_value = True
+        handle1 = MagicMock(spec=SubscriptionHandle)
+        handle2 = MagicMock(spec=SubscriptionHandle)
+        handle1.wait.return_value = True
+        handle2.wait.return_value = True
 
         ## Act
-        client.wait_all([handle], timeout=10.0)
+        client.wait_all([handle1, handle2], timeout_each=10.0)
 
         ## Assert
-        handle.wait.assert_called_once_with(10.0)
+        handle1.wait.assert_called_once_with(10.0)
+        handle2.wait.assert_called_once_with(10.0)
 
 
 class TestIbkrWsClientV2Tic:
+    @capture_logs()
+    @patch('ibind.ibkr_ws_v2.ibkr_ws_client_v2.wait_until')
+    def test_tic_returns_routed_tic_response(self, mock_wait_until, client):
+        """tic records and returns a tic response routed through the System event callback."""
+        ## Arrange
+        response = {'topic': 'tic', 'lastAccessed': 2000}
+        client._runtime = MagicMock()
+        client._tic_message = {'lastAccessed': 1000}
+
+        def send_tic(_):
+            event = IbkrRouter().route(json.dumps(response))
+            if not isinstance(event, System):
+                raise ValueError(f'Expected System event, got {event}')
+
+            client._on_system(event)
+            return True
+
+        client._runtime.send.side_effect = send_tic
+        mock_wait_until.side_effect = lambda predicate, timeout: predicate()
+
+        ## Act
+        result = client.tic()
+
+        ## Assert
+        assert result == response
+        client._runtime.send.assert_called_once_with('tic')
+
     @capture_logs()
     @patch('ibind.ibkr_ws_v2.ibkr_ws_client_v2.wait_until')
     def test_tic_success(self, mock_wait_until, client):

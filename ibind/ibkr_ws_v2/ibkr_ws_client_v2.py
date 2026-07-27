@@ -164,6 +164,9 @@ class IbkrWsClientV2:
             self._runtime.set_authenticated(event.authenticated)
 
     def _on_system(self, event: events.System):
+        if event.data.get('topic') == 'tic':
+            self._tic_message = event.data
+
         if 'hb' in event.data:
             self._runtime.set_last_heartbeat(int(event.data['hb']) / 1000)
 
@@ -297,7 +300,11 @@ class IbkrWsClientV2:
         subscription.set_server_id(server_id)
 
     @ensure_list_arg('subscription_handles')
-    def wait_all(self, subscription_handles: OneOrMany[SubscriptionHandle], timeout: float | None = None) -> List[SubscriptionHandle]:
+    def wait_all(
+        self,
+        subscription_handles: OneOrMany[SubscriptionHandle],
+        timeout_each: float | None = None,
+    ) -> List[SubscriptionHandle]:
         """
         Wait for multiple subscription handles to complete.
 
@@ -305,14 +312,16 @@ class IbkrWsClientV2:
 
         Args:
             subscription_handles (OneOrMany[SubscriptionHandle]): Single handle or list of handles to wait for.
-            timeout (float | None): Maximum time to wait in seconds. If None, waits indefinitely.
+            timeout_each (float | None): Maximum time to wait for each handle in seconds.
+                If None, waits indefinitely for each handle.
 
         Returns:
-            List[SubscriptionHandle]: List of handles that failed to complete within the timeout.
+            List[SubscriptionHandle]: Handles that failed to complete within their
+                individual timeout.
         """
         failed = []
         for subscription_handle in subscription_handles:
-            if not (subscription_handle.wait(timeout)):
+            if not subscription_handle.wait(timeout_each):
                 failed.append(subscription_handle)
         return failed
 

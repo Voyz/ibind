@@ -118,7 +118,9 @@ Both `subscribe()` and `unsubscribe()` return an instance of SubscriptionHandle 
 
 Subscription handles provide methods for querying binding status and checking whether binding is done (ie. its status is equal to its intent).
 
-A handle can also be waited for by either calling `handle.wait(timeout)` or `client.wait_all([handle, ...])`), blocking the current thread until the binding is done.
+A handle can also be waited for by calling `handle.wait(timeout)` or `client.wait_all([handle, ...], timeout_each=5)`, blocking the current thread until the binding is done.
+
+`timeout_each` applies independently to every handle. Consequently, the total wait may be as long as the number of handles multiplied by `timeout_each`.
 
 ## Subscription Models
 
