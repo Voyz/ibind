@@ -248,6 +248,10 @@ class MarketHistorySubscription(IbkrSubscription):
             raise ValueError('Server ID already set')
         self.server_id.append(server_id)
 
+    def clear_server_id(self):
+        """Clear the server ID, typically needed after reconnect."""
+        self.server_id.clear()
+
     def has_server_id(self) -> bool:
         return len(self.server_id) > 0
 

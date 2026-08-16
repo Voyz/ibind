@@ -326,6 +326,22 @@ class TestMarketHistorySubscription:
         assert sub.get_server_id() is None
 
     @capture_logs()
+    def test_clear_server_id(self, sub):
+        """MarketHistorySubscription clear_server_id clears the server_id."""
+        sub.set_server_id('server_123')
+        assert sub.has_server_id() is True
+        sub.clear_server_id()
+        assert sub.has_server_id() is False
+        assert sub.get_server_id() is None
+
+    @capture_logs()
+    def test_clear_server_id_when_not_set(self, sub):
+        """MarketHistorySubscription clear_server_id works when no server_id is set."""
+        assert sub.has_server_id() is False
+        sub.clear_server_id()
+        assert sub.has_server_id() is False
+
+    @capture_logs()
     def test_binding_key(self, sub):
         """MarketHistorySubscription generates correct binding key."""
         assert sub.binding_key() == 'mh+67890'

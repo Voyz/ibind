@@ -237,11 +237,12 @@ class TestIbkrWsClientV2Init:
         client = IbkrWsClientV2()
 
         ## Assert
-        assert mock_runtime_instance.add_internal_callback.call_count == 4
+        assert mock_runtime_instance.add_internal_callback.call_count == 5
         mock_runtime_instance.add_internal_callback.assert_any_call(events.AuthenticationStatus, client._on_authentication_status)
         mock_runtime_instance.add_internal_callback.assert_any_call(events.WaitingForSession, client._on_waiting_for_session)
         mock_runtime_instance.add_internal_callback.assert_any_call(events.System, client._on_system)
         mock_runtime_instance.add_internal_callback.assert_any_call(events.ServerId, client._on_server_id)
+        mock_runtime_instance.add_internal_callback.assert_any_call(events.WsStopping, client._on_stopping)
 
 
 class TestIbkrWsClientV2Callbacks:
@@ -381,8 +382,8 @@ class TestIbkrWsClientV2Callbacks:
         assert subscription.has_server_id() is False
 
     @capture_logs()
-    def test_on_server_id_does_not_update_subscription_already_has_server_id(self, client):
-        """_on_server_id does not update subscription that already has server_id."""
+    def test_on_server_id_replaces_stale_server_id(self, client):
+        """_on_server_id clears and replaces stale server_id (reconnect scenario)."""
         ## Arrange
         subscription = MarketHistorySubscription(conid='12345')
         subscription.set_server_id('srv_old')
@@ -394,7 +395,7 @@ class TestIbkrWsClientV2Callbacks:
         client._on_server_id(event)
 
         ## Assert
-        assert subscription.get_server_id() == 'srv_old'
+        assert subscription.get_server_id() == 'srv_new'
 
 
 class TestIbkrWsClientV2GetCookie:
@@ -498,6 +499,11 @@ class TestIbkrWsClientV2Subscribe:
         client._runtime = MagicMock()
         subscription = MarketHistorySubscription(conid='12345')
         handle = MagicMock(spec=SubscriptionHandle)
+        handle.binding_key = 'smh+12345'
+
+        binding = MagicMock()
+        binding.subscription = subscription
+        client._runtime.subscription_controller._bindings = {'smh+12345': binding}
         client._runtime.subscription_controller.subscribe.return_value = handle
 
         ## Act
@@ -528,22 +534,27 @@ class TestIbkrWsClientV2Subscribe:
 
     @capture_logs()
     def test_subscribe_market_history_replaces_existing_for_same_conid(self, client):
-        """subscribe replaces existing MarketHistorySubscription for same conid."""
+        """subscribe tracks controller's retained subscription, not caller's instance."""
         ## Arrange
         client._runtime = MagicMock()
         subscription1 = MarketHistorySubscription(conid='12345', period='1d')
         subscription2 = MarketHistorySubscription(conid='12345', period='1w')
         handle = MagicMock(spec=SubscriptionHandle)
+        handle.binding_key = 'smh+12345'
+
+        binding = MagicMock()
+        binding.subscription = subscription1
+        client._runtime.subscription_controller._bindings = {'smh+12345': binding}
         client._runtime.subscription_controller.subscribe.return_value = handle
 
         ## Act
         client.subscribe(subscription1)
         client.subscribe(subscription2)
 
-        ## Assert
+        ## Assert - controller retained subscription1, so that's what gets tracked
         key = (events.MarketHistory, '12345')
         assert len(client._mh_subscriptions) == 1
-        assert client._mh_subscriptions[key] is subscription2
+        assert client._mh_subscriptions[key] is subscription1
 
 
 class TestIbkrWsClientV2Unsubscribe:
@@ -839,3 +850,108 @@ class TestIbkrWsClientV2Tic:
         assert callback_func() is False
         client._tic_message = {'lastAccessed': 2000}
         assert callback_func() is True
+
+
+class TestIbkrWsClientV2MarketHistoryServerIdTracking:
+    @capture_logs()
+    def test_subscribe_tracks_controller_retained_instance(self, client):
+        """subscribe stores controller's retained subscription instance, not caller's instance."""
+        ## Arrange
+        client._runtime = MagicMock()
+        subscription_a = MarketHistorySubscription(conid='12345', period='1d')
+        subscription_b = MarketHistorySubscription(conid='12345', period='1d')
+
+        handle = MagicMock(spec=SubscriptionHandle)
+        handle.binding_key = 'smh+12345'
+
+        binding = MagicMock()
+        binding.subscription = subscription_a
+        client._runtime.subscription_controller._bindings = {'smh+12345': binding}
+        client._runtime.subscription_controller.subscribe.return_value = handle
+
+        ## Act - subscribe with instance A first
+        client.subscribe(subscription_a)
+
+        ## Assert - instance A is tracked
+        key = (events.MarketHistory, '12345')
+        assert client._mh_subscriptions[key] is subscription_a
+
+        ## Act - subscribe with equivalent instance B (idempotent)
+        client.subscribe(subscription_b)
+
+        ## Assert - controller's retained instance A is still tracked, not B
+        assert client._mh_subscriptions[key] is subscription_a
+        assert client._mh_subscriptions[key] is not subscription_b
+
+    @capture_logs()
+    def test_on_server_id_clears_stale_id_on_reconnect(self, client):
+        """_on_server_id clears stale server_id before setting new one on reconnect."""
+        ## Arrange
+        subscription = MarketHistorySubscription(conid='12345')
+        subscription.set_server_id('old_server_id')
+        key = (events.MarketHistory, '12345')
+        client._mh_subscriptions[key] = subscription
+
+        event = events.ServerId(conid='12345', server_id='new_server_id', target_event_type=events.MarketHistory)
+
+        ## Act
+        client._on_server_id(event)
+
+        ## Assert - old ID was cleared and new ID was set
+        assert subscription.has_server_id() is True
+        assert subscription.get_server_id() == 'new_server_id'
+
+    @capture_logs()
+    def test_on_stopping_clears_all_market_history_server_ids(self, client):
+        """_on_stopping clears all Market History server IDs to prepare for reconnect."""
+        ## Arrange
+        sub1 = MarketHistorySubscription(conid='12345')
+        sub1.set_server_id('srv_1')
+        sub2 = MarketHistorySubscription(conid='67890')
+        sub2.set_server_id('srv_2')
+        sub3 = MarketHistorySubscription(conid='11111')
+
+        client._mh_subscriptions = {
+            (events.MarketHistory, '12345'): sub1,
+            (events.MarketHistory, '67890'): sub2,
+            (events.MarketHistory, '11111'): sub3,
+        }
+
+        stopping_event = events.WsStopping(previous_state=WsState.AUTHENTICATED, current_state=WsState.STOPPING)
+
+        ## Act
+        client._on_stopping(stopping_event)
+
+        ## Assert - all server IDs cleared
+        assert sub1.has_server_id() is False
+        assert sub2.has_server_id() is False
+        assert sub3.has_server_id() is False
+
+    @capture_logs()
+    def test_clear_market_history_server_ids_handles_empty_subscriptions(self, client):
+        """_clear_market_history_server_ids handles empty subscription dict without error."""
+        ## Arrange
+        client._mh_subscriptions = {}
+
+        ## Act & Assert - should not raise
+        client._clear_market_history_server_ids()
+
+    @capture_logs()
+    def test_clear_market_history_server_ids_only_clears_subscriptions_with_ids(self, client):
+        """_clear_market_history_server_ids only clears subscriptions that have server IDs."""
+        ## Arrange
+        sub_with_id = MarketHistorySubscription(conid='12345')
+        sub_with_id.set_server_id('srv_1')
+        sub_without_id = MarketHistorySubscription(conid='67890')
+
+        client._mh_subscriptions = {
+            (events.MarketHistory, '12345'): sub_with_id,
+            (events.MarketHistory, '67890'): sub_without_id,
+        }
+
+        ## Act
+        client._clear_market_history_server_ids()
+
+        ## Assert
+        assert sub_with_id.has_server_id() is False
+        assert sub_without_id.has_server_id() is False

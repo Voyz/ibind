@@ -151,6 +151,7 @@ class IbkrWsClientV2:
         self._runtime.add_internal_callback(events.WaitingForSession, self._on_waiting_for_session)
         self._runtime.add_internal_callback(events.System, self._on_system)
         self._runtime.add_internal_callback(events.ServerId, self._on_server_id)
+        self._runtime.add_internal_callback(events.WsStopping, self._on_stopping)
 
     def _on_waiting_for_session(self, _):  # pragma: no cover
         self._runtime.set_state(WsState.OPEN)
@@ -175,8 +176,19 @@ class IbkrWsClientV2:
         self._conid_server_id_pairs[event.target_event_type][event.conid] = event.server_id
         key = (event.target_event_type, event.conid)
         subscription = self._mh_subscriptions.get(key)
-        if subscription and not subscription.has_server_id():
+        if subscription:
+            if subscription.has_server_id():
+                subscription.clear_server_id()
             subscription.set_server_id(event.server_id)
+
+    def _on_stopping(self, _):
+        self._clear_market_history_server_ids()
+
+    def _clear_market_history_server_ids(self):
+        """Clear all Market History server IDs to prepare for reconnect."""
+        for subscription in self._mh_subscriptions.values():
+            if subscription.has_server_id():
+                subscription.clear_server_id()
 
     def _get_cookie(self):
         status = self._ibkr_client.tickle()
@@ -239,10 +251,12 @@ class IbkrWsClientV2:
         Note:
             - This method is non-blocking and idempotent.
         """
+        handle = self._runtime.subscription_controller.subscribe(subscription)
         if isinstance(subscription, MarketHistorySubscription):
             key = (subscription.event_type, subscription.conid)
-            self._mh_subscriptions[key] = subscription
-        return self._runtime.subscription_controller.subscribe(subscription)
+            retained_subscription = self._runtime.subscription_controller._bindings[handle.binding_key].subscription
+            self._mh_subscriptions[key] = retained_subscription
+        return handle
 
     def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
         """
