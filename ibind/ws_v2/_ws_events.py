@@ -242,6 +242,7 @@ class QueueSink:
                 If False, drops newest events. Default: var.IBIND_WS_DROP_OLDEST (True).
         """
         self._queues = {}
+        self._queues_lock = threading.RLock()
         self._maxsize = maxsize
         self._drop_oldest = drop_oldest
 
@@ -258,11 +259,12 @@ class QueueSink:
         return QueueAccessor(self._get_queue(event_type), event_type)
 
     def _get_queue(self, event_type: type[WsEvent]) -> Queue:  # pragma: no cover
-        try:
-            return self._queues[event_type]
-        except KeyError:
-            self._queues[event_type] = Queue(maxsize=self._maxsize)
-            return self._queues[event_type]
+        with self._queues_lock:
+            try:
+                return self._queues[event_type]
+            except KeyError:
+                self._queues[event_type] = Queue(maxsize=self._maxsize)
+                return self._queues[event_type]
 
     def get(self, event_type: type[WsEvent], block: bool = False, timeout: float = None) -> Any:
         """
