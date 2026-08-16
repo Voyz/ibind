@@ -2,8 +2,7 @@
 *.iml
 __pycache__
 ibind.egg-info
-build/docs/.generated-files.txt
-build/docs/mkdocs.yml
+build/docs/
 
 .venv
 .env
