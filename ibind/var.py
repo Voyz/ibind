@@ -108,6 +108,12 @@ IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', 
 IBIND_WS_SKIP_UTF8_VALIDATION = to_bool(os.environ.get('IBIND_WS_SKIP_UTF8_VALIDATION', True))
 """ Whether to skip UTF-8 validation for WebSocket messages. """
 
+IBIND_WS_MAX_QUEUE_SIZE = int(os.environ.get('IBIND_WS_MAX_QUEUE_SIZE', 10_000))
+""" Maximum queue size for WebSocket events. """
+
+IBIND_WS_DROP_OLDEST = to_bool(os.environ.get('IBIND_WS_DROP_OLDEST', True))
+""" Whether to drop oldest events when full. If False, drops newest events. """
+
 ##### OAuth common #####
 
 IBIND_USE_OAUTH = to_bool(os.environ.get('IBIND_USE_OAUTH', False))

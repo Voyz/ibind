@@ -6,6 +6,7 @@ from typing import Protocol, Callable, TypeVar, List, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ibind import var
 from ibind.base.queue_controller import QueueAccessor
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import OneOrMany, exception_to_string, tname
@@ -218,16 +219,31 @@ class CallbackSink:
 
 
 class QueueSink:
-    # TODO: add queue size limits
     """
     Sink that stores events in separate queues per event type.
 
     Maintains a dictionary of queues, one for each event type. Events can be
     retrieved synchronously or asynchronously via queue accessors.
+
+    When queues reach maxsize, events are dropped according to the drop_oldest policy.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        maxsize: int = var.IBIND_WS_MAX_QUEUE_SIZE,
+        drop_oldest: bool = var.IBIND_WS_DROP_OLDEST,
+    ):
+        """
+        Create a queue sink.
+
+        Args:
+            maxsize (int, optional): Maximum queue size per event type. 0 = unbounded. Default: var.IBIND_WS_MAX_QUEUE_SIZE.
+            drop_oldest (bool, optional): Whether to drop oldest events when full.
+                If False, drops newest events. Default: var.IBIND_WS_DROP_OLDEST (True).
+        """
         self._queues = {}
+        self._maxsize = maxsize
+        self._drop_oldest = drop_oldest
 
     def new_queue_accessor(self, event_type: type[WsEvent]) -> QueueAccessor:
         """
@@ -245,7 +261,7 @@ class QueueSink:
         try:
             return self._queues[event_type]
         except KeyError:
-            self._queues[event_type] = Queue()
+            self._queues[event_type] = Queue(maxsize=self._maxsize)
             return self._queues[event_type]
 
     def get(self, event_type: type[WsEvent], block: bool = False, timeout: float = None) -> Any:
@@ -285,7 +301,29 @@ class QueueSink:
             event (WsEvent): The event to emit.
         """
         queue = self._get_queue(type(event))
-        queue.put(event)
+
+        if self._maxsize == 0:
+            queue.put(event)
+            return
+
+        try:
+            queue.put_nowait(event)
+            return
+        except Full:
+            if not self._drop_oldest:
+                _LOGGER.warning(f'{self}: Queue full for {type(event).__name__}; dropping newest event')
+                return
+
+            try:
+                dropped = queue.get_nowait()
+                _LOGGER.warning(f'{self}: Queue full for {type(event).__name__}; dropping oldest event: {dropped}')
+            except Empty:
+                pass
+
+            try:
+                queue.put_nowait(event)
+            except Full:
+                _LOGGER.warning(f'{self}: Queue still full for {type(event).__name__}; dropping event: {event}')
 
     def __str__(self):  # pragma: no cover
         return f'{self.__class__.__qualname__}()'
@@ -336,8 +374,8 @@ class AsyncSink:
     def __init__(
         self,
         sink: EventSink,
-        maxsize: int = 10_000,
-        drop_oldest: bool = True,
+        maxsize: int = var.IBIND_WS_MAX_QUEUE_SIZE,
+        drop_oldest: bool = var.IBIND_WS_DROP_OLDEST,
         stop_timeout: float = 5,
         cycle_interval: float = 0.25,
     ):
@@ -346,9 +384,9 @@ class AsyncSink:
 
         Args:
             sink (EventSink): The sink to forward events to.
-            maxsize (int, optional): Maximum queue size. Default: 10,000.
+            maxsize (int, optional): Maximum queue size. Default: var.IBIND_WS_MAX_QUEUE_SIZE.
             drop_oldest (bool, optional): Whether to drop oldest events when full.
-                If False, drops newest events. Default: True.
+                If False, drops newest events. Default: var.IBIND_WS_DROP_OLDEST (True).
             stop_timeout (float, optional): Maximum time to wait for thread to stop in seconds. Default: 5.
             cycle_interval (float, optional): Interval between queue processing cycles in seconds. Default: 0.25.
         """

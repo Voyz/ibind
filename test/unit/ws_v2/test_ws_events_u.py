@@ -326,6 +326,156 @@ class TestQueueSink:
         assert isinstance(retrieved2, WsClose)
         assert queue_sink.get(WsOpen, block=False) is None
 
+    @capture_logs(error_level='WARNING', expected_errors=['Queue full for WsOpen; dropping oldest event'], partial_match=True)
+    def test_bounded_queue_drops_oldest_when_full(self):
+        """QueueSink with default maxsize drops oldest events when queue is full."""
+        ## Arrange
+        sink = QueueSink(maxsize=3, drop_oldest=True)
+        events = [
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+        ]
+
+        ## Act
+        for event in events[:3]:
+            sink.emit(event)
+        sink.emit(events[3])
+
+        ## Assert
+        retrieved1 = sink.get(WsOpen, block=False)
+        retrieved2 = sink.get(WsOpen, block=False)
+        retrieved3 = sink.get(WsOpen, block=False)
+        retrieved4 = sink.get(WsOpen, block=False)
+
+        assert retrieved1 is events[1]
+        assert retrieved2 is events[2]
+        assert retrieved3 is events[3]
+        assert retrieved4 is None
+
+    @capture_logs(error_level='WARNING', expected_errors=['Queue full for WsOpen; dropping newest event'], partial_match=True)
+    def test_bounded_queue_drops_newest_when_full(self):
+        """QueueSink with drop_oldest=False drops newest events when queue is full."""
+        ## Arrange
+        sink = QueueSink(maxsize=3, drop_oldest=False)
+        events = [
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+            WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN),
+        ]
+
+        ## Act
+        for event in events[:3]:
+            sink.emit(event)
+        sink.emit(events[3])
+
+        ## Assert
+        retrieved1 = sink.get(WsOpen, block=False)
+        retrieved2 = sink.get(WsOpen, block=False)
+        retrieved3 = sink.get(WsOpen, block=False)
+        retrieved4 = sink.get(WsOpen, block=False)
+
+        assert retrieved1 is events[0]
+        assert retrieved2 is events[1]
+        assert retrieved3 is events[2]
+        assert retrieved4 is None
+
+    @capture_logs()
+    def test_unbounded_queue_accepts_all_events(self):
+        """QueueSink with maxsize=0 accepts unlimited events without dropping."""
+        ## Arrange
+        sink = QueueSink(maxsize=0)
+        events = [WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN) for _ in range(100)]
+
+        ## Act
+        for event in events:
+            sink.emit(event)
+
+        ## Assert
+        for i in range(100):
+            retrieved = sink.get(WsOpen, block=False)
+            assert retrieved is events[i]
+        assert sink.get(WsOpen, block=False) is None
+
+    @capture_logs()
+    def test_default_maxsize_is_10000(self):
+        """QueueSink defaults to maxsize=10_000."""
+        ## Act
+        sink = QueueSink()
+
+        ## Assert
+        assert sink._maxsize == 10_000
+
+    @capture_logs()
+    def test_bounded_queues_independent_per_event_type(self):
+        """QueueSink enforces maxsize independently for each event type."""
+        ## Arrange
+        sink = QueueSink(maxsize=2)
+        open_events = [WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN) for _ in range(2)]
+        close_events = [WsClose(close_status_code=1000, close_msg='', previous_state=WsState.OPEN, current_state=WsState.CLOSED) for _ in range(2)]
+
+        ## Act
+        for event in open_events:
+            sink.emit(event)
+        for event in close_events:
+            sink.emit(event)
+
+        ## Assert
+        assert sink.get(WsOpen, block=False) is open_events[0]
+        assert sink.get(WsOpen, block=False) is open_events[1]
+        assert sink.get(WsClose, block=False) is close_events[0]
+        assert sink.get(WsClose, block=False) is close_events[1]
+
+    def test_emit_handles_empty_exception_when_dropping_oldest(self):
+        """QueueSink handles Empty exception when queue becomes empty between full check and get."""
+        ## Arrange
+        sink = QueueSink(maxsize=1, drop_oldest=True)
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        queue = sink._get_queue(WsOpen)
+
+        ## Act
+        with patch.object(queue, 'put_nowait', side_effect=[Full(), None]) as mock_put:
+            with patch.object(queue, 'get_nowait', side_effect=Empty):
+                sink.emit(event1)
+
+        ## Assert
+        assert mock_put.call_count == 2
+
+    def test_emit_handles_empty_exception_when_dropping_oldest_logs_warning(self):
+        """QueueSink logs warning when queue becomes empty between full check and get."""
+        ## Arrange
+        sink = QueueSink(maxsize=1, drop_oldest=True)
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        queue = sink._get_queue(WsOpen)
+
+        ## Act
+        with patch.object(queue, 'put_nowait', side_effect=[Full(), None]) as mock_put:
+            with patch.object(queue, 'get_nowait', side_effect=Empty):
+                sink.emit(event1)
+
+        ## Assert
+        assert mock_put.call_count == 2
+
+    @capture_logs(expected_errors=['dropping oldest event', 'still full'], partial_match=True)
+    def test_emit_warns_when_queue_still_full_after_drop(self, **kwargs):
+        """QueueSink logs warning when queue is still full after dropping oldest event."""
+        ## Arrange
+        cm_slog = kwargs['_cm_ibind']
+        sink = QueueSink(maxsize=1, drop_oldest=True)
+        event1 = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+        event2 = WsAuthenticated(previous_state=WsState.OPEN, current_state=WsState.AUTHENTICATED)
+        queue = sink._get_queue(WsAuthenticated)
+
+        ## Act
+        with patch.object(queue, 'put_nowait', side_effect=[Full(), Full()]):
+            with patch.object(queue, 'get_nowait', return_value=event1):
+                sink.emit(event2)
+
+        ## Assert
+        cm_slog.partial_log('still full')
+
 
 class TestCompositeSink:
     @capture_logs()
