@@ -15,9 +15,7 @@
     </a>
 </p>
 
-IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (recently rebranded to Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with [OAuth 1.0a][wiki-oauth1a] support.
-
-_Note: IBind currently supports only the Web API 1.0 since the [newer Web API][web-api] seems to be still in beta and is not fully documented. Some of its features may work, but it is recommended to use the Web API 1.0's documentation for the time being. Once a complete version of the new Web API is released IBind will be extended to support it._
+IBind is an unofficial Python API client library for the [Interactive Brokers Client Portal Web API.][ibkr-docs] (also known as Web API 1.0 or CPAPI 1.0) It supports both REST and WebSocket APIs of the IBKR Web API 1.0. Now fully headless with [OAuth 1.0a][wiki-oauth1a] support.
 
 ## Installation
 
@@ -182,9 +180,8 @@ Thanks and have an awesome day 👋
 [ibkr-ws-client-docs]: ./docs/websocket/overview.md
 
 [ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
-[ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
-[ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
-[web-api]: https://www.interactivebrokers.com/campus/ibkr-api-page/webapi-doc
+[ibkr-endpoints]: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/introduction
+[ibkr-websocket]: https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
 
 
 [wiki]: ./docs/index.md
