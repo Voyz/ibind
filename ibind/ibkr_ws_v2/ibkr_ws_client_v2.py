@@ -211,11 +211,14 @@ class IbkrWsClientV2:
         """
         return self._runtime.stop()
 
-    def hard_reset(self):  # pragma: no cover
+    def hard_reset(self) -> bool:  # pragma: no cover
         """
         Perform a hard reset of the WebSocket client, stopping and restarting the runtime.
+
+        Returns:
+            bool: True if reset completed successfully, False if stop failed.
         """
-        self._runtime.hard_reset()
+        return self._runtime.hard_reset()
 
     def reset_websocket_app(self):  # pragma: no cover
         """

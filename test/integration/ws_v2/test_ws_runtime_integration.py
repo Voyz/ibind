@@ -472,11 +472,11 @@ class TestRestartAndHardResetScenarios:
 
     @capture_logs(
         logger_level='ERROR',
-        expected_errors=['Failed to stop transport thread', 'Runtime thread failed to stop'],
+        expected_errors=['Failed to stop transport thread', 'Transport thread failed to stop within timeout', 'Runtime thread failed to stop within timeout', 'Stop incomplete'],
         partial_match=True,
     )
-    def test_restart_replaces_threads_that_failed_to_stop(self, runtime):
-        """A restart must create replacement workers after old threads time out."""
+    def test_restart_blocked_when_threads_fail_to_stop(self, runtime):
+        """Stop returns False and start is blocked when threads fail to stop."""
         ## Arrange
         runtime.set_state(WsState.AUTHENTICATED)
         old_transport_thread, old_runtime_thread = self._install_unstoppable_threads(runtime)
@@ -485,20 +485,26 @@ class TestRestartAndHardResetScenarios:
             patch.object(runtime._runtime_worker, 'wait_for_one_cycle'),
             patch.object(runtime._lifecycle, '_new_runtime_thread') as new_runtime_thread,
             patch.object(runtime._lifecycle, 'new_transport_thread') as new_transport_thread,
-            patch('ibind.ws_v2.runtime.ws_lifecycle.wait_until', return_value=True),
         ):
-            ## Act
-            assert runtime.stop() is True
-            assert runtime.start() is True
-            runtime._lifecycle.maintain_transport()
+            ## Act 1: stop fails
+            stop_result = runtime.stop()
 
-        # The mocked startup does not create workers, so restore a stopped fixture state.
+            ## Assert 1: stop returns False, threads still referenced
+            assert stop_result is False
+            assert runtime._lifecycle._transport_thread is old_transport_thread
+            assert runtime._lifecycle._runtime_thread is old_runtime_thread
+            assert runtime.get_state() == WsState.STOPPING
+
+            ## Act 2: start is blocked
+            start_result = runtime.start()
+
+            ## Assert 2: start returns False, no new threads created
+            assert start_result is False
+            new_runtime_thread.assert_not_called()
+            new_transport_thread.assert_not_called()
+
+        # Restore fixture state
         runtime._runtime_worker.running = False
         runtime.set_state(WsState.STOPPED)
         runtime._lifecycle._runtime_thread = None
-
-        ## Assert
-        old_transport_thread.join.assert_called_once()
-        old_runtime_thread.join.assert_called_once()
-        new_runtime_thread.assert_called_once_with()
-        new_transport_thread.assert_called_once_with()
+        runtime._lifecycle._transport_thread = None

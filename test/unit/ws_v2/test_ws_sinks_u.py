@@ -488,7 +488,7 @@ class TestAsyncSink:
 
     @capture_logs()
     def test_stop_terminates_thread(self, noop_sink):
-        """AsyncSink.stop terminates the background thread."""
+        """AsyncSink.stop terminates the background thread and clears reference."""
         ## Arrange
         sink = AsyncSink(noop_sink)
         sink.start()
@@ -539,6 +539,29 @@ class TestAsyncSink:
 
         ## Cleanup
         sink._running = False
+
+    @capture_logs(logger_level='ERROR', expected_errors=['AsyncSink thread failed to stop within timeout'], partial_match=True)
+    def test_stop_returns_false_when_thread_fails_to_stop(self, noop_sink):
+        """AsyncSink.stop returns False and keeps thread reference when join times out."""
+        ## Arrange
+        sink = AsyncSink(noop_sink, stop_timeout=0.1)
+        sink.start()
+        original_thread = sink._thread
+
+        mock_thread = MagicMock()
+        mock_thread.is_alive.return_value = True
+        sink._thread = mock_thread
+
+        ## Act
+        result = sink.stop()
+
+        ## Assert
+        assert result is False
+        assert sink._running is False
+        assert sink._thread is mock_thread
+
+        ## Cleanup
+        original_thread.join(timeout=1)
 
     @capture_logs()
     def test_emit_queues_event(self, sample_event):
@@ -683,3 +706,37 @@ class TestAsyncSink:
         with patch.object(sink._queue, 'put_nowait', side_effect=[Full, Full]):
             with patch.object(sink._queue, 'get_nowait', return_value=event1):
                 sink.emit(event2)
+
+    @capture_logs(logger='ibind.ibkr_ws_client', logger_level='DEBUG', error_level='ERROR', expected_errors=['AsyncSink thread failed to stop within timeout', 'Event queue not empty when stopping; 1 events will remain unprocessed'], partial_match=True)
+    def test_stop_warns_when_queue_not_empty_and_thread_timeout(self, noop_sink):
+        """AsyncSink logs warning about unprocessed events when thread times out with non-empty queue."""
+        ## Arrange
+        sink = AsyncSink(noop_sink, stop_timeout=0.1)
+        event = WsOpen(previous_state=WsState.STARTING, current_state=WsState.OPEN)
+
+        # Mock _consume_queue to prevent the thread from consuming events
+        sink._consume_queue = MagicMock()
+
+        # Start the sink and immediately replace the thread with a mock
+        sink.start()
+        original_thread = sink._thread
+
+        # Put an event in the queue to simulate non-empty queue
+        sink._queue.put(event)
+        assert sink._queue.qsize() == 1
+
+        # Mock the thread to simulate timeout scenario
+        mock_thread = MagicMock()
+        mock_thread.is_alive.return_value = True
+        sink._thread = mock_thread
+
+        ## Act
+        result = sink.stop()
+
+        ## Assert
+        assert result is False
+        assert sink._running is False
+        assert sink._thread is mock_thread
+
+        ## Cleanup
+        original_thread.join(timeout=1)

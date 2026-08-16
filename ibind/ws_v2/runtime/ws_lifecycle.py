@@ -68,8 +68,12 @@ class WsLifecycle:
 
             self._transport_thread.join(self._connection_timeout)
             is_alive = self._transport_thread.is_alive()
-            self._transport_thread = None
-            return not is_alive
+            if not is_alive:
+                self._transport_thread = None
+                return True
+            else:
+                _LOGGER.error(f'{self}: Transport thread failed to stop within timeout, still alive')
+                return False
         except Exception as e:
             _LOGGER.error(f'{self}: Failed to stop transport thread: {e}')
 
@@ -83,11 +87,15 @@ class WsLifecycle:
             bool: True if connection authenticated within timeout, False on timeout or if already started.
         """
         if self._state_manager.get_state() != WsState.STOPPED:
-            return
+            return False
 
         if self._runtime_thread is not None and self._runtime_thread.is_alive():
             _LOGGER.error(f'{self}: Runtime thread must be stopped and joined before starting')
-            return
+            return False
+
+        if self._transport_thread is not None and self._transport_thread.is_alive():
+            _LOGGER.error(f'{self}: Transport thread must be stopped and joined before starting')
+            return False
 
         self._transport.set_degraded(False)
         _LOGGER.info(f'{self}: Starting WebSocket runtime')
@@ -110,7 +118,7 @@ class WsLifecycle:
         to complete. Must be called from a thread other than the runtime thread.
 
         Returns:
-            bool: True if stop completed successfully.
+            bool: True if all threads stopped cleanly, False if threads failed to stop within timeout.
 
         Raises:
             RuntimeError: If called from within the runtime thread.
@@ -129,27 +137,35 @@ class WsLifecycle:
         self._state_manager.set_state(WsState.STOPPING)
         transport_thread_stopped = self._stop_transport_thread()
         if not transport_thread_stopped:
-            _LOGGER.error(f'{self}: Failed to stop transport thread, abandoning...')
-            self._transport_thread = None
+            _LOGGER.error(f'{self}: Failed to stop transport thread')
+
         self._transport.set_degraded(True)
 
         self._runtime_worker.running = False
+        runtime_thread_stopped = True
         if self._runtime_thread is not None:
             self._runtime_thread.join(self._connection_timeout)
+            if self._runtime_thread.is_alive():
+                _LOGGER.error(f'{self}: Runtime thread failed to stop within timeout, still alive')
+                runtime_thread_stopped = False
+            else:
+                self._runtime_thread = None
 
-        if self._runtime_thread.is_alive():
-            _LOGGER.error(f'{self}: Runtime thread failed to stop, abandoning...')
+        if transport_thread_stopped and runtime_thread_stopped:
+            self._state_manager.set_state(WsState.STOPPED)
+            return True
+        else:
+            _LOGGER.error(f'{self}: Stop incomplete - transport_ok={transport_thread_stopped}, runtime_ok={runtime_thread_stopped}')
+            return False
 
-        self._runtime_thread = None
-
-        self._state_manager.set_state(WsState.STOPPED)
-        return True
-
-    def hard_reset(self) -> None:
+    def hard_reset(self) -> bool:
         """
         Perform a hard reset by stopping and restarting the runtime.
 
         Must be called from a thread other than the runtime or transport threads.
+
+        Returns:
+            bool: True if reset completed successfully, False if stop failed.
 
         Raises:
             RuntimeError: If called from within the runtime or transport thread.
@@ -159,8 +175,11 @@ class WsLifecycle:
         if threading.current_thread() in [self._runtime_thread, self._transport_thread]:
             raise RuntimeError(f'{self}: Hard reset called from Runtime or Transport thread. Ensure it is called from a separate thread')
 
-        self.stop()
-        self.start()
+        stop_ok = self.stop()
+        if not stop_ok:
+            _LOGGER.error(f'{self}: Hard reset aborted - stop failed, threads may still be running')
+            return False
+        return self.start()
 
     def reset_websocket_app(self):  # pragma: no cover
         """Reset the transport's WebSocketApp."""

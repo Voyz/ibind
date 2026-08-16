@@ -1,14 +1,17 @@
 # Shut down cleanly
 
-Call `client.shutdown()` to stop the client. It blocks until all internal threads have stopped.
+Call `client.shutdown()` to stop the client. It blocks until all internal threads have stopped or the timeout expires. Always check the return value to confirm clean shutdown.
 
 ```python
 ws_client.start()
 
 # ... your application logic ...
 
-ws_client.shutdown()
+if not ws_client.shutdown():
+    logger.error('Shutdown failed - threads did not stop within timeout')
 ```
+
+If `shutdown()` returns `False`, threads failed to stop within the timeout and the client cannot be safely restarted. This typically indicates a deadlock or blocking operation in a callback. Check logs for details.
 
 ## Unsubscribe before shutting down
 

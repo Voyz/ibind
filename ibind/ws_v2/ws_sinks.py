@@ -305,17 +305,20 @@ class AsyncSink:
         self._running = False
         self._wait_event.set()
 
-        succeeded = True
         if self._thread is not None:
             self._thread.join(self._stop_timeout)
-            succeeded = not self._thread.is_alive()
-
-        self._thread = None
+            if self._thread.is_alive():
+                _LOGGER.error(f'{self}: AsyncSink thread failed to stop within timeout, still alive')
+                if self._queue.qsize() > 0:
+                    _LOGGER.warning(f'{self}: Event queue not empty when stopping; {self._queue.qsize()} events will remain unprocessed')
+                return False
+            else:
+                self._thread = None
 
         if self._queue.qsize() > 0:
             _LOGGER.warning(f'{self}: Event queue not empty when stopping; discarding {self._queue.qsize()} events')
 
-        return succeeded
+        return True
 
     def emit(self, event: WsEvent) -> None:
         """

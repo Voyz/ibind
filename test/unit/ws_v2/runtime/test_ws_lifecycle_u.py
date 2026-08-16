@@ -74,9 +74,9 @@ class TestStopTransportThread:
         lifecycle._transport.stop.assert_called_once()
         assert result is True
 
-    @capture_logs()
+    @capture_logs(logger_level='ERROR', expected_errors=['Transport thread failed to stop within timeout'], partial_match=True)
     def test_stop_transport_thread_returns_false_when_thread_alive(self, lifecycle):
-        """WsLifecycle._stop_transport_thread returns False when thread is still alive."""
+        """WsLifecycle._stop_transport_thread returns False and keeps reference when thread is still alive."""
         ## Arrange
         mock_thread = MagicMock()
         mock_thread.is_alive.return_value = True
@@ -87,7 +87,7 @@ class TestStopTransportThread:
 
         ## Assert
         assert result is False
-        assert lifecycle._transport_thread is None
+        assert lifecycle._transport_thread is mock_thread
 
     @capture_logs(logger_level='ERROR', expected_errors=['Failed to stop transport thread'], partial_match=True)
     def test_stop_transport_thread_logs_exception(self, lifecycle):
@@ -104,8 +104,8 @@ class TestStopTransportThread:
 
 class TestStart:
     @capture_logs()
-    def test_start_returns_early_when_state_not_stopped(self, lifecycle):
-        """WsLifecycle.start returns early when state is not STOPPED."""
+    def test_start_returns_false_when_state_not_stopped(self, lifecycle):
+        """WsLifecycle.start returns False when state is not STOPPED."""
         ## Arrange
         lifecycle._state_manager.set_state(WsState.OPEN)
 
@@ -113,11 +113,11 @@ class TestStart:
         result = lifecycle.start()
 
         ## Assert
-        assert result is None
+        assert result is False
 
     @capture_logs(logger_level='ERROR', expected_errors=['Runtime thread must be stopped'], partial_match=True)
-    def test_start_returns_when_runtime_thread_alive(self, lifecycle):
-        """WsLifecycle.start returns early when runtime thread is still alive."""
+    def test_start_returns_false_when_runtime_thread_alive(self, lifecycle):
+        """WsLifecycle.start returns False when runtime thread is still alive."""
         ## Arrange
         lifecycle._state_manager.set_state(WsState.STOPPED)
         lifecycle._runtime_thread = MagicMock()
@@ -127,7 +127,21 @@ class TestStart:
         result = lifecycle.start()
 
         ## Assert
-        assert result is None
+        assert result is False
+
+    @capture_logs(logger_level='ERROR', expected_errors=['Transport thread must be stopped'], partial_match=True)
+    def test_start_returns_false_when_transport_thread_alive(self, lifecycle):
+        """WsLifecycle.start returns False when transport thread is still alive."""
+        ## Arrange
+        lifecycle._state_manager.set_state(WsState.STOPPED)
+        lifecycle._transport_thread = MagicMock()
+        lifecycle._transport_thread.is_alive.return_value = True
+
+        ## Act
+        result = lifecycle.start()
+
+        ## Assert
+        assert result is False
 
     @capture_logs(logger_level='INFO', expected_errors=['Starting WebSocket runtime'], partial_match=True)
     def test_start_sets_state_and_returns_true_on_success(self, lifecycle):
@@ -186,8 +200,8 @@ class TestStop:
             lifecycle.stop()
 
     @capture_logs(logger_level='INFO', expected_errors=['Stopping WebSocket runtime'], partial_match=True)
-    def test_stop_sets_running_false_and_stops_threads(self, lifecycle):
-        """WsLifecycle.stop sets running to False and stops all threads."""
+    def test_stop_returns_true_and_transitions_to_stopped_on_success(self, lifecycle):
+        """WsLifecycle.stop returns True and transitions to STOPPED when all threads stop cleanly."""
         ## Arrange
         lifecycle._state_manager.set_state(WsState.OPEN)
         lifecycle._runtime_worker.running = True
@@ -196,16 +210,17 @@ class TestStop:
 
         ## Act
         with patch.object(lifecycle, '_stop_transport_thread', return_value=True):
-            lifecycle.stop()
+            result = lifecycle.stop()
 
         ## Assert
+        assert result is True
         assert lifecycle._runtime_worker.running is False
         assert lifecycle._state_manager.get_state() == WsState.STOPPED
         assert lifecycle._runtime_thread is None
 
-    @capture_logs(logger_level='ERROR', expected_errors=['Failed to stop transport thread'], partial_match=True)
-    def test_stop_abandons_transport_thread_when_stop_fails(self, lifecycle):
-        """WsLifecycle.stop abandons transport thread when stop fails."""
+    @capture_logs(logger_level='ERROR', expected_errors=['Failed to stop transport thread', 'Stop incomplete'], partial_match=True)
+    def test_stop_returns_false_when_transport_thread_fails(self, lifecycle):
+        """WsLifecycle.stop returns False when transport thread fails to stop."""
         ## Arrange
         lifecycle._state_manager.set_state(WsState.OPEN)
         lifecycle._runtime_worker.running = True
@@ -214,27 +229,31 @@ class TestStop:
 
         ## Act
         with patch.object(lifecycle, '_stop_transport_thread', return_value=False):
-            lifecycle.stop()
+            result = lifecycle.stop()
 
         ## Assert
-        assert lifecycle._transport_thread is None
+        assert result is False
+        assert lifecycle._state_manager.get_state() == WsState.STOPPING
         lifecycle._transport.set_degraded.assert_called_once_with(True)
 
-    @capture_logs(logger_level='ERROR', expected_errors=['Runtime thread failed to stop'], partial_match=True)
-    def test_stop_abandons_runtime_thread_when_join_fails(self, lifecycle):
-        """WsLifecycle.stop abandons runtime thread when join times out."""
+    @capture_logs(logger_level='ERROR', expected_errors=['Runtime thread failed to stop within timeout', 'Stop incomplete'], partial_match=True)
+    def test_stop_returns_false_when_runtime_thread_fails(self, lifecycle):
+        """WsLifecycle.stop returns False and keeps reference when runtime thread fails to stop."""
         ## Arrange
         lifecycle._state_manager.set_state(WsState.OPEN)
         lifecycle._runtime_worker.running = True
-        lifecycle._runtime_thread = MagicMock()
-        lifecycle._runtime_thread.is_alive.return_value = True
+        mock_thread = MagicMock()
+        mock_thread.is_alive.return_value = True
+        lifecycle._runtime_thread = mock_thread
 
         ## Act
         with patch.object(lifecycle, '_stop_transport_thread', return_value=True):
-            lifecycle.stop()
+            result = lifecycle.stop()
 
         ## Assert
-        assert lifecycle._runtime_thread is None
+        assert result is False
+        assert lifecycle._runtime_thread is mock_thread
+        assert lifecycle._state_manager.get_state() == WsState.STOPPING
 
     @capture_logs(logger_level='INFO', expected_errors=['Stopping WebSocket runtime'], partial_match=True)
     def test_stop_waits_for_one_cycle(self, lifecycle):
@@ -266,19 +285,39 @@ class TestStop:
         ## Assert
         lifecycle._transport.set_degraded.assert_called_once_with(True)
 
+    @capture_logs(logger_level='ERROR', expected_errors=['Failed to stop transport thread', 'Runtime thread failed to stop', 'Stop incomplete'], partial_match=True)
+    def test_stop_returns_false_when_both_threads_fail(self, lifecycle):
+        """WsLifecycle.stop returns False when both threads fail to stop."""
+        ## Arrange
+        lifecycle._state_manager.set_state(WsState.OPEN)
+        lifecycle._runtime_worker.running = True
+        mock_runtime_thread = MagicMock()
+        mock_runtime_thread.is_alive.return_value = True
+        lifecycle._runtime_thread = mock_runtime_thread
+
+        ## Act
+        with patch.object(lifecycle, '_stop_transport_thread', return_value=False):
+            result = lifecycle.stop()
+
+        ## Assert
+        assert result is False
+        assert lifecycle._runtime_thread is mock_runtime_thread
+        assert lifecycle._state_manager.get_state() == WsState.STOPPING
+
 
 class TestHardReset:
     @capture_logs(logger_level='INFO', expected_errors=['Hard reset'], partial_match=True)
-    def test_hard_reset_stops_and_starts(self, lifecycle):
-        """WsLifecycle.hard_reset stops and restarts the lifecycle."""
+    def test_hard_reset_stops_and_starts_on_success(self, lifecycle):
+        """WsLifecycle.hard_reset stops and restarts the lifecycle when stop succeeds."""
         ## Arrange
-        lifecycle.stop = MagicMock()
-        lifecycle.start = MagicMock()
+        lifecycle.stop = MagicMock(return_value=True)
+        lifecycle.start = MagicMock(return_value=True)
 
         ## Act
-        lifecycle.hard_reset()
+        result = lifecycle.hard_reset()
 
         ## Assert
+        assert result is True
         lifecycle.stop.assert_called_once()
         lifecycle.start.assert_called_once()
 
@@ -301,6 +340,21 @@ class TestHardReset:
         ## Act & Assert
         with pytest.raises(RuntimeError, match='Hard reset called from Runtime or Transport thread'):
             lifecycle.hard_reset()
+
+    @capture_logs(logger_level='ERROR', expected_errors=['Hard reset', 'Hard reset aborted'], partial_match=True)
+    def test_hard_reset_aborts_when_stop_fails(self, lifecycle):
+        """WsLifecycle.hard_reset aborts and returns False when stop fails."""
+        ## Arrange
+        lifecycle.stop = MagicMock(return_value=False)
+        lifecycle.start = MagicMock()
+
+        ## Act
+        result = lifecycle.hard_reset()
+
+        ## Assert
+        assert result is False
+        lifecycle.stop.assert_called_once()
+        lifecycle.start.assert_not_called()
 
 
 class TestMaintainTransport:
