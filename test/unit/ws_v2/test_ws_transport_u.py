@@ -972,6 +972,7 @@ class TestConnect:
         mock_run_forever.assert_called_once()
         call_kwargs = mock_run_forever.call_args[1]
         assert call_kwargs['ping_interval'] == TEST_PING_INTERVAL
+        assert call_kwargs['ping_timeout'] == TEST_PING_TIMEOUT
         assert call_kwargs['reconnect'] == TEST_RECONNECT_TIMEOUT
 
     @capture_logs(logger_level='ERROR', expected_errors=['URL is invalid'], partial_match=True)

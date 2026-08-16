@@ -84,7 +84,7 @@ class WsTransport:
         get_cookie: Callable[[], str | None] = noop,
         get_header: Callable[[], Dict[str, Any] | None] = noop,
         ping_interval: float = 10,
-        ping_timeout: float = 10,
+        ping_timeout: float = 0.95,
         max_ping_interval: float = 20,
         connection_timeout: float = 5,
         reconnect_timeout: float = 5,
@@ -382,7 +382,7 @@ class WsTransport:
         try:
             self._wsa.run_forever(
                 ping_interval=self._ping_interval,
-                ping_timeout=self._ping_interval * 0.95,  # the timeout is set to a little sooner than the interval
+                ping_timeout=self._ping_timeout,
                 sslopt=self._sslopt,
                 reconnect=cast(int, self._reconnect_timeout),  # floats are de facto valid, casting only for the linter
                 skip_utf8_validation=self._skip_utf8_validation,
