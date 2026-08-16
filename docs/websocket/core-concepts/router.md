@@ -36,11 +36,11 @@ Unrecognised messages are emitted as `GenericIbkrEvent`. Messages that carry an 
 To pass a configured router to the client:
 
 ```python
-from ibind import IbkrWsClientV2
-from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter
+from ibind import IbkrWsClient
+from ibind.ibkr_ws.ibkr_router import IbkrRouter
 
 router = IbkrRouter(log_raw_messages=True, unwrap_market_data=False)
-client = IbkrWsClientV2(account_id='...', router=router)
+client = IbkrWsClient(account_id='...', router=router)
 ```
 
 ## Custom Router
@@ -57,15 +57,17 @@ def route(self, raw_message: str) -> OneOrMany[WsEvent]:
 A custom router is useful when connecting to a non-standard backend, adding support for additional message types, or overriding how specific topics are parsed. In most cases `IbkrRouter` is sufficient and does not need replacing.
 
 ```python
-from ibind.ws_v2._ws_events import Router
+from ibind.ws._ws_events import Router
 from ibind.events import WsEvent
+
 
 class MyRouter:
     def route(self, raw_message: str) -> list[WsEvent]:
         # parse raw_message and return typed events
         ...
 
-client = IbkrWsClientV2(account_id='...', router=MyRouter())
+
+client = IbkrWsClient(account_id='...', router=MyRouter())
 ```
 
 [events]: ./events.md

@@ -16,22 +16,22 @@ For local Client Portal Gateway usage, IBind normally connects to the local Gate
 ## Minimal example
 
 ```python
-from ibind import QueueSink, IbkrWsClientV2, snapshot_keys_to_ids, events
+from ibind import QueueSink, IbkrWsClient, snapshot_keys_to_ids, events
 from ibind.subscriptions import MarketDataSubscription
 
 # Enables queue-based consumption
 sink = QueueSink()
 
 # Initialise the client
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
+ws_client = IbkrWsClient(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 
 # Start the client
 ws_client.start()
 
 # Create the subscription intent object
 subscription = MarketDataSubscription(
-    conid='265598', # AAPL
-    fields=snapshot_keys_to_ids(['last_price', 'bid_price', 'ask_price']), # convert fields to numeric representation
+    conid='265598',  # AAPL
+    fields=snapshot_keys_to_ids(['last_price', 'bid_price', 'ask_price']),  # convert fields to numeric representation
 )
 
 # Register the intent with the client
@@ -40,7 +40,7 @@ handle = ws_client.subscribe(subscription)
 # Wait for the first event
 event = sink.get(events.MarketData, block=True, timeout=30)
 print(event)
-    
+
 # Shutdown gracefully
 ws_client.shutdown()
 ```
@@ -71,16 +71,18 @@ In production code, replace `print(event)` with your own event handling logic. F
 ## Callback example
 
 ```python
-from ibind import CallbackSink, IbkrWsClientV2, snapshot_keys_to_ids, events
+from ibind import CallbackSink, IbkrWsClient, snapshot_keys_to_ids, events
 from ibind.subscriptions import MarketDataSubscription
+
 
 def on_market_data(event: events.MarketData):
     print(event)
 
+
 sink = CallbackSink()
-sink.on(events.MarketData, on_market_data) # can be called before or after passing the sink to the client
-    
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
+sink.on(events.MarketData, on_market_data)  # can be called before or after passing the sink to the client
+
+ws_client = IbkrWsClient(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 ws_client.start()
 
 subscription = MarketDataSubscription(
@@ -97,28 +99,31 @@ Callbacks are invoked in order they're added to the sink and in the order in whi
 
 The WebSocket client uses bounded queues to prevent out-of-memory errors. If your application code is consuming events slower than they're received from IBKR, the oldest events will be dropped after queue limits are reached. `QueueSink` defaults to 10,000 events per type. For more see [Sinks](./core-concepts/sinks.md).
 
-## Checking Lifecycle and Subscription States 
-
+## Checking Lifecycle and Subscription States
 
 ```python
 import time
-from ibind import CallbackSink, IbkrWsClientV2, events
+from ibind import CallbackSink, IbkrWsClient, events
+
 
 def on_authenticated(event: events.WsAuthenticated):
     print('WebSocket client ready')
 
+
 def on_degraded(event: events.WsDegraded):
     print('Warning: WebSocket connection degraded')
 
+
 def on_stopped(event: events.WsStopped):
     print('WebSocket client stopped')
+
 
 sink = CallbackSink()
 sink.on(events.WsAuthenticated, on_authenticated)
 sink.on(events.WsDegraded, on_degraded)
 sink.on(events.WsStopped, on_stopped)
-    
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
+
+ws_client = IbkrWsClient(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 
 ws_client.start()
 # Should print 'WebSocket client ready'

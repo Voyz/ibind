@@ -1,253 +1,97 @@
 # Table of Contents
 
-* [queue\_controller](#base.queue_controller)
-  * [QueueAccessor](#base.queue_controller.QueueAccessor)
-    * [\_\_init\_\_](#base.queue_controller.QueueAccessor.__init__)
-    * [get](#base.queue_controller.QueueAccessor.get)
-    * [empty](#base.queue_controller.QueueAccessor.empty)
-* [subscription\_controller](#base.subscription_controller)
-  * [SubscriptionController](#base.subscription_controller.SubscriptionController)
-    * [unsubscribe](#base.subscription_controller.SubscriptionController.unsubscribe)
-    * [modify\_subscription](#base.subscription_controller.SubscriptionController.modify_subscription)
-    * [recreate\_subscriptions](#base.subscription_controller.SubscriptionController.recreate_subscriptions)
-* [ws\_client](#base.ws_client)
-  * [WsClient](#base.ws_client.WsClient)
-    * [hard\_reset](#base.ws_client.WsClient.hard_reset)
-    * [disconnect](#base.ws_client.WsClient.disconnect)
-    * [start](#base.ws_client.WsClient.start)
-    * [shutdown](#base.ws_client.WsClient.shutdown)
-    * [check\_ping](#base.ws_client.WsClient.check_ping)
-    * [connected](#base.ws_client.WsClient.connected)
-    * [ready](#base.ws_client.WsClient.ready)
-    * [running](#base.ws_client.WsClient.running)
-* [ibkr\_ws\_client](#client.ibkr_ws_client)
-  * [IbkrWsKey](#client.ibkr_ws_client.IbkrWsKey)
-    * [from\_channel](#client.ibkr_ws_client.IbkrWsKey.from_channel)
-    * [channel](#client.ibkr_ws_client.IbkrWsKey.channel)
-  * [IbkrWsClient](#client.ibkr_ws_client.IbkrWsClient)
-    * [\_\_init\_\_](#client.ibkr_ws_client.IbkrWsClient.__init__)
-    * [check\_health](#client.ibkr_ws_client.IbkrWsClient.check_health)
-    * [server\_ids](#client.ibkr_ws_client.IbkrWsClient.server_ids)
-    * [new\_queue\_accessor](#client.ibkr_ws_client.IbkrWsClient.new_queue_accessor)
-    * [subscribe](#client.ibkr_ws_client.IbkrWsClient.subscribe)
-    * [unsubscribe](#client.ibkr_ws_client.IbkrWsClient.unsubscribe)
-    * [get](#client.ibkr_ws_client.IbkrWsClient.get)
-    * [empty](#client.ibkr_ws_client.IbkrWsClient.empty)
-    * [tic](#client.ibkr_ws_client.IbkrWsClient.tic)
+* [ibkr\_ws\_client](#ibkr_ws.ibkr_ws_client)
+  * [IbkrWsClient](#ibkr_ws.ibkr_ws_client.IbkrWsClient)
+    * [\_\_init\_\_](#ibkr_ws.ibkr_ws_client.IbkrWsClient.__init__)
+    * [start](#ibkr_ws.ibkr_ws_client.IbkrWsClient.start)
+    * [shutdown](#ibkr_ws.ibkr_ws_client.IbkrWsClient.shutdown)
+    * [hard\_reset](#ibkr_ws.ibkr_ws_client.IbkrWsClient.hard_reset)
+    * [reset\_websocket\_app](#ibkr_ws.ibkr_ws_client.IbkrWsClient.reset_websocket_app)
+    * [subscribe](#ibkr_ws.ibkr_ws_client.IbkrWsClient.subscribe)
+    * [unsubscribe](#ibkr_ws.ibkr_ws_client.IbkrWsClient.unsubscribe)
+    * [get\_binding\_status](#ibkr_ws.ibkr_ws_client.IbkrWsClient.get_binding_status)
+    * [get\_server\_id](#ibkr_ws.ibkr_ws_client.IbkrWsClient.get_server_id)
+    * [wait\_all](#ibkr_ws.ibkr_ws_client.IbkrWsClient.wait_all)
+    * [is\_running](#ibkr_ws.ibkr_ws_client.IbkrWsClient.is_running)
+    * [get\_state](#ibkr_ws.ibkr_ws_client.IbkrWsClient.get_state)
+    * [is\_authenticated](#ibkr_ws.ibkr_ws_client.IbkrWsClient.is_authenticated)
+    * [is\_subscription\_active](#ibkr_ws.ibkr_ws_client.IbkrWsClient.is_subscription_active)
+    * [tic](#ibkr_ws.ibkr_ws_client.IbkrWsClient.tic)
+* [ws\_subscriptions](#ws.ws_subscriptions)
+  * [Subscription](#ws.ws_subscriptions.Subscription)
+    * [topic](#ws.ws_subscriptions.Subscription.topic)
+    * [subscribe\_payload](#ws.ws_subscriptions.Subscription.subscribe_payload)
+    * [unsubscribe\_payload](#ws.ws_subscriptions.Subscription.unsubscribe_payload)
+    * [confirms\_subscribe](#ws.ws_subscriptions.Subscription.confirms_subscribe)
+    * [confirms\_unsubscribe](#ws.ws_subscriptions.Subscription.confirms_unsubscribe)
+    * [binding\_key](#ws.ws_subscriptions.Subscription.binding_key)
+  * [BindingStatus](#ws.ws_subscriptions.BindingStatus)
+    * [ACTIVE](#ws.ws_subscriptions.BindingStatus.ACTIVE)
+    * [UNSUBSCRIBED](#ws.ws_subscriptions.BindingStatus.UNSUBSCRIBED)
+  * [SubscriptionUpdated](#ws.ws_subscriptions.SubscriptionUpdated)
+  * [Binding](#ws.ws_subscriptions.Binding)
+    * [done](#ws.ws_subscriptions.Binding.done)
+    * [reset](#ws.ws_subscriptions.Binding.reset)
+  * [SubscriptionHandle](#ws.ws_subscriptions.SubscriptionHandle)
+    * [binding\_key](#ws.ws_subscriptions.SubscriptionHandle.binding_key)
+    * [status](#ws.ws_subscriptions.SubscriptionHandle.status)
+    * [active](#ws.ws_subscriptions.SubscriptionHandle.active)
+    * [unsubscribed](#ws.ws_subscriptions.SubscriptionHandle.unsubscribed)
+    * [done](#ws.ws_subscriptions.SubscriptionHandle.done)
+    * [wait](#ws.ws_subscriptions.SubscriptionHandle.wait)
+    * [unsubscribe](#ws.ws_subscriptions.SubscriptionHandle.unsubscribe)
 
-<a id="base.queue_controller.QueueAccessor"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient"></a>
 
-## QueueAccessor
+## IbkrWsClient
 
-Provides access to a queue with an associated key.
+WebSocket client for Interactive Brokers market data and account updates.
 
-This class encapsulates a queue and provides methods to interact with it, such as retrieving items
-and checking if the queue is empty. It is generic and can be associated with a key of any type.
+Manages subscriptions to IBKR WebSocket topics, handles authentication,
+and routes incoming events to registered sinks. Supports both OAuth and
+Gateway-based authentication.
 
-<a id="base.queue_controller.QueueAccessor.__init__"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.__init__"></a>
 
 ### \_\_init\_\_
 
 ```python
-def __init__(queue: Queue, key: T)
+def __init__(account_id: str = var.IBIND_ACCOUNT_ID,
+             url: str = var.IBIND_WS_URL,
+             host: str = '127.0.0.1',
+             port: str = '5000',
+             base_route: str = '/v1/api/ws',
+             ibkr_client: IbkrClient = None,
+             use_oauth: bool = var.IBIND_USE_OAUTH,
+             access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
+             cacert: Union[str, bool] = var.IBIND_CACERT,
+             cycle_interval: float = _DEFAULT_CYCLE_INTERVAL,
+             sink: EventSink = None,
+             router: Router = None,
+             subscription_resolver: SubscriptionResolver = None,
+             synchronous_output_events: bool = False)
 ```
+
+Initialize the IBKR WebSocket client.
 
 Arguments:
 
-- `queue` _Queue_ - The queue to be accessed.
-- `key` _T_ - The key associated with this queue accessor.
-
-<a id="base.queue_controller.QueueAccessor.get"></a>
-
-### get
-
-```python
-def get(block: bool = False, timeout=None) -> Any
-```
-
-Attempts to retrieve an item from the queue.
-
-This method tries to get an item from the queue. If the queue is empty and 'block' is False,
-it immediately returns None. Otherwise, it blocks until an item is available or until the
-timeout (if provided in 'kwargs') elapses.
-
-Arguments:
-
-- `block` _bool, optional_ - Whether to block if the queue is empty. Defaults to False.
-- `timeout` _Optional[float]_ - The maximum time in seconds to block waiting for an item.
-  A value of None indicates an indefinite wait. Only effective if 'block' is True.
-  
-  
-
-Returns:
-
-  The item retrieved from the queue, or None if the queue is empty and 'block' is False.
-
-<a id="base.queue_controller.QueueAccessor.empty"></a>
-
-### empty
-
-```python
-def empty() -> bool
-```
-
-Checks if the queue is empty.
-
-Returns:
-
-- `bool` - True if the queue is empty, False otherwise.
-
-<a id="base.subscription_controller.SubscriptionController"></a>
-
-## SubscriptionController
-
-Mixin which manages subscriptions to different channels using the WsClient.
-
-This class handles the logic for subscribing and unsubscribing to various channels. It maintains a
-record of active subscriptions and provides methods to modify them. The class relies on a
-SubscriptionProcessor to create subscription and unsubscription payloads.
-
-Constructor Parameters:
-subscription_processor (SubscriptionProcessor): The processor to create subscription payloads.
-subscription_retries (int, optional): The number of retries for subscription requests. Defaults to 5.
-subscription_timeout (float, optional): The timeout in seconds for subscription requests. Defaults to 2.
-
-<a id="base.subscription_controller.SubscriptionController.unsubscribe"></a>
-
-### unsubscribe
-
-```python
-def unsubscribe(channel: str,
-                data: dict = None,
-                needs_confirmation: bool = False,
-                subscription_processor: SubscriptionProcessor = None) -> bool
-```
-
-Unsubscribes from a specified channel.
-
-Attempts to unsubscribe from a given channel using the WsClient. The method manages the
-unsubscription logic, including sending the unsubscription payload and handling retries and timeouts.
-The subscription status is updated accordingly within the class.
-
-Arguments:
-
-- `channel` _str_ - The name of the channel to unsubscribe from.
-- `data` _dict, optional_ - Additional data to be included in the unsubscription request. Defaults to None.
-- `needs_confirmation` _bool, optional_ - Specifies whether the unsubscription requires confirmation.
-  Defaults to False.
-- `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
-  default one if provided. Defaults to None.
-  
-
-Returns:
-
-- `bool` - True if the unsubscription was successful, False otherwise.
-  
-
-Notes:
-
-  - If 'needs_confirmation' is False, the method sends the unsubscription request and assumes success.
-  - If 'needs_confirmation' is True, the method waits for confirmation before marking the unsubscription as successful.
-
-<a id="base.subscription_controller.SubscriptionController.modify_subscription"></a>
-
-### modify\_subscription
-
-```python
-def modify_subscription(
-        channel: str,
-        status: bool = UNDEFINED,
-        data: dict = UNDEFINED,
-        needs_confirmation: bool = UNDEFINED,
-        subscription_processor: SubscriptionProcessor = UNDEFINED)
-```
-
-Modifies an existing subscription.
-
-Updates the properties of an existing subscription. If a property is set to UNDEFINED, it remains unchanged.
-
-Arguments:
-
-- `channel` _str_ - The channel whose subscription is to be modified.
-- `status` _bool, optional_ - The new status of the subscription. Set as UNDEFINED to leave unchanged.
-- `data` _dict, optional_ - The new data associated with the subscription. Set as UNDEFINED to leave unchanged.
-- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation.
-  Set as UNDEFINED to leave unchanged.
-- `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
-  default one if provided. Defaults to None.
-  
-
-Raises:
-
-- `KeyError` - If the specified channel does not have an existing subscription.
-
-<a id="base.subscription_controller.SubscriptionController.recreate_subscriptions"></a>
-
-### recreate\_subscriptions
-
-```python
-def recreate_subscriptions()
-```
-
-Re-subscribes to all currently stored subscriptions.
-
-Iterates over all currently stored subscriptions and attempts to re-subscribe to each. Useful in scenarios
-where a connection reset or similar event necessitates re-establishing subscriptions.
-
-<a id="base.ws_client.WsClient"></a>
-
-## WsClient
-
-A client class for handling WebSocket connections.
-
-This class manages WebSocket connections, providing functionalities to start, manage, and shut down
-the WebSocketApp. It supports automatic reconnection, sending payloads, and managing the connection state.
-
-Notes:
-
-  - This class is designed to be used as a base class and extended with specific logic for message handling and other WebSocket events.
-
-<a id="base.ws_client.WsClient.hard_reset"></a>
-
-### hard\_reset
-
-```python
-def hard_reset(restart: bool = False) -> None
-```
-
-Performs a hard reset of the WebSocket connection.
-
-This method forcefully closes the current WebSocketApp connection and optionally restarts it. It is
-used to handle scenarios where the connection is unresponsive or encounters a critical error.
-
-This method cannot be called from the WsClient thread.
-
-Arguments:
-
-- `restart` _bool, optional_ - Specifies whether to restart the WebSocketApp connection after resetting.
-  Defaults to False.
-  
-
-Notes:
-
-  - Closes the current WebSocketApp connection, if any, and clears related resources.
-  - If the WebSocketApp is unresponsive or cannot be closed, it will be abandoned and the connection will be reset.
-  - If 'restart' is True, the method attempts to re-establish a new WebSocketApp connection after resetting.
-
-<a id="base.ws_client.WsClient.disconnect"></a>
-
-### disconnect
-
-```python
-def disconnect()
-```
-
-Disconnects the WebSocketApp connection.
-
-This method closes the active WebSocketApp connection if it exists. If the WebSocketApp is not
-currently connected, it sets the connected status to False.
-
-<a id="base.ws_client.WsClient.start"></a>
+- `account_id` _str_ - IBKR account ID. Default: None.
+- `url` _str_ - WebSocket server URL. Default: None.
+- `host` _str_ - Server host for local connections. Default: '127.0.0.1'.
+- `port` _str_ - Server port. Default: '5000'.
+- `base_route` _str_ - API base route. Default: '/v1/api/ws'.
+- `ibkr_client` _IbkrClient, optional_ - REST client for authentication. If None, creates new instance.
+- `use_oauth` _bool_ - Whether to use OAuth authentication. Default: False.
+- `access_token` _str_ - OAuth access token. Default: None.
+- `cacert` _Union[str, bool]_ - CA certificate for SSL verification. Default: False.
+- `cycle_interval` _float_ - Event loop cycle interval in seconds. Default: 0.25.
+- `sink` _EventSink, optional_ - Event sink for output events. Default: NoopSink.
+- `router` _Router, optional_ - Event router. Default: IbkrRouter.
+- `subscription_resolver` _SubscriptionResolver, optional_ - Subscription resolver. Default: IbkrSubscriptionResolver.
+- `synchronous_output_events` _bool_ - If True, emit events synchronously from runtime thread. Default: False.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.start"></a>
 
 ### start
 
@@ -255,428 +99,227 @@ currently connected, it sets the connected status to False.
 def start() -> bool
 ```
 
-Starts the WsClient and establishes the WebSocketApp connection.
-
-This method sets the WsClient to running state and attempts to establish a WebSocketApp connection.
-It returns the success status of the connection attempt.
+Start the WebSocket client.
 
 Returns:
 
-- `bool` - True if the WebSocketApp connection was successfully established, False otherwise.
-  
+- `bool` - True if start was successful, False otherwise.
 
-Notes:
-
-  - The success of the connection is determined by the ability to establish and maintain the WebSocketApp connection.
-
-<a id="base.ws_client.WsClient.shutdown"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.shutdown"></a>
 
 ### shutdown
 
 ```python
-def shutdown()
+def shutdown() -> bool
 ```
 
-Shuts down the WsClient and its WebSocketApp connection.
-
-This method stops the WsClient and closes the active WebSocketApp connection, if any.
-It ensures that all resources are cleanly released.
-
-Notes:
-
-  - The method sets the WsClient to a non-running state and closes the WebSocketApp connection.
-  - If the WebSocketApp connection is active, it is disconnected.
-
-<a id="base.ws_client.WsClient.check_ping"></a>
-
-### check\_ping
-
-```python
-def check_ping() -> bool
-```
-
-Checks the last ping response time of the WebSocketApp connection.
-
-Verifies whether the last ping response from the WebSocketApp was within the acceptable time interval
-defined by 'max_ping_interval' parameter. If the last ping response exceeds this interval, a hard reset of the connection is triggered.
+Shutdown the WebSocket client.
 
 Returns:
 
-- `bool` - True if the last ping was within the acceptable interval or if the WebSocketApp is not connected,
-  False if the ping interval was exceeded and a hard reset was initiated.
-  
+- `bool` - True if shutdown was successful, False otherwise.
 
-Notes:
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.hard_reset"></a>
 
-  - A ping interval exceeding 'max_ping_interval' indicates potential issues with the WebsocketApp connection.
-
-<a id="base.ws_client.WsClient.connected"></a>
-
-### connected
+### hard\_reset
 
 ```python
-@property
-def connected() -> bool
+def hard_reset() -> bool
 ```
 
-Whether the WebSocketApp connection is active.
+Perform a hard reset of the WebSocket client, stopping and restarting the runtime.
 
 Returns:
 
-  - bool: True if the WebSocketApp is connected, False otherwise.
+- `bool` - True if reset completed successfully, False if stop failed.
 
-<a id="base.ws_client.WsClient.ready"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.reset_websocket_app"></a>
 
-### ready
-
-```python
-def ready() -> bool
-```
-
-Whether the WsClient is ready for use.
-
-Returns:
-
-  - bool: True if the WsClient is ready for use, False otherwise.
-
-<a id="base.ws_client.WsClient.running"></a>
-
-### running
+### reset\_websocket\_app
 
 ```python
-@property
-def running() -> bool
+def reset_websocket_app()
 ```
 
-Whether the WsClient has been started.
+Reset the underlying WebSocketApp.
 
-Returns:
-
-  - bool: True if the WsClient is running, False otherwise.
-
-<a id="client.ibkr_ws_client.IbkrWsKey"></a>
-
-## IbkrWsKey
-
-https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
-
-Enumeration of key types for IBKR WebSocket channels.
-
-This Enum class represents various types of data or subscription channels for IBKR WebSocket API.
-
-Subscriptions Enums:
-* ACCOUNT_SUMMARY: Represents the 'ACCOUNT_SUMMARY' subscription. (S) (U)
-* ACCOUNT_LEDGER: Represents the 'ACCOUNT_LEDGER' subscription. (S) (U)
-* MARKET_DATA: Represents the 'MARKET_DATA' subscription. (S)
-* MARKET_HISTORY: Represents the 'MARKET_HISTORY' subscription. (S) (U)
-* PRICE_LADDER: Represents the 'PRICE_LADDER' subscription.
-* ORDERS: Represents the 'ORDERS' subscription.
-* PNL: Represents the 'PNL' subscription. (S)
-* TRADES: Represents the 'TRADES' subscription. (S)
-
-Unsolicited Enums:
-* ACCOUNT_UPDATES: Represents the 'ACCOUNT_UPDATES' unsolicited message.
-* AUTHENTICATION: Represents the 'AUTHENTICATION' unsolicited message.
-* BULLETINS: Represents the 'BULLETINS' unsolicited message.
-* ERROR: Represents the 'ERROR' unsolicited message.
-* SYSTEM: Represents the 'SYSTEM' unsolicited message.
-* NOTIFICATIONS: Represents the 'NOTIFICATIONS' unsolicited message.
-
-(S) marker indicates that the channel confirms its subscription, while (U) marker indicates that it confirms its unsubscription.
-
-<a id="client.ibkr_ws_client.IbkrWsKey.from_channel"></a>
-
-### from\_channel
-
-```python
-@classmethod
-def from_channel(cls, channel)
-```
-
-Converts a solicited channel string to its corresponding IbkrWsKey enum member.
-
-Arguments:
-
-- `channel` _str_ - The channel string to be converted.
-  
-
-Returns:
-
-- `IbkrWsKey` - The corresponding IbkrWsKey enum member.
-  
-
-Raises:
-
-- `ValueError` - If no enum member is associated with the provided channel.
-
-<a id="client.ibkr_ws_client.IbkrWsKey.channel"></a>
-
-### channel
-
-```python
-@property
-def channel()
-```
-
-Gets the solicited channel string associated with the enum member.
-
-Returns:
-
-- `str` - The channel string corresponding to the enum member.
-
-<a id="client.ibkr_ws_client.IbkrWsClient"></a>
-
-## IbkrWsClient
-
-A WebSocket client for IBKR, extending WsClient.
-
-This class handles WebSocket communications specific to IBKR, managing subscriptions,
-message processing, and maintaining the health of the WebSocket connection.
-
-See: https://interactivebrokers.github.io/cpwebapi/websockets
-
-<a id="client.ibkr_ws_client.IbkrWsClient.__init__"></a>
-
-### \_\_init\_\_
-
-```python
-def __init__(
-        account_id: str = var.IBIND_ACCOUNT_ID,
-        url: str = var.IBIND_WS_URL,
-        host: str = '127.0.0.1',
-        port: str = '5000',
-        base_route: str = '/v1/api/ws',
-        ibkr_client: IbkrClient = None,
-        subscription_processor_class: Type[
-            SubscriptionProcessor] = IbkrSubscriptionProcessor,
-        queue_controller_class: Type[QueueController] = QueueController[
-            IbkrWsKey],
-        log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES,
-        unsolicited_channels_to_be_queued: List[IbkrWsKey] = None,
-        unwrap_market_data: bool = True,
-        start: bool = False,
-        use_oauth: bool = var.IBIND_USE_OAUTH,
-        access_token: str = var.IBIND_OAUTH1A_ACCESS_TOKEN,
-        ping_interval: int = var.IBIND_WS_PING_INTERVAL,
-        max_ping_interval: int = var.IBIND_WS_MAX_PING_INTERVAL,
-        timeout: float = var.IBIND_WS_TIMEOUT,
-        restart_on_close: bool = True,
-        restart_on_critical: bool = True,
-        max_connection_attempts: int = 10,
-        cacert: Union[str, bool] = var.IBIND_CACERT,
-        recreate_subscriptions_on_reconnect: bool = True,
-        subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
-        subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT
-) -> None
-```
-
-Initializes the IbkrWsClient, an IBKR WebSocket client.
-
-Sets up the client with necessary configurations for connecting to and interacting with the IBKR WebSocket.
-
-Arguments:
-
-- `url` _str, optional_ - URL for the IBKR WebSocket.
-- `host` _str, optional_ - Host for the IBKR WebSocket API. Defaults to 'localhost'.
-- `port` _str, optional_ - Port for the IBKR WebSocket API. Defaults to '5000'
-- `base_route` _str, optional_ - Base route for the IBKR WebSocket API. Defaults to '/v1/api/ws'.
-- `account_id` _str, optional_ - Account ID for subscription management.
-- `ibkr_client` _IbkrClient, optional_ - An instance of the IbkrClient for related operations.
-- `subscription_processor_class` _Type[SubscriptionProcessor]_ - The class to process subscription payloads.
-- `queue_controller_class` _Type[QueueController[IbkrWsKey]], optional_ - The class to manage message queues. Defaults to QueueController[IbkrWsKey].
-- `unsolicited_channels_to_be_queued` _List[IbkrWsKey], optional_ - List of unsolicited channels to be queued. Defaults to None.
-- `unwrap_market_data` _bool, optional_ - Whether Market Data messages' data should be remapped to readable keys. Defaults to True.
-- `start` _bool, optional_ - Flag to start the client immediately after initialization. Defaults to False.
-- `use_oauth` _bool, optional_ - Whether to use OAuth authentication. Defaults to False.
-- `access_token` _str, optional_ - OAuth access token generated in the self-service portal. Defaults to None.
-  
-  Inherited parameters from WsClient:
-  
-- `timeout` _float, optional_ - Timeout for waiting on operations like connection and shutdown. Defaults to _DEFAULT_TIMEOUT.
-- `restart_on_close` _bool, optional_ - Flag to restart the connection if it closes unexpectedly. Defaults to True.
-- `restart_on_critical` _bool, optional_ - Flag to restart the connection on critical errors. Defaults to True.
-- `ping_interval` _int, optional_ - Interval in seconds for sending pings to keep the connection alive. Defaults to _DEFAULT_PING_INTERVAL.
-- `max_ping_interval` _int, optional_ - Maximum interval in seconds to wait for a ping response. Defaults to _DEFAULT_MAX_PING_INTERVAL.
-- `max_connection_attempts` _int, optional_ - Maximum number of attempts for connecting to the WebSocket. Defaults to 10.
-- `cacert` _Union[str, bool], optional_ - Path to the CA certificate file for SSL verification, or False to disable SSL verification. Defaults to False.
-- `recreate_subscriptions_on_reconnect` _bool, optional_ - Flag to recreate subscriptions on reconnect. Defaults to True.
-- `subscription_retries` _int, optional_ - Number of retries for subscription requests. Defaults to 5.
-- `subscription_timeout` _float, optional_ - Timeout for subscription requests. Defaults to 2.
-
-<a id="client.ibkr_ws_client.IbkrWsClient.check_health"></a>
-
-### check\_health
-
-```python
-def check_health() -> bool
-```
-
-Checks the overall health of the IbkrWsClient and its WebSocket connection.
-
-Verifies the health of the WebSocket connection by checking ping responses and heartbeat messages
-from IBKR. If the connection is found to be unhealthy, a hard reset is initiated.
-
-Returns:
-
-- `bool` - True if the WebSocket connection is healthy, False otherwise.
-
-<a id="client.ibkr_ws_client.IbkrWsClient.server_ids"></a>
-
-### server\_ids
-
-```python
-def server_ids(key: IbkrWsKey)
-```
-
-Retrieves the server IDs associated with a specific IbkrWsKey.
-
-Each type of data subscription (identified by IbkrWsKey) may have an associated server ID. This method
-returns the server IDs for the given subscription type.
-
-Arguments:
-
-- `key` _IbkrWsKey_ - The key representing the subscription type.
-  
-
-Returns:
-
-  Optional[Dict[str, int]: The server IDs associated with the given key, or None if no server IDs are available.
-
-<a id="client.ibkr_ws_client.IbkrWsClient.new_queue_accessor"></a>
-
-### new\_queue\_accessor
-
-```python
-def new_queue_accessor(key: IbkrWsKey) -> QueueAccessor[IbkrWsKey]
-```
-
-Creates a new queue accessor for a specified IbkrWsKey.
-
-Utilizes the internal queue controller to create an accessor for a queue associated with a specific
-IbkrWsKey. This accessor facilitates interaction with the queue for that particular type of subscription.
-
-Arguments:
-
-- `key` _IbkrWsKey_ - The key representing the subscription type for which the queue accessor is created.
-  
-
-Returns:
-
-- `QueueAccessor[IbkrWsKey]` - A queue accessor for the specified key.
-
-<a id="client.ibkr_ws_client.IbkrWsClient.subscribe"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.subscribe"></a>
 
 ### subscribe
 
 ```python
-def subscribe(channel: str,
-              data: dict = None,
-              needs_confirmation: bool = None,
-              subscription_processor: SubscriptionProcessor = None) -> bool
+def subscribe(subscription: Subscription) -> SubscriptionHandle
 ```
 
-Subscribes to a specific channel in the IBKR WebSocket.
-
-Initiates a subscription to a given channel, optionally including additional data in the subscription
-request. The method delegates the subscription logic to the SubscriptionController.
-
-From docs: "To receive all orders for the current day the endpoint /iserver/account/orders can be used. It is advised to query all orders for the current day first before subscribing to live orders."
+Subscribe to a WebSocket topic.
 
 Arguments:
 
-- `channel` _str_ - The channel to subscribe to.
-- `data` _dict, optional_ - Additional data to be included in the subscription request. Defaults to None.
-- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
-- `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
-  default one if provided. Defaults to None.
+- `subscription` _Subscription_ - Subscription object specifying the topic and parameters.
   
 
 Returns:
 
-- `bool` - True if the subscription was successful, False otherwise.
+- `SubscriptionHandle` - Handle to track subscription status and wait for completion.
+  
 
-<a id="client.ibkr_ws_client.IbkrWsClient.unsubscribe"></a>
+Notes:
+
+  - This method is non-blocking and idempotent.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.unsubscribe"></a>
 
 ### unsubscribe
 
 ```python
-def unsubscribe(channel: str,
-                data: dict = None,
-                needs_confirmation: bool = None,
-                subscription_processor: SubscriptionProcessor = None) -> bool
+def unsubscribe(subscription: Subscription) -> SubscriptionHandle
 ```
 
-Unsubscribes from a specified channel.
-
-Attempts to unsubscribe from a given channel using the WsClient. The method manages the
-unsubscription logic, including sending the unsubscription payload and handling retries and timeouts.
-The subscription status is updated accordingly within the class.
+Unsubscribe from a WebSocket topic.
 
 Arguments:
 
-- `channel` _str_ - The name of the channel to unsubscribe from.
-- `data` _dict, optional_ - Additional data to be included in the unsubscription request. Defaults to None.
-- `needs_confirmation` _bool, optional_ - Specifies whether the subscription requires confirmation. If not specified it will be derived from the channel type. Defaults to None.
-- `subscription_processor` _SubscriptionProcessor, optional_ - The subscription processor to use instead of the
-  default one if provided. Defaults to None.
+- `subscription` _Subscription_ - Subscription object to unsubscribe from.
   
 
 Returns:
 
-- `bool` - True if the unsubscription was successful, False otherwise.
-
-<a id="client.ibkr_ws_client.IbkrWsClient.get"></a>
-
-### get
-
-```python
-def get(ibkr_ws_key: IbkrWsKey, block: bool = False, timeout=None)
-```
-
-Facilitates access to data queues by exposing the `get` method of internally-stored QueueAccessor objects.
-
-Arguments:
-
-- `ibkr_ws_key` _IbkrWsKey_ - The IbkrWsKey of the queue to access.
-- `block` _bool, optional_ - Whether to block if the queue is empty. Defaults to False.
-- `timeout` _Optional[float]_ - The maximum time in seconds to block waiting for an item.
-  A value of None indicates an indefinite wait. Only effective if 'block' is True.
-  
-
-Returns:
-
-  The item retrieved from the queue, or None if the queue is empty and 'block' is False.
+- `SubscriptionHandle` - Handle to track unsubscription status.
   
 
 Notes:
 
-  - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+  - This method is non-blocking and idempotent.
 
-<a id="client.ibkr_ws_client.IbkrWsClient.empty"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.get_binding_status"></a>
 
-### empty
+### get\_binding\_status
 
 ```python
-def empty(ibkr_ws_key: IbkrWsKey)
+def get_binding_status(binding_key: str) -> BindingStatus
 ```
 
-Facilitates access to data queues by exposing the `empty` method of internally-stored QueueAccessor objects.
+Get the status of a subscription binding.
 
 Arguments:
 
-- `ibkr_ws_key` _IbkrWsKey_ - The IbkrWsKey of the queue to access.
+- `binding_key` _str_ - Unique identifier for the subscription binding.
   
 
 Returns:
 
-- `bool` - True if the queue is empty, False otherwise.
+- `BindingStatus` - Current status of the binding.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.get_server_id"></a>
+
+### get\_server\_id
+
+```python
+def get_server_id(event_type: Type[IbkrTopicEvent], conid: str) -> str
+```
+
+Get the server ID for a given event type and contract ID.
+
+This is primarily used for Market History subscriptions.
+
+Arguments:
+
+- `event_type` _Type[IbkrTopicEvent]_ - The event type to look up.
+- `conid` _str_ - Contract ID.
   
 
-Notes:
+Returns:
 
-  - This method is provided for convenience and should not be used in production code. A new QueueAccessor object should be acquired instead using `new_queue_accessor`.
+- `str` - The server ID associated with the event type and contract ID.
 
-<a id="client.ibkr_ws_client.IbkrWsClient.tic"></a>
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.wait_all"></a>
+
+### wait\_all
+
+```python
+@ensure_list_arg('subscription_handles')
+def wait_all(subscription_handles: OneOrMany[SubscriptionHandle],
+             timeout_each: float | None = None) -> List[SubscriptionHandle]
+```
+
+Wait for multiple subscription handles to complete.
+
+Returns an empty list if all handles completed successfully.
+
+Arguments:
+
+- `subscription_handles` _OneOrMany[SubscriptionHandle]_ - Single handle or list of handles to wait for.
+- `timeout_each` _float | None_ - Maximum time to wait for each handle in seconds.
+  If None, waits indefinitely for each handle.
+  
+
+Returns:
+
+- `List[SubscriptionHandle]` - Handles that failed to complete within their
+  individual timeout.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.is_running"></a>
+
+### is\_running
+
+```python
+def is_running() -> bool
+```
+
+Check if the WebSocket runtime is running.
+
+Returns:
+
+- `bool` - True if runtime is running, False otherwise.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.get_state"></a>
+
+### get\_state
+
+```python
+def get_state() -> WsState
+```
+
+Get the current state of the WebSocket client.
+
+Returns:
+
+- `WsState` - Current runtime state.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.is_authenticated"></a>
+
+### is\_authenticated
+
+```python
+def is_authenticated() -> bool
+```
+
+Check if the WebSocket connection is authenticated.
+
+Returns:
+
+- `bool` - True if authenticated, False otherwise.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.is_subscription_active"></a>
+
+### is\_subscription\_active
+
+```python
+def is_subscription_active(binding_key: str) -> Optional[bool]
+```
+
+Check if a subscription binding is currently active.
+
+Arguments:
+
+- `binding_key` _str_ - Unique identifier for the subscription binding.
+  
+
+Returns:
+
+- `Optional[bool]` - True if active, False if inactive, None if binding not found.
+
+<a id="ibkr_ws.ibkr_ws_client.IbkrWsClient.tic"></a>
 
 ### tic
 
@@ -694,3 +337,250 @@ Returns:
 
 - `dict` - The tic message dictionary containing server response data, or None if
   the send operation failed or the response timed out.
+
+<a id="ws.ws_subscriptions.Subscription"></a>
+
+## Subscription
+
+Base class for WebSocket subscriptions.
+
+Immutable model defining subscription behaviour including payload generation,
+confirmation requirements, and expiry settings. Subclasses implement specific
+subscription types by overriding abstract methods.
+
+Attributes:
+
+- `expiry_seconds` _int | None_ - Time in seconds before subscription expires and
+  requires renewal. None means no expiry. Default: None.
+
+<a id="ws.ws_subscriptions.Subscription.topic"></a>
+
+### topic
+
+```python
+@property
+def topic() -> str
+```
+
+Get the subscription topic identifier.
+
+<a id="ws.ws_subscriptions.Subscription.subscribe_payload"></a>
+
+### subscribe\_payload
+
+```python
+def subscribe_payload() -> str
+```
+
+Generate the payload string to send for subscribing.
+
+<a id="ws.ws_subscriptions.Subscription.unsubscribe_payload"></a>
+
+### unsubscribe\_payload
+
+```python
+def unsubscribe_payload() -> str
+```
+
+Generate the payload string to send for unsubscribing.
+
+<a id="ws.ws_subscriptions.Subscription.confirms_subscribe"></a>
+
+### confirms\_subscribe
+
+```python
+@property
+def confirms_subscribe() -> bool
+```
+
+Whether the server sends confirmation when subscription succeeds.
+
+<a id="ws.ws_subscriptions.Subscription.confirms_unsubscribe"></a>
+
+### confirms\_unsubscribe
+
+```python
+@property
+def confirms_unsubscribe() -> bool
+```
+
+Whether the server sends confirmation when unsubscription succeeds.
+
+<a id="ws.ws_subscriptions.Subscription.binding_key"></a>
+
+### binding\_key
+
+```python
+def binding_key()
+```
+
+Get the unique key identifying this subscription binding.
+
+<a id="ws.ws_subscriptions.BindingStatus"></a>
+
+## BindingStatus
+
+Status of a subscription binding.
+
+Tracks the lifecycle state of a subscription from initial registration through
+activation, failure, or unsubscription.
+
+<a id="ws.ws_subscriptions.BindingStatus.ACTIVE"></a>
+
+#### ACTIVE
+
+subscription successful
+
+<a id="ws.ws_subscriptions.BindingStatus.UNSUBSCRIBED"></a>
+
+#### UNSUBSCRIBED
+
+unsubscription successful
+
+<a id="ws.ws_subscriptions.SubscriptionUpdated"></a>
+
+## SubscriptionUpdated
+
+Emitted when subscription status changes.
+
+Attributes:
+
+- `subscription` _Subscription_ - The subscription that changed.
+- `binding_key` _str_ - The binding key of the subscription.
+- `status` _BindingStatus_ - The new status of the subscription.
+- `previous_status` _BindingStatus_ - The previous status of the subscription.
+
+<a id="ws.ws_subscriptions.Binding"></a>
+
+## Binding
+
+Internal state tracking for a subscription binding.
+
+Maintains the desired intent (subscribe or unsubscribe), current status,
+and retry state for subscription operations.
+
+Attributes:
+
+- `subscription` _Subscription_ - The subscription being tracked.
+- `intent` _Literal[BindingStatus.ACTIVE, BindingStatus.UNSUBSCRIBED]_ - Desired state.
+- `status` _BindingStatus_ - Current state. Default: BindingStatus.NEW.
+- `attempts` _int_ - Number of attempts made. Default: 0.
+- `last_attempt` _float_ - Timestamp of last attempt. Default: 0.
+
+<a id="ws.ws_subscriptions.Binding.done"></a>
+
+### done
+
+```python
+@property
+def done() -> bool
+```
+
+Whether the binding has reached its intended state.
+
+<a id="ws.ws_subscriptions.Binding.reset"></a>
+
+### reset
+
+```python
+def reset()
+```
+
+Reset retry state to allow new attempts.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle"></a>
+
+## SubscriptionHandle
+
+Handle for interacting with a subscription.
+
+Provides methods to query subscription state, wait for completion, and unsubscribe.
+Returned by subscribe/unsubscribe operations.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.binding_key"></a>
+
+### binding\_key
+
+```python
+@property
+def binding_key() -> str
+```
+
+Get the unique key identifying this subscription.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.status"></a>
+
+### status
+
+```python
+@property
+def status() -> BindingStatus
+```
+
+Get the current status of this subscription.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.active"></a>
+
+### active
+
+```python
+@property
+def active() -> bool
+```
+
+Whether the subscription is currently active.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.unsubscribed"></a>
+
+### unsubscribed
+
+```python
+@property
+def unsubscribed() -> bool
+```
+
+Whether the subscription has been unsubscribed.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.done"></a>
+
+### done
+
+```python
+@property
+def done() -> bool
+```
+
+Whether the subscription has reached its intended state.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.wait"></a>
+
+### wait
+
+```python
+def wait(timeout: float | None = None) -> bool
+```
+
+Wait for the subscription to reach its intended state.
+
+Arguments:
+
+- `timeout` _float | None_ - Maximum time to wait in seconds, or indefinitely if None. Default: None.
+  
+
+Returns:
+
+- `bool` - True if subscription reached intended state, False if timed out or failed.
+
+<a id="ws.ws_subscriptions.SubscriptionHandle.unsubscribe"></a>
+
+### unsubscribe
+
+```python
+def unsubscribe() -> 'SubscriptionHandle'
+```
+
+Unsubscribe from this subscription.
+
+Returns:
+
+- `SubscriptionHandle` - This handle for chaining.

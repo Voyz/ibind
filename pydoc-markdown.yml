@@ -95,58 +95,40 @@ renderer:
     - title: API IbkWsClient
       name: ibkr_ws_client
       contents:
-        - client.ibkr_ws_client.IbkrWsClient.*
-        - client.ibkr_ws_client.IbkrWsKey.*
-        - base.subscription_controller.SubscriptionController.unsubscribe
-        - base.subscription_controller.SubscriptionController.modify_subscription
-        - base.subscription_controller.SubscriptionController.recreate_subscriptions
-        - base.queue_controller.QueueAccessor.*
-        - base.ws_client.WsClient.start
-        - base.ws_client.WsClient.shutdown
-        - base.ws_client.WsClient.disconnect
-        - base.ws_client.WsClient.check_ping
-        - base.ws_client.WsClient.hard_reset
-        - base.ws_client.WsClient.connected
-        - base.ws_client.WsClient.ready
-        - base.ws_client.WsClient.running
-
-    - title: API IbkWsClientV2
-      name: ibkr_ws_v2
-      contents:
-        - ibkr_ws_v2.ibkr_ws_client_v2.*
-        - ws_v2.ws_subscriptions.Subscription.*
-        - ws_v2.ws_subscriptions.BindingStatus.*
-        - ws_v2.ws_subscriptions.SubscriptionUpdated
-        - ws_v2.ws_subscriptions.Binding.*
-        - ws_v2.ws_subscriptions.SubscriptionHandle.*
+        - ibkr_ws.ibkr_ws_client.*
+        - ws.ws_subscriptions.Subscription.*
+        - ws.ws_subscriptions.BindingStatus.*
+        - ws.ws_subscriptions.SubscriptionUpdated
+        - ws.ws_subscriptions.Binding.*
+        - ws.ws_subscriptions.SubscriptionHandle.*
 
     - title: API Subscriptions
       name: ibkr_ws_subscriptions
       contents:
-        - ibkr_ws_v2.ibkr_subscriptions.AccountSummarySubscription
-        - ibkr_ws_v2.ibkr_subscriptions.AccountLedgerSubscription
-        - ibkr_ws_v2.ibkr_subscriptions.MarketDataSubscription
-        - ibkr_ws_v2.ibkr_subscriptions.MarketHistorySubscription
-        - ibkr_ws_v2.ibkr_subscriptions.OrdersSubscription
-        - ibkr_ws_v2.ibkr_subscriptions.PriceLadderSubscription
-        - ibkr_ws_v2.ibkr_subscriptions.PnlSubscription
-        - ibkr_ws_v2.ibkr_subscriptions.TradesSubscription
+        - ibkr_ws.ibkr_subscriptions.AccountSummarySubscription
+        - ibkr_ws.ibkr_subscriptions.AccountLedgerSubscription
+        - ibkr_ws.ibkr_subscriptions.MarketDataSubscription
+        - ibkr_ws.ibkr_subscriptions.MarketHistorySubscription
+        - ibkr_ws.ibkr_subscriptions.OrdersSubscription
+        - ibkr_ws.ibkr_subscriptions.PriceLadderSubscription
+        - ibkr_ws.ibkr_subscriptions.PnlSubscription
+        - ibkr_ws.ibkr_subscriptions.TradesSubscription
 
     - title: API Events
       name: ibkr_ws_events
       contents:
-        - ws_v2._ws_events.*
-        - ibkr_ws_v2.ibkr_events.*
+        - ws._ws_events.*
+        - ibkr_ws.ibkr_events.*
 
     - title: API Sinks
       name: ibkr_ws_sinks
       contents:
-        - ws_v2.ws_sinks.*
+        - ws.ws_sinks.*
 
     - title: API Utils
       name: utils
       contents:
         - client.ibkr_utils.StockQuery
-        - client.ibkr_utils.make_order_request
+        - client.ibkr_utils.OrderRequest
         - support.py_utils.execute_in_parallel
         - support.logs.ibind_logs_initialize

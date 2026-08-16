@@ -8,7 +8,6 @@
 - [WebSocket Events](./ibkr_ws_events.md) - Event definitions for WebSocket subscriptions
 - [WebSocket Subscriptions](./ibkr_ws_subscriptions.md) - Subscription management
 - [WebSocket Sinks](./ibkr_ws_sinks.md) - Data sink implementations
-- [WebSocket V2](./ibkr_ws_v2.md) - WebSocket V2 protocol implementation
 
 ## Utilities
 - [Utils](./utils.md) - Utility functions and helpers

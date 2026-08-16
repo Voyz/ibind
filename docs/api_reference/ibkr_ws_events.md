@@ -1,41 +1,41 @@
 # Table of Contents
 
-* [ibkr\_events](#ibkr_ws_v2.ibkr_events)
-  * [GenericIbkrEvent](#ibkr_ws_v2.ibkr_events.GenericIbkrEvent)
-  * [IbkrError](#ibkr_ws_v2.ibkr_events.IbkrError)
-  * [WaitingForSession](#ibkr_ws_v2.ibkr_events.WaitingForSession)
-  * [Notification](#ibkr_ws_v2.ibkr_events.Notification)
-  * [Bulletin](#ibkr_ws_v2.ibkr_events.Bulletin)
-  * [AccountUpdate](#ibkr_ws_v2.ibkr_events.AccountUpdate)
-  * [System](#ibkr_ws_v2.ibkr_events.System)
-  * [AuthenticationStatus](#ibkr_ws_v2.ibkr_events.AuthenticationStatus)
-  * [IbkrTopicEvent](#ibkr_ws_v2.ibkr_events.IbkrTopicEvent)
-  * [AccountSummary](#ibkr_ws_v2.ibkr_events.AccountSummary)
-  * [AccountLedger](#ibkr_ws_v2.ibkr_events.AccountLedger)
-  * [MarketData](#ibkr_ws_v2.ibkr_events.MarketData)
-  * [MarketHistory](#ibkr_ws_v2.ibkr_events.MarketHistory)
-  * [Orders](#ibkr_ws_v2.ibkr_events.Orders)
-  * [PriceLadder](#ibkr_ws_v2.ibkr_events.PriceLadder)
-  * [Pnl](#ibkr_ws_v2.ibkr_events.Pnl)
-  * [Trades](#ibkr_ws_v2.ibkr_events.Trades)
-  * [ServerId](#ibkr_ws_v2.ibkr_events.ServerId)
-  * [Unsubscription](#ibkr_ws_v2.ibkr_events.Unsubscription)
-* [\_ws\_events](#ws_v2._ws_events)
-  * [WsEvent](#ws_v2._ws_events.WsEvent)
-  * [LifecycleEvent](#ws_v2._ws_events.LifecycleEvent)
-  * [WsStarting](#ws_v2._ws_events.WsStarting)
-  * [WsStopping](#ws_v2._ws_events.WsStopping)
-  * [WsStopped](#ws_v2._ws_events.WsStopped)
-  * [WsOpen](#ws_v2._ws_events.WsOpen)
-  * [WsAuthenticated](#ws_v2._ws_events.WsAuthenticated)
-  * [WsDegraded](#ws_v2._ws_events.WsDegraded)
-  * [WsReady](#ws_v2._ws_events.WsReady)
-  * [WsClose](#ws_v2._ws_events.WsClose)
-  * [WsError](#ws_v2._ws_events.WsError)
-  * [Router](#ws_v2._ws_events.Router)
-    * [route](#ws_v2._ws_events.Router.route)
+* [ibkr\_events](#ibkr_ws.ibkr_events)
+  * [GenericIbkrEvent](#ibkr_ws.ibkr_events.GenericIbkrEvent)
+  * [IbkrError](#ibkr_ws.ibkr_events.IbkrError)
+  * [WaitingForSession](#ibkr_ws.ibkr_events.WaitingForSession)
+  * [Notification](#ibkr_ws.ibkr_events.Notification)
+  * [Bulletin](#ibkr_ws.ibkr_events.Bulletin)
+  * [AccountUpdate](#ibkr_ws.ibkr_events.AccountUpdate)
+  * [System](#ibkr_ws.ibkr_events.System)
+  * [AuthenticationStatus](#ibkr_ws.ibkr_events.AuthenticationStatus)
+  * [IbkrTopicEvent](#ibkr_ws.ibkr_events.IbkrTopicEvent)
+  * [AccountSummary](#ibkr_ws.ibkr_events.AccountSummary)
+  * [AccountLedger](#ibkr_ws.ibkr_events.AccountLedger)
+  * [MarketData](#ibkr_ws.ibkr_events.MarketData)
+  * [MarketHistory](#ibkr_ws.ibkr_events.MarketHistory)
+  * [Orders](#ibkr_ws.ibkr_events.Orders)
+  * [PriceLadder](#ibkr_ws.ibkr_events.PriceLadder)
+  * [Pnl](#ibkr_ws.ibkr_events.Pnl)
+  * [Trades](#ibkr_ws.ibkr_events.Trades)
+  * [ServerId](#ibkr_ws.ibkr_events.ServerId)
+  * [Unsubscription](#ibkr_ws.ibkr_events.Unsubscription)
+* [\_ws\_events](#ws._ws_events)
+  * [WsEvent](#ws._ws_events.WsEvent)
+  * [LifecycleEvent](#ws._ws_events.LifecycleEvent)
+  * [WsStarting](#ws._ws_events.WsStarting)
+  * [WsStopping](#ws._ws_events.WsStopping)
+  * [WsStopped](#ws._ws_events.WsStopped)
+  * [WsOpen](#ws._ws_events.WsOpen)
+  * [WsAuthenticated](#ws._ws_events.WsAuthenticated)
+  * [WsDegraded](#ws._ws_events.WsDegraded)
+  * [WsReady](#ws._ws_events.WsReady)
+  * [WsClose](#ws._ws_events.WsClose)
+  * [WsError](#ws._ws_events.WsError)
+  * [Router](#ws._ws_events.Router)
+    * [route](#ws._ws_events.Router.route)
 
-<a id="ibkr_ws_v2.ibkr_events.GenericIbkrEvent"></a>
+<a id="ibkr_ws.ibkr_events.GenericIbkrEvent"></a>
 
 ## GenericIbkrEvent
 
@@ -50,7 +50,7 @@ Attributes:
 - `topic` _str | None_ - The message topic, if one was present. Default: None.
 - `data` _dict | None_ - The message arguments, if any were extracted. Default: None.
 
-<a id="ibkr_ws_v2.ibkr_events.IbkrError"></a>
+<a id="ibkr_ws.ibkr_events.IbkrError"></a>
 
 ## IbkrError
 
@@ -60,13 +60,13 @@ Attributes:
 
 - `data` _dict_ - The raw error payload from IBKR.
 
-<a id="ibkr_ws_v2.ibkr_events.WaitingForSession"></a>
+<a id="ibkr_ws.ibkr_events.WaitingForSession"></a>
 
 ## WaitingForSession
 
 Signals that the client is waiting for an active IBKR brokerage session to be established.
 
-<a id="ibkr_ws_v2.ibkr_events.Notification"></a>
+<a id="ibkr_ws.ibkr_events.Notification"></a>
 
 ## Notification
 
@@ -76,7 +76,7 @@ Attributes:
 
 - `data` _dict_ - The notification payload.
 
-<a id="ibkr_ws_v2.ibkr_events.Bulletin"></a>
+<a id="ibkr_ws.ibkr_events.Bulletin"></a>
 
 ## Bulletin
 
@@ -86,7 +86,7 @@ Attributes:
 
 - `data` _dict_ - The bulletin payload.
 
-<a id="ibkr_ws_v2.ibkr_events.AccountUpdate"></a>
+<a id="ibkr_ws.ibkr_events.AccountUpdate"></a>
 
 ## AccountUpdate
 
@@ -96,7 +96,7 @@ Attributes:
 
 - `data` _dict_ - The account update payload.
 
-<a id="ibkr_ws_v2.ibkr_events.System"></a>
+<a id="ibkr_ws.ibkr_events.System"></a>
 
 ## System
 
@@ -106,7 +106,7 @@ Attributes:
 
 - `data` _dict_ - The system message payload.
 
-<a id="ibkr_ws_v2.ibkr_events.AuthenticationStatus"></a>
+<a id="ibkr_ws.ibkr_events.AuthenticationStatus"></a>
 
 ## AuthenticationStatus
 
@@ -119,7 +119,7 @@ Attributes:
 - `competing` _bool | None_ - Whether another session is competing for the same account, or None
   when not reported.
 
-<a id="ibkr_ws_v2.ibkr_events.IbkrTopicEvent"></a>
+<a id="ibkr_ws.ibkr_events.IbkrTopicEvent"></a>
 
 ## IbkrTopicEvent
 
@@ -129,7 +129,7 @@ Attributes:
 
 - `topic` _ClassVar[str]_ - The IBKR topic code the subclass corresponds to.
 
-<a id="ibkr_ws_v2.ibkr_events.AccountSummary"></a>
+<a id="ibkr_ws.ibkr_events.AccountSummary"></a>
 
 ## AccountSummary
 
@@ -140,7 +140,7 @@ Attributes:
 - `account_id` _str_ - The account the summary belongs to.
 - `data` _dict_ - The account summary payload.
 
-<a id="ibkr_ws_v2.ibkr_events.AccountLedger"></a>
+<a id="ibkr_ws.ibkr_events.AccountLedger"></a>
 
 ## AccountLedger
 
@@ -151,7 +151,7 @@ Attributes:
 - `account_id` _str_ - The account the ledger entry belongs to.
 - `data` _dict_ - The ledger payload.
 
-<a id="ibkr_ws_v2.ibkr_events.MarketData"></a>
+<a id="ibkr_ws.ibkr_events.MarketData"></a>
 
 ## MarketData
 
@@ -165,7 +165,7 @@ Attributes:
 - `conid` _str_ - The contract identifier the update applies to.
 - `data` _dict_ - The changed market data fields. Default: empty dict.
 
-<a id="ibkr_ws_v2.ibkr_events.MarketHistory"></a>
+<a id="ibkr_ws.ibkr_events.MarketHistory"></a>
 
 ## MarketHistory
 
@@ -176,7 +176,7 @@ Attributes:
 - `conid` _str_ - The contract identifier the bars apply to.
 - `data` _dict_ - The historical bar payload.
 
-<a id="ibkr_ws_v2.ibkr_events.Orders"></a>
+<a id="ibkr_ws.ibkr_events.Orders"></a>
 
 ## Orders
 
@@ -186,7 +186,7 @@ Attributes:
 
 - `data` _dict_ - The order update payload.
 
-<a id="ibkr_ws_v2.ibkr_events.PriceLadder"></a>
+<a id="ibkr_ws.ibkr_events.PriceLadder"></a>
 
 ## PriceLadder
 
@@ -199,7 +199,7 @@ Attributes:
 - `exchange` _str | None_ - The exchange echoed by IBKR, when present.
 - `data` _list[dict]_ - The price ladder rows.
 
-<a id="ibkr_ws_v2.ibkr_events.Pnl"></a>
+<a id="ibkr_ws.ibkr_events.Pnl"></a>
 
 ## Pnl
 
@@ -209,7 +209,7 @@ Attributes:
 
 - `data` _dict_ - The profit and loss payload.
 
-<a id="ibkr_ws_v2.ibkr_events.Trades"></a>
+<a id="ibkr_ws.ibkr_events.Trades"></a>
 
 ## Trades
 
@@ -219,7 +219,7 @@ Attributes:
 
 - `data` _dict_ - The trade payload.
 
-<a id="ibkr_ws_v2.ibkr_events.ServerId"></a>
+<a id="ibkr_ws.ibkr_events.ServerId"></a>
 
 ## ServerId
 
@@ -234,7 +234,7 @@ Attributes:
 - `conid` _str_ - The contract identifier mapped to the server ID.
 - `server_id` _str_ - The server ID assigned by IBKR.
 
-<a id="ibkr_ws_v2.ibkr_events.Unsubscription"></a>
+<a id="ibkr_ws.ibkr_events.Unsubscription"></a>
 
 ## Unsubscription
 
@@ -246,7 +246,7 @@ Attributes:
 - `conid` _str | None_ - The contract identifier when the subscription was contract-specific,
   otherwise None. Default: None.
 
-<a id="ws_v2._ws_events.WsEvent"></a>
+<a id="ws._ws_events.WsEvent"></a>
 
 ## WsEvent
 
@@ -254,7 +254,7 @@ Base class for all WebSocket events.
 
 Immutable event model that tracks when it was received.
 
-<a id="ws_v2._ws_events.LifecycleEvent"></a>
+<a id="ws._ws_events.LifecycleEvent"></a>
 
 ## LifecycleEvent
 
@@ -265,61 +265,61 @@ Attributes:
 - `previous_state` _WsState_ - The state before the transition.
 - `current_state` _WsState_ - The state after the transition.
 
-<a id="ws_v2._ws_events.WsStarting"></a>
+<a id="ws._ws_events.WsStarting"></a>
 
 ## WsStarting
 
 Emitted when the WebSocket connection is starting.
 
-<a id="ws_v2._ws_events.WsStopping"></a>
+<a id="ws._ws_events.WsStopping"></a>
 
 ## WsStopping
 
 Emitted when the WebSocket connection is stopping.
 
-<a id="ws_v2._ws_events.WsStopped"></a>
+<a id="ws._ws_events.WsStopped"></a>
 
 ## WsStopped
 
 Emitted when the WebSocket connection is stopped.
 
-<a id="ws_v2._ws_events.WsOpen"></a>
+<a id="ws._ws_events.WsOpen"></a>
 
 ## WsOpen
 
 Emitted when the WebSocket connection is successfully opened.
 
-<a id="ws_v2._ws_events.WsAuthenticated"></a>
+<a id="ws._ws_events.WsAuthenticated"></a>
 
 ## WsAuthenticated
 
 Emitted when the WebSocket connection is authenticated.
 
-<a id="ws_v2._ws_events.WsDegraded"></a>
+<a id="ws._ws_events.WsDegraded"></a>
 
 ## WsDegraded
 
 Emitted when the WebSocket connection enters a degraded state.
 
-<a id="ws_v2._ws_events.WsReady"></a>
+<a id="ws._ws_events.WsReady"></a>
 
 ## WsReady
 
 Emitted when the WebSocket connection is ready for use.
 
-<a id="ws_v2._ws_events.WsClose"></a>
+<a id="ws._ws_events.WsClose"></a>
 
 ## WsClose
 
 Emitted when the WebSocket connection is closed.
 
-<a id="ws_v2._ws_events.WsError"></a>
+<a id="ws._ws_events.WsError"></a>
 
 ## WsError
 
 Emitted when a WebSocket error occurs.
 
-<a id="ws_v2._ws_events.Router"></a>
+<a id="ws._ws_events.Router"></a>
 
 ## Router
 
@@ -327,7 +327,7 @@ Protocol for routing raw WebSocket messages to typed events.
 
 Implementations parse raw messages and convert them to one or more WsEvent instances.
 
-<a id="ws_v2._ws_events.Router.route"></a>
+<a id="ws._ws_events.Router.route"></a>
 
 ### route
 

@@ -56,7 +56,7 @@ Notes:
 
   - This endpoint requires a pre-flight request. Orders is the list of live orders (cancelled, filled, submitted).
   - To retrieve order information for a specific account, clients must first query the /iserver/account endpoint to switch to the appropriate account.
-  - Please be aware that filtering orders using the /iserver/account/orders endpoint will prevent order details from coming through over the websocket �sor� topic. To resolve this issue, developers should set �force=true� in a follow-up /iserver/account/orders call to clear any cached behavior surrounding the endpoint prior to calling for the websocket request.
+  - Please be aware that filtering orders using the /iserver/account/orders endpoint will prevent order details from coming through over the ws �sor� topic. To resolve this issue, developers should set �force=true� in a follow-up /iserver/account/orders call to clear any cached behavior surrounding the endpoint prior to calling for the ws request.
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.order_status"></a>
 

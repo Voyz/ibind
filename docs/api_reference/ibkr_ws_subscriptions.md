@@ -1,16 +1,16 @@
 # Table of Contents
 
-* [ibkr\_subscriptions](#ibkr_ws_v2.ibkr_subscriptions)
-  * [AccountSummarySubscription](#ibkr_ws_v2.ibkr_subscriptions.AccountSummarySubscription)
-  * [AccountLedgerSubscription](#ibkr_ws_v2.ibkr_subscriptions.AccountLedgerSubscription)
-  * [MarketDataSubscription](#ibkr_ws_v2.ibkr_subscriptions.MarketDataSubscription)
-  * [MarketHistorySubscription](#ibkr_ws_v2.ibkr_subscriptions.MarketHistorySubscription)
-  * [OrdersSubscription](#ibkr_ws_v2.ibkr_subscriptions.OrdersSubscription)
-  * [PriceLadderSubscription](#ibkr_ws_v2.ibkr_subscriptions.PriceLadderSubscription)
-  * [PnlSubscription](#ibkr_ws_v2.ibkr_subscriptions.PnlSubscription)
-  * [TradesSubscription](#ibkr_ws_v2.ibkr_subscriptions.TradesSubscription)
+* [ibkr\_subscriptions](#ibkr_ws.ibkr_subscriptions)
+  * [AccountSummarySubscription](#ibkr_ws.ibkr_subscriptions.AccountSummarySubscription)
+  * [AccountLedgerSubscription](#ibkr_ws.ibkr_subscriptions.AccountLedgerSubscription)
+  * [MarketDataSubscription](#ibkr_ws.ibkr_subscriptions.MarketDataSubscription)
+  * [MarketHistorySubscription](#ibkr_ws.ibkr_subscriptions.MarketHistorySubscription)
+  * [OrdersSubscription](#ibkr_ws.ibkr_subscriptions.OrdersSubscription)
+  * [PriceLadderSubscription](#ibkr_ws.ibkr_subscriptions.PriceLadderSubscription)
+  * [PnlSubscription](#ibkr_ws.ibkr_subscriptions.PnlSubscription)
+  * [TradesSubscription](#ibkr_ws.ibkr_subscriptions.TradesSubscription)
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.AccountSummarySubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.AccountSummarySubscription"></a>
 
 ## AccountSummarySubscription
 
@@ -22,7 +22,7 @@ Attributes:
 - `keys` _List[str], optional_ - Pass specific account summary data keys to receive messages concerning only those keys.
 - `fields` _List[str], optional_ - Pass specific account summary field names to filter responses to include only these fields.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.AccountLedgerSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.AccountLedgerSubscription"></a>
 
 ## AccountLedgerSubscription
 
@@ -34,7 +34,7 @@ Attributes:
 - `keys` _List[str], optional_ - Pass specific ledger currency keys to receive messages with data only for those currencies.
 - `fields` _List[str], optional_ - Pass specific ledger field names to receive messages only those data points.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.MarketDataSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.MarketDataSubscription"></a>
 
 ## MarketDataSubscription
 
@@ -47,7 +47,7 @@ Attributes:
 - `conid` _str_ - Required. A single contract identifier. Contracts requested use SMART routing by default.
 - `fields` _List[str]_ - Optional. Pass an array of field IDs to receive messages concerning only those fields.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.MarketHistorySubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.MarketHistorySubscription"></a>
 
 ## MarketHistorySubscription
 
@@ -65,7 +65,7 @@ Attributes:
 - `source` _str, optional_ - The value determining what type of data to show.
 - `format` _str, optional_ - The format in which bars are returned.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.OrdersSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.OrdersSubscription"></a>
 
 ## OrdersSubscription
 
@@ -75,7 +75,7 @@ Attributes:
 
 - `filter` _str, optional_ - Pass an exclusive Order Status Value to return.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.PriceLadderSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.PriceLadderSubscription"></a>
 
 ## PriceLadderSubscription
 
@@ -87,13 +87,13 @@ Attributes:
 - `conid` _str_ - Required. A single contract identifier.
 - `exchange` _str, optional_ - Provide a routing exchange identifier. If no exchange is specified, all available deep exchanges are assumed.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.PnlSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.PnlSubscription"></a>
 
 ## PnlSubscription
 
 Subscribes the user to live profit and loss information.
 
-<a id="ibkr_ws_v2.ibkr_subscriptions.TradesSubscription"></a>
+<a id="ibkr_ws.ibkr_subscriptions.TradesSubscription"></a>
 
 ## TradesSubscription
 

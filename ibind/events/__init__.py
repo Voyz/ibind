@@ -1,4 +1,4 @@
-from ibind.ws_v2._ws_events import (
+from ibind.ws._ws_events import (
     LifecycleEvent,
     WsOpen,
     WsAuthenticated,
@@ -11,7 +11,7 @@ from ibind.ws_v2._ws_events import (
     WsStarting,
     WsStopped,
 )
-from ibind.ibkr_ws_v2.ibkr_events import (
+from ibind.ibkr_ws.ibkr_events import (
     GenericIbkrEvent,
     IbkrError,
     WaitingForSession,
@@ -33,7 +33,7 @@ from ibind.ibkr_ws_v2.ibkr_events import (
     Unsubscription,
 )
 
-from ibind.ws_v2.ws_subscriptions import SubscriptionUpdated
+from ibind.ws.ws_subscriptions import SubscriptionUpdated
 
 __all__ = [
     'LifecycleEvent',

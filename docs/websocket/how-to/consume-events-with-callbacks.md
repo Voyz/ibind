@@ -5,15 +5,17 @@
 ## Registering a callback
 
 ```python
-from ibind import CallbackSink, IbkrWsClientV2, events
+from ibind import CallbackSink, IbkrWsClient, events
+
 
 def on_market_data(event: events.MarketData):
     print(event)
 
+
 sink = CallbackSink()
 sink.on(events.MarketData, on_market_data)
 
-ws_client = IbkrWsClientV2(account_id='...', sink=sink)
+ws_client = IbkrWsClient(account_id='...', sink=sink)
 ws_client.start()
 ```
 

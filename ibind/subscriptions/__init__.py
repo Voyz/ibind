@@ -1,4 +1,4 @@
-from ibind.ibkr_ws_v2.ibkr_subscriptions import (
+from ibind.ibkr_ws.ibkr_subscriptions import (
     MarketDataSubscription,
     OrdersSubscription,
     AccountLedgerSubscription,
@@ -8,7 +8,7 @@ from ibind.ibkr_ws_v2.ibkr_subscriptions import (
     MarketHistorySubscription,
 )
 
-from ibind.ws_v2.ws_subscriptions import SubscriptionHandle, BindingStatus, Subscription, SubscriptionResolver
+from ibind.ws.ws_subscriptions import SubscriptionHandle, BindingStatus, Subscription, SubscriptionResolver
 
 __all__ = [
     'Subscription',

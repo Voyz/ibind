@@ -1,6 +1,6 @@
-# Migrating from IbkrWsClient to IbkrWsClientV2
+# Migrating from IbkrWsClient to IbkrWsClient
 
-`IbkrWsClientV2` replaces `IbkrWsClient` with a redesigned interface. The core responsibilities are the same - connecting to IBKR WebSocket, managing subscriptions, and delivering incoming data - but the model for subscriptions and event consumption has changed significantly.
+The WebSocket client v2 replaces the old v1 client with a redesigned interface. The core responsibilities are the same - connecting to IBKR WebSocket, managing subscriptions, and delivering incoming data - but the model for subscriptions and event consumption has changed significantly.
 
 ## Imports
 
@@ -10,8 +10,9 @@ from ibind import IbkrWsClient, IbkrWsKey
 ```
 
 **After:**
+
 ```python
-from ibind import IbkrWsClientV2, QueueSink, events
+from ibind import IbkrWsClient, QueueSink, events
 from ibind.subscriptions import MarketDataSubscription, OrdersSubscription  # etc.
 ```
 
@@ -36,7 +37,7 @@ client = IbkrWsClient(
 **After:**
 ```python
 sink = QueueSink()
-client = IbkrWsClientV2(account_id='...', sink=sink)
+client = IbkrWsClient(account_id='...', sink=sink)
 client.start()
 ```
 
@@ -117,7 +118,7 @@ from ibind import CallbackSink
 
 sink = CallbackSink()
 sink.on(events.MarketData, lambda event: print(event))
-client = IbkrWsClientV2(account_id='...', sink=sink)
+client = IbkrWsClient(account_id='...', sink=sink)
 ```
 
 ## Lifecycle

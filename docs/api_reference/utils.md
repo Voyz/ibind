@@ -2,7 +2,7 @@
 
 * [ibkr\_utils](#client.ibkr_utils)
   * [StockQuery](#client.ibkr_utils.StockQuery)
-  * [make\_order\_request](#client.ibkr_utils.make_order_request)
+  * [OrderRequest](#client.ibkr_utils.OrderRequest)
 * [logs](#support.logs)
   * [ibind\_logs\_initialize](#support.logs.ibind_logs_initialize)
 * [py\_utils](#support.py_utils)
@@ -26,70 +26,9 @@ Attributes:
 - `contract_conditions` _Optional[dict], optional_ - Key-value pairs representing conditions to apply to
   stock contracts. Each condition is matched exactly against the contract's attributes.
 
-<a id="client.ibkr_utils.make_order_request"></a>
+<a id="client.ibkr_utils.OrderRequest"></a>
 
-## make\_order\_request
-
-```python
-def make_order_request(conid: Union[int, str],
-                       side: str,
-                       quantity: float,
-                       order_type: str,
-                       acct_id: str,
-                       price: float = None,
-                       conidex: str = None,
-                       sec_type: str = None,
-                       coid: str = None,
-                       parent_id: str = None,
-                       listing_exchange: str = None,
-                       is_single_group: bool = None,
-                       outside_rth: bool = None,
-                       aux_price: float = None,
-                       ticker: str = None,
-                       tif: str = 'GTC',
-                       trailing_amt: float = None,
-                       trailing_type: str = None,
-                       referrer: str = None,
-                       cash_qty: float = None,
-                       fx_qty: float = None,
-                       use_adaptive: bool = None,
-                       is_ccy_conv: bool = None,
-                       allocation_method: str = None,
-                       strategy: str = None,
-                       strategy_parameters=None)
-```
-
-Create an order request object. Arguments set as None will not be included.
-
-Arguments:
-
-- `conid` _int | str_ - Identifier of the security to trade.
-- `side` _str_ - Order side, either 'SELL' or 'BUY'.
-- `quantity` _int_ - Order quantity in number of shares.
-- `order_type` _str_ - Type of the order (e.g., LMT, MKT, STP).
-- `price` _float_ - Order limit price, depends on order type.
-- `coid` _str_ - Customer Order ID, unique for a 24h span.
-- `acctId` _str, optional_ - Account ID, defaults to the first account if not provided.
-  
-- `conidex` _str, Optional_ - Concatenated value of contract identifier and exchange.
-- `sec_type` _str, Optional_ - Concatenated value of contract-identifier and security type.
-- `parent_id` _str, Optional_ - Used for child orders in bracket orders, must match the parent's cOID.
-- `listing_exchange` _str, Optional, optional_ - Exchange for order routing, default is "SMART".
-- `is_single_group` _bool, Optional_ - Set to True for placing single group orders (OCA).
-- `outside_rth` _bool, Optional_ - Set to True if the order can be executed outside regular trading hours.
-- `aux_price` _float, Optional_ - Auxiliary price parameter.
-- `ticker` _str, Optional_ - Underlying symbol for the contract.
-- `tif` _str, Optional_ - Time-In-Force for the order (e.g., GTC, OPG, DAY, IOC). Default: "GTC".
-- `trailing_amt` _float, Optional_ - Trailing amount for TRAIL or TRAILLMT orders.
-- `trailing_type` _str, Optional_ - Trailing type ('amt' or '%') for TRAIL or TRAILLMT orders.
-- `referrer` _str, Optional_ - Custom order reference.
-- `cash_qty` _float, Optional_ - Cash Quantity for the order.
-- `fx_qty` _float, Optional_ - Cash quantity for Currency Conversion Orders.
-- `use_adaptive` _bool, Optional_ - Set to True to use the Price Management Algo.
-- `is_ccy_conv` _bool, Optional_ - Set to True for FX conversion orders.
-- `allocation_method` _str, Optional_ - Allocation method for FA account orders.
-- `strategy` _str, Optional_ - IB Algo algorithm to use for the order.
-- `strategy_parameters` _dict, Optional_ - Parameters for the specified IB Algo algorithm.
+## OrderRequest
 
 <a id="support.logs.ibind_logs_initialize"></a>
 

@@ -70,9 +70,9 @@ IBind's core functionality consists of two client classes:
 
   Using the `IbkrClient` requires constructing it with appropriate arguments, then calling the API methods.
 
-* [`IbkrWsClientV2`][ibkr-ws-client-docs] - for [IBKR WebSocket API][ibkr-websocket]
+* [`IbkrWsClient`][ibkr-ws-client-docs] - for [IBKR WebSocket API][ibkr-websocket]
 
-  Using the `IbkrWsClientV2` involves handling three areas:
+  Using the `IbkrWsClient` involves handling three areas:
 
   * Managing its lifecycle. It is asynchronous and runs on separate internal threads, hence we need to construct it, start it, and manage it from the originating thread.
   * Subscribing and unsubscribing. It uses a typed subscription interface with idempotent semantics, allowing flexible subscription management.
@@ -106,14 +106,14 @@ print(client.portfolio_accounts().data)
 ### Basic WebSocket Example
 
 ```python
-from ibind import QueueSink, IbkrWsClientV2, events
+from ibind import QueueSink, IbkrWsClient, events
 from ibind.subscriptions import PnlSubscription
 
 # Create a queue-based event sink
 sink = QueueSink()
 
 # Construct and start the client
-ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
+ws_client = IbkrWsClient(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
 ws_client.start()
 
 # Subscribe to PnL updates

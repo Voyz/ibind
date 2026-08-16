@@ -6,11 +6,11 @@ from ibind.support.errors import ExternalBrokerError
 from ibind.support.logs import ibind_logs_initialize
 from ibind.support.py_utils import execute_in_parallel
 from ibind import events, subscriptions
-from ibind.ws_v2.runtime.ws_state_manager import WsState
-from ibind.ws_v2.ws_sinks import EventSink, LogSink, NoopSink, CallbackSink, QueueSink, CompositeSink
-from ibind.ws_v2.ws_subscriptions import SubscriptionHandle, BindingStatus, SubscriptionConflictError
-from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2
-from ibind.ibkr_ws_v2.ibkr_subscriptions import make_binding_key
+from ibind.ws.runtime.ws_state_manager import WsState
+from ibind.ws.ws_sinks import EventSink, LogSink, NoopSink, CallbackSink, QueueSink, CompositeSink
+from ibind.ws.ws_subscriptions import SubscriptionHandle, BindingStatus, SubscriptionConflictError
+from ibind.ibkr_ws.ibkr_ws_client import IbkrWsClient
+from ibind.ibkr_ws.ibkr_subscriptions import make_binding_key
 
 __all__ = [
     'ibind_logs_initialize',
@@ -26,7 +26,7 @@ __all__ = [
     'question_type_to_message_id',
     'events',
     'subscriptions',
-    'IbkrWsClientV2',
+    'IbkrWsClient',
     'WsState',
     'BindingStatus',
     'EventSink',

@@ -21,7 +21,7 @@ It does not replace the REST client (`IbkrClient`), and some WebSocket functiona
 
 The WebSocket client encompasses 5 concepts:
 
-* [IbkrWsClient](../api_reference/ibkr_ws_v2.md) - the core interface, managing lifecycle and event forwarding
+* [IbkrWsClient](../api_reference/ibkr_ws_client.md) - the core interface, managing lifecycle and event forwarding
 * [Events](./core-concepts/events.md) - Pydantic models encapsulating parsed incoming messages and connection state changes
 * [Subscriptions](./core-concepts/subscriptions.md) - Typed representation of topics available for subscription
 * [Sinks](./core-concepts/sinks.md) - User-defined event consumers, providing high degree of customizability
@@ -95,7 +95,7 @@ For more on sinks, see [Sinks](./core-concepts/sinks.md)
 The WebSocket client has an explicit lifecycle:
 
 ```python
-client = IbkrWsClientV2(...)
+client = IbkrWsClient(...)
 client.start()
 # subscribe and consume events
 client.shutdown()
