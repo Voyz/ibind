@@ -63,6 +63,8 @@ Callbacks can be registered at any point - before or after passing the sink to t
 
 `QueueSink` stores events in separate thread-safe queues, one per event type. Events can be retrieved at any point after being emitted.
 
+By default, each queue is bounded at 10,000 events per type. When a queue is full, the oldest events are dropped to make room for new ones.
+
 ```python
 from ibind import QueueSink, events
 
@@ -71,6 +73,18 @@ sink = QueueSink()
 # ...
 
 event = sink.get(events.MarketData, block=True, timeout=10)
+```
+
+### Configuration
+
+`QueueSink(maxsize=10_000, drop_oldest=True)`
+
+- `maxsize` - Maximum queue size per event type. Set to `0` for unbounded queues. Default: 10,000.
+- `drop_oldest` - Whether to drop oldest events when full. If `False`, drops newest events instead. Default: `True`.
+
+```python
+sink = QueueSink(maxsize=5000, drop_oldest=False)
+unbounded_sink = QueueSink(maxsize=0)
 ```
 
 ### Methods
@@ -90,8 +104,6 @@ while True:
         # handle event
     time.sleep(0.1)
 ```
-
-Note that `QueueSink` does not enforce a maximum queue size. If events are produced faster than they are consumed, the queue will grow without bound.
 
 ## CompositeSink
 

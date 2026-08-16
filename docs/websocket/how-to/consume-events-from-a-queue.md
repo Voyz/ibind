@@ -108,7 +108,16 @@ accessor = sink.new_queue_accessor(events.MarketData)
 
 ## A note on queue size
 
-`QueueSink` does not enforce a maximum size. If your consumer falls significantly behind the rate of incoming events, the queue will grow without bound.
+By default, `QueueSink` enforces a maximum size of 10,000 events per event type. When a queue is full, the oldest events are dropped to make room for new ones. This prevents unbounded memory growth if your consumer falls behind.
+
+You can configure the maximum size and drop policy when creating the sink:
+
+```python
+sink = QueueSink(maxsize=5000, drop_oldest=False)
+unbounded_sink = QueueSink(maxsize=0)
+```
+
+Set `maxsize=0` for unbounded queues if you need to guarantee no events are dropped, but be aware this can lead to out-of-memory errors if consumption is slower than production.
 
 [sinks]: ../core-concepts/sinks.md
 [threading-model]: ../core-concepts/threading-model.md
