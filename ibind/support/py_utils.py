@@ -373,8 +373,8 @@ def sanitize_url(url: str) -> str:
 
 def patch_dotenv():
     try:
-        import dotenv
-        from dotenv import load_dotenv
+        import dotenv  # NOQA: PLC0415
+        from dotenv import load_dotenv  # NOQA: PLC0415
 
         # Wrap the original load_dotenv function
         def warn_if_late_load(*args, **kwargs):

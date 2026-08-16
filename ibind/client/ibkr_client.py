@@ -92,7 +92,7 @@ class IbkrClient(
         self._use_oauth = use_oauth
 
         if self._use_oauth:
-            from ibind.oauth.oauth1a import OAuth1aConfig
+            from ibind.oauth.oauth1a import OAuth1aConfig  # NOQA: PLC0415
 
             # cast to OAuth1aConfig for type checking, since currently 1.0a is the only version used
             self.oauth_config = cast(OAuth1aConfig, oauth_config) if oauth_config is not None else OAuth1aConfig()
@@ -149,7 +149,7 @@ class IbkrClient(
             return {}
 
         # get headers for endpoints other than live session token request
-        from ibind.oauth.oauth1a import generate_oauth_headers
+        from ibind.oauth.oauth1a import generate_oauth_headers  # NOQA: PLC0415
 
         headers = generate_oauth_headers(
             oauth_config=self.oauth_config, request_method=request_method, request_url=request_url, live_session_token=self.live_session_token
@@ -169,7 +169,7 @@ class IbkrClient(
         Raises:
             ExternalBrokerError: If the token request fails.
         """
-        from ibind.oauth.oauth1a import req_live_session_token
+        from ibind.oauth.oauth1a import req_live_session_token  # NOQA: PLC0415
 
         self.live_session_token, self.live_session_token_expires_ms, self.live_session_token_signature = req_live_session_token(
             self, self.oauth_config
@@ -211,7 +211,7 @@ class IbkrClient(
         self.generate_live_session_token()
 
         # validate the live session token once
-        from ibind.oauth.oauth1a import validate_live_session_token
+        from ibind.oauth.oauth1a import validate_live_session_token  # NOQA: PLC0415
 
         success = validate_live_session_token(
             live_session_token=self.live_session_token,
