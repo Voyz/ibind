@@ -69,7 +69,6 @@ def ws_client(client_mock):
     )
 
 
-
 @pytest.fixture
 def wsa_mock():
     return create_wsa_mock()
@@ -94,8 +93,6 @@ def ws_app_factory(wsa_mock):
 def patched_constructors(mocker, thread_mock, ws_app_factory):
     mocker.patch('ibind.base.ws_client.WebSocketApp', side_effect=lambda *args, **kwargs: ws_app_factory['fn'](*args, **kwargs))
     mocker.patch('ibind.base.ws_client.Thread', return_value=thread_mock)
-    return None
-
 
 
 def _send_payload(ws_client, payload: dict):
@@ -131,7 +128,6 @@ def _subscribe(ws_client, wsa_mock, request: dict, response: Optional[dict]):
     )
     ws_client.shutdown()
     return rv
-
 
 
 def _logs_subscriptions(full_channel, data=None, needs_confirmation_sub: bool = False, needs_confirmation_unsub: bool = True):
@@ -194,7 +190,8 @@ def test_on_message_system_heartbeat(ws_client, patched_constructors):
     ## Assert
     assert ws_client._last_heartbeat == hb
 
-@capture_logs(logger_level='DEBUG', expected_errors = ["IbkrWsClient: Account ID mismatch: expected=TEST_ACCOUNT_ID, received=['OTHER_ACCOUNT_ID']"])
+
+@capture_logs(logger_level='DEBUG', expected_errors=["IbkrWsClient: Account ID mismatch: expected=TEST_ACCOUNT_ID, received=['OTHER_ACCOUNT_ID']"])
 def test_on_message_act_account_mismatch(ws_client, patched_constructors):
     """Logs a warning when account list in act message mismatches expected account."""
     ## Act
@@ -214,10 +211,14 @@ def test_on_message_blt(ws_client, patched_constructors, mocker):
     ## Assert
     mock_handle_bulletin.assert_called_once_with(bulletin_message)
 
-@capture_logs(logger_level='DEBUG', expected_errors=[
-    "IbkrWsClient: Status unauthenticated: {'authenticated': False}",
-    'IbkrWsClient: Not authenticated, closing WebSocketApp',
-])
+
+@capture_logs(
+    logger_level='DEBUG',
+    expected_errors=[
+        "IbkrWsClient: Status unauthenticated: {'authenticated': False}",
+        'IbkrWsClient: Not authenticated, closing WebSocketApp',
+    ],
+)
 def test_on_message_sts_unauthenticated(ws_client, client_mock, patched_constructors, mocker):
     """On unauthenticated status, refetches session and closes websocket."""
     ## Arrange
@@ -239,6 +240,7 @@ def test_on_message_sts_unauthenticated(ws_client, client_mock, patched_construc
     ## Assert
     assert ws_client._authenticated is False
 
+
 @capture_logs(logger_level='DEBUG')
 def test_on_message_sts_authenticated(ws_client, patched_constructors):
     """Accepts authenticated status without logging warnings."""
@@ -246,12 +248,11 @@ def test_on_message_sts_authenticated(ws_client, patched_constructors):
     _send_payload(ws_client, {'topic': 'sts', 'args': {'authenticated': True}})
 
 
-@capture_logs(logger_level='DEBUG', expected_errors = [f'IbkrWsClient: Error message:'], partial_match=True)
+@capture_logs(logger_level='DEBUG', expected_errors=['IbkrWsClient: Error message:'], partial_match=True)
 def test_on_message_error(ws_client, patched_constructors):
     """Logs error-topic messages as warnings."""
     ## Act
     _send_payload(ws_client, {'topic': 'error', 'args': {'error_key': 'error_details'}})
-
 
 
 @capture_logs(logger_level='DEBUG', expected_errors=['unrecognised. Message:'], partial_match=True)
@@ -264,9 +265,7 @@ def test_on_message_no_topic_handler(ws_client, patched_constructors):
     _send_payload(ws_client, message_data)
 
 
-@capture_logs(logger_level='DEBUG', expected_errors = [
-    'message that is missing a subscription. Message:'
-], partial_match=True)
+@capture_logs(logger_level='DEBUG', expected_errors=['message that is missing a subscription. Message:'], partial_match=True)
 def test_on_message_handled_without_subscription(ws_client, patched_constructors, mocker):
     """Logs a warning if a subscribed message arrives without a known subscription."""
     ## Arrange
@@ -274,7 +273,6 @@ def test_on_message_handled_without_subscription(ws_client, patched_constructors
 
     ## Act
     _send_payload(ws_client, {'topic': 'some_topic', 'args': {'channel': 'XYZ', 'data': 'info'}})
-
 
 
 # --------------------------------------------------------------------------------------
@@ -319,26 +317,23 @@ def test_on_message_market_data_channel_handling(ws_client, wsa_mock, patched_co
     ## Assert
     assert success is True
     cm.partial_log(_logs_subscriptions(full_channel, request['data']))
-    assert (
-        {
-            _CONID: {
-                '_updated': _UPDATE_TIME,
-                'conid': _CONID,
-                'topic': f'smd+{_CONID}',
-                'ask_price': '195.26',
-                'ask_size': '500',
-                'bid_price': '195.25',
-                'bid_size': '3,500',
-                'high': '195.34',
-                'low': '193.67',
-                'open': '194.10',
-                'service_params': '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109',
-                'symbol': 'AAPL',
-                'volume': '24.2M',
-            }
+    assert {
+        _CONID: {
+            '_updated': _UPDATE_TIME,
+            'conid': _CONID,
+            'topic': f'smd+{_CONID}',
+            'ask_price': '195.26',
+            'ask_size': '500',
+            'bid_price': '195.25',
+            'bid_size': '3,500',
+            'high': '195.34',
+            'low': '193.67',
+            'open': '194.10',
+            'service_params': '&serviceID1=122&serviceID2=123&serviceID3=203&serviceID4=775&serviceID5=204&serviceID6=206&serviceID7=108&serviceID8=109',
+            'symbol': 'AAPL',
+            'volume': '24.2M',
         }
-        == queue.get()
-    )
+    } == queue.get()
 
 
 @capture_logs(logger_level='DEBUG')
@@ -453,11 +448,12 @@ def test_subscription_without_confirmation(ws_client, wsa_mock, patched_construc
 
     ## Assert
     assert success is True
-    cm.partial_log([
-        f'IbkrWsClient: Subscribed: s{full_channel} without confirmation.',
-        f'IbkrWsClient: Unsubscribed: u{full_channel}+{{}} without confirmation.',
-    ])
-
+    cm.partial_log(
+        [
+            f'IbkrWsClient: Subscribed: s{full_channel} without confirmation.',
+            f'IbkrWsClient: Unsubscribed: u{full_channel}+{{}} without confirmation.',
+        ]
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -465,9 +461,12 @@ def test_subscription_without_confirmation(ws_client, wsa_mock, patched_construc
 # --------------------------------------------------------------------------------------
 
 
-@capture_logs(logger_level='DEBUG', expected_errors=[
-    f'IbkrWsClient: Last IBKR heartbeat happened 162.00 seconds ago, exceeding the max ping interval of {_MAX_PING_INTERVAL}. Restarting.',
-])
+@capture_logs(
+    logger_level='DEBUG',
+    expected_errors=[
+        f'IbkrWsClient: Last IBKR heartbeat happened 162.00 seconds ago, exceeding the max ping interval of {_MAX_PING_INTERVAL}. Restarting.',
+    ],
+)
 def test_check_health(ws_client, wsa_mock, ws_app_factory, patched_constructors, mocker, **kwargs):
     """Restarts and recreates subscriptions when heartbeat exceeds max ping interval."""
     ## Arrange
@@ -524,7 +523,6 @@ def test_check_health(ws_client, wsa_mock, ws_app_factory, patched_constructors,
     assert [call()] * 6 == ws_client._has_active_connection.call_args_list
 
     ws_client.shutdown()
-
 
     ## Assert
     channel_subscribed_log = f'IbkrWsClient: Subscribed: s{full_channel}+{json.dumps(request["data"])}'

@@ -62,7 +62,7 @@ def test_ensure_list_arg_with_keyword_arg_non_list():
 def test_ensure_list_arg_with_missing_arg():
     """Raises TypeError when the decorated arg is missing."""
     # Arrange
-    
+
     # Act / Assert
     with pytest.raises(TypeError):
         sample_function()
@@ -113,7 +113,7 @@ def test_execute_in_parallel_with_list(parallel_setup):
     # Arrange
     func = parallel_setup['func']
     requests = parallel_setup['requests_list']
-    parallel_setup['state']['delay'] = 0.1
+    parallel_setup['state']['delay'] = 0.01
 
     # Act
     results = execute_in_parallel(func, requests)
@@ -190,7 +190,7 @@ def test_wait_until_condition_not_met():
     condition = MagicMock(return_value=False)
 
     # Act
-    result = wait_until(condition, timeout=0.1)
+    result = wait_until(condition, timeout=0.01, sleep=0.01)
 
     # Assert
     assert result is False
@@ -205,7 +205,7 @@ def test_wait_until_timeout_message(mocker):
     timeout_message = 'Condition not met within timeout'
 
     # Act
-    result = wait_until(condition, timeout_message=timeout_message, timeout=0.1)
+    result = wait_until(condition, timeout_message=timeout_message, timeout=0.01, sleep=0.01)
 
     # Assert
     assert result is False
@@ -217,10 +217,10 @@ def test_wait_until_timeout():
     # Arrange
     start_time = time.time()
     condition = MagicMock(return_value=False)
-    timeout = 0.1
+    timeout = 0.01
 
     # Act
-    result = wait_until(condition, timeout=timeout)
+    result = wait_until(condition, timeout=timeout, sleep=0.01)
 
     # Assert
     assert result is False

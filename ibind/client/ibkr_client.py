@@ -25,6 +25,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _LOGGER = project_logger(__file__)
 
+_HEALTH_SLEEP_INTERVAL = 1
+
 
 class IbkrClient(
     RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin
@@ -307,7 +309,7 @@ class IbkrClient(
 
             if attempt < max_attempts - 1:
                 _LOGGER.warning(f'IBKR connection is not healthy. Retrying health check attempt {attempt + 2}/{max_attempts}.')
-                time.sleep(1)
+                time.sleep(_HEALTH_SLEEP_INTERVAL)
 
         if not self._use_oauth:
             # Do nothing; wait for a reconnection either from IBeam or manually.

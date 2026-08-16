@@ -11,6 +11,7 @@ from ibind.ws_v2.ws_subscriptions import SubscriptionController
 from ibind.ws_v2.ws_transport import TransportEvent, TransportOpened, TransportReconnect, TransportClosed, TransportError, TransportMessage
 from test.test_utils import capture_logs
 from test.conftest import configure_logs  # noqa: F401
+from datetime import datetime, timedelta
 
 
 @pytest.fixture
@@ -71,8 +72,6 @@ class TestWsEventHandlerProcessTransportQueue:
     def test_processes_multiple_events_in_order(self, handler, state_manager):
         """process_transport_queue processes events sorted by received_at."""
         ## Arrange
-        from datetime import datetime, timedelta
-
         base_time = datetime.now()
         event1 = TransportOpened(received_at=base_time)
         event2 = TransportReconnect(received_at=base_time + timedelta(seconds=1))
