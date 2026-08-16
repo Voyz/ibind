@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from typing import Union, List, Dict, Type, Optional, Tuple
 
-from ibind import events
+from ibind import events, EventSink, NoopSink
 from ibind import var
 from ibind import IbkrClient
 from ibind.events import IbkrTopicEvent
@@ -10,7 +10,8 @@ from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibind.ibkr_ws_v2.ibkr_subscriptions import IbkrSubscriptionResolver, MarketHistorySubscription
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import OneOrMany, ensure_list_arg, wait_until
-from ibind.ws_v2._ws_events import EventSink, Router, AsyncSink, NoopSink
+from ibind.ws_v2._ws_events import Router
+from ibind.ws_v2.ws_sinks import AsyncSink
 from ibind.ws_v2.ws_subscriptions import Subscription, SubscriptionResolver, SubscriptionHandle, BindingStatus
 from ibind.ws_v2.ws_runtime import WsRuntime, WsState
 

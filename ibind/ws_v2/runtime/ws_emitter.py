@@ -1,6 +1,7 @@
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import exception_to_string
-from ibind.ws_v2._ws_events import WsEvent, CallbackSink, EventSink
+from ibind.ws_v2._ws_events import WsEvent
+from ibind.ws_v2.ws_sinks import EventSink, CallbackSink
 
 _LOGGER = project_logger('ibkr_ws_client')
 

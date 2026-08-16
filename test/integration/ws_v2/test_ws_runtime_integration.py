@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ibind import events
+from ibind import events, NoopSink, CallbackSink
 from ibind.subscriptions import OrdersSubscription
-from ibind.ws_v2._ws_events import CallbackSink, NoopSink, AsyncSink
+from ibind.ws_v2.ws_sinks import AsyncSink
 from ibind.ws_v2.ws_runtime import WsRuntime
 from ibind.ws_v2.runtime.ws_state_manager import WsState
 from ibind.ws_v2.ws_subscriptions import BindingStatus

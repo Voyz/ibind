@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ibind import events
-from ibind.ws_v2._ws_events import NoopSink, AsyncSink, QueueSink
+from ibind import events, NoopSink, QueueSink
+from ibind.ws_v2.ws_sinks import AsyncSink
 from ibind.ws_v2.ws_runtime import WsRuntime, make_sslopt
 from ibind.ws_v2.runtime.ws_state_manager import WsState
 from test.test_utils import capture_logs, mock_module_time

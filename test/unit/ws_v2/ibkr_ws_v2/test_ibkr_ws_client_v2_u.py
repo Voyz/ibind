@@ -9,7 +9,7 @@ from ibind.ibkr_ws_v2.ibkr_events import System
 from ibind.ibkr_ws_v2.ibkr_router import IbkrRouter
 from ibind.ibkr_ws_v2.ibkr_ws_client_v2 import IbkrWsClientV2, _build_ws_url
 from ibind.ibkr_ws_v2.ibkr_subscriptions import MarketHistorySubscription
-from ibind.ws_v2._ws_events import AsyncSink
+from ibind.ws_v2.ws_sinks import AsyncSink
 from ibind.ws_v2.ws_subscriptions import SubscriptionHandle, BindingStatus
 from ibind.ws_v2.ws_runtime import WsState
 from test.test_utils import capture_logs

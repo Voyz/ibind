@@ -8,7 +8,8 @@ from typing import Union, List, Dict, Callable
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import noop
 from ibind import events
-from ibind.ws_v2._ws_events import EventSink, Router, CallbackSink, WsEvent, T, AsyncSink
+from ibind.ws_v2._ws_events import WsEvent, Router
+from ibind.ws_v2.ws_sinks import T, AsyncSink, EventSink, CallbackSink
 from ibind.ws_v2.runtime.ws_emitter import WsEmitter
 from ibind.ws_v2.runtime.ws_event_handler import WsEventHandler
 from ibind.ws_v2.runtime.ws_health_monitor import WsHealthMonitor

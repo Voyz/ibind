@@ -2,9 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ibind import WsState
+from ibind import WsState, EventSink, CallbackSink
 from ibind.events import WsOpen
-from ibind.ws_v2._ws_events import CallbackSink, EventSink
 from ibind.ws_v2.runtime.ws_emitter import WsEmitter
 from test.test_utils import capture_logs
 
