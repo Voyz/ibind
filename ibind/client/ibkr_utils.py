@@ -3,7 +3,6 @@ import pprint
 import threading
 from dataclasses import dataclass, field, fields
 from typing import Optional, Dict, Union, TYPE_CHECKING
-from warnings import warn
 
 from ibind.base.rest_client import Result, pass_result
 from ibind.client.ibkr_definitions import decode_data_availability
@@ -176,30 +175,57 @@ class QuestionType(VerboseEnum):
 
 # FIXME: Fill in the remaining question types as we find out what they are
 _MESSAGE_ID_TO_QUESTION_TYPE = {
-    "o163": (QuestionType.PRICE_PERCENTAGE_CONSTRAINT, "The following order exceeds the price percentage limit"),
-    "o354": (QuestionType.MISSING_MARKET_DATA, "You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades. Are you sure you want to submit this order?"),
-    "o382": (QuestionType.TICK_SIZE_LIMIT, "The following value exceeds the tick size limit"),
-    "o383": (QuestionType.ORDER_SIZE_LIMIT, "The following order BUY 650 AAPL NASDAQ.NMS size exceeds the Size Limit of 500.\nAre you sure you want to submit this order?"),
-    "o403": (QuestionType.TRIGGER_AND_FILL, "This order will most likely trigger and fill immediately.\nAre you sure you want to submit this order?"),
-    "o451": (QuestionType.ORDER_VALUE_LIMIT, "The following order BUY 650 AAPL NASDAQ.NMS value estimate of 124,995.00 USD exceeds \nthe Total Value Limit of 100,000 USD.\nAre you sure you want to submit this order?"),
-    "o2136": (UNDEFINED, "Mixed allocation order warning"),
-    "o2137": (UNDEFINED, "Cross side order warning"),
-    "o2165": (UNDEFINED, "Warns that instrument does not support trading in fractions outside regular trading hours"),
-    "o10082": (UNDEFINED, "Called Bond warning"),
-    "o10138": (QuestionType.SIZE_MODIFICATION_LIMIT, "The following order size modification exceeds the size modification limit."),
-    "o10151": (UNDEFINED, "Warns about risks with Market Orders"),
-    "o10152": (UNDEFINED, "Warns about risks associated with stop orders once they become active"),
-    "o10153": (QuestionType.MANDATORY_CAP_PRICE, "<h4>Confirm Mandatory Cap Price</h4>To avoid trading at a price that is not consistent with a fair and orderly market, IB may set a cap (for a buy order) or sell order). THIS MAY CAUSE AN ORDER THAT WOULD OTHERWISE BE MARKETABLE TO NOT BE TRADED."),
-    "o10164": (QuestionType.CASH_QUANTITY, "Traders are responsible for understanding cash quantity details, which are provided on a best efforts basis only."),
-    "o10223": (QuestionType.CASH_QUANTITY_ORDER, "<h4>Cash Quantity Order Confirmation</h4>Orders that express size using a monetary value (cash quantity) are provided on a non-guaranteed basis. The system simulates the order by cancelling it once the specified amount is spent (for buy orders) or collected (for sell orders). In addition to the monetary value, the order uses a maximum size that is calculated using the Cash Quantity Estimate Factor, which you can modify in Presets."),
-    "o10288": (UNDEFINED, "Warns about risks associated with market orders for Crypto"),
-    "o10331": (QuestionType.STOP_ORDER_RISKS, "You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.\nAre you sure you want to submit this order?"),
-    "o10332": (UNDEFINED, "OSL Digital Securities LTD Crypto Order Warning"),
-    "o10333": (UNDEFINED, "Option Exercise at the Money warning"),
-    "o10334": (UNDEFINED, "Warns that order will be placed into current omnibus account instead of currently selected global account."),
-    "o10335": (UNDEFINED, "Serves internal Rapid Entry window."),
-    "p6": (QuestionType.MULTIPLE_ACCOUNTS, "This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders."),
-    "p12": (QuestionType.DISRUPTIVE_ORDERS, "If your order is not immediately executable, our systems may, depending on market conditions, reject your order if its limit price is more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace.\\nUse the Price Management Algo?"),
+    'o163': (QuestionType.PRICE_PERCENTAGE_CONSTRAINT, 'The following order exceeds the price percentage limit'),
+    'o354': (
+        QuestionType.MISSING_MARKET_DATA,
+        'You are submitting an order without market data. We strongly recommend against this as it may result in erroneous and unexpected trades. Are you sure you want to submit this order?',
+    ),
+    'o382': (QuestionType.TICK_SIZE_LIMIT, 'The following value exceeds the tick size limit'),
+    'o383': (
+        QuestionType.ORDER_SIZE_LIMIT,
+        'The following order BUY 650 AAPL NASDAQ.NMS size exceeds the Size Limit of 500.\nAre you sure you want to submit this order?',
+    ),
+    'o403': (QuestionType.TRIGGER_AND_FILL, 'This order will most likely trigger and fill immediately.\nAre you sure you want to submit this order?'),
+    'o451': (
+        QuestionType.ORDER_VALUE_LIMIT,
+        'The following order BUY 650 AAPL NASDAQ.NMS value estimate of 124,995.00 USD exceeds \nthe Total Value Limit of 100,000 USD.\nAre you sure you want to submit this order?',
+    ),
+    'o2136': (UNDEFINED, 'Mixed allocation order warning'),
+    'o2137': (UNDEFINED, 'Cross side order warning'),
+    'o2165': (UNDEFINED, 'Warns that instrument does not support trading in fractions outside regular trading hours'),
+    'o10082': (UNDEFINED, 'Called Bond warning'),
+    'o10138': (QuestionType.SIZE_MODIFICATION_LIMIT, 'The following order size modification exceeds the size modification limit.'),
+    'o10151': (UNDEFINED, 'Warns about risks with Market Orders'),
+    'o10152': (UNDEFINED, 'Warns about risks associated with stop orders once they become active'),
+    'o10153': (
+        QuestionType.MANDATORY_CAP_PRICE,
+        '<h4>Confirm Mandatory Cap Price</h4>To avoid trading at a price that is not consistent with a fair and orderly market, IB may set a cap (for a buy order) or sell order). THIS MAY CAUSE AN ORDER THAT WOULD OTHERWISE BE MARKETABLE TO NOT BE TRADED.',
+    ),
+    'o10164': (
+        QuestionType.CASH_QUANTITY,
+        'Traders are responsible for understanding cash quantity details, which are provided on a best efforts basis only.',
+    ),
+    'o10223': (
+        QuestionType.CASH_QUANTITY_ORDER,
+        '<h4>Cash Quantity Order Confirmation</h4>Orders that express size using a monetary value (cash quantity) are provided on a non-guaranteed basis. The system simulates the order by cancelling it once the specified amount is spent (for buy orders) or collected (for sell orders). In addition to the monetary value, the order uses a maximum size that is calculated using the Cash Quantity Estimate Factor, which you can modify in Presets.',
+    ),
+    'o10288': (UNDEFINED, 'Warns about risks associated with market orders for Crypto'),
+    'o10331': (
+        QuestionType.STOP_ORDER_RISKS,
+        'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.\nAre you sure you want to submit this order?',
+    ),
+    'o10332': (UNDEFINED, 'OSL Digital Securities LTD Crypto Order Warning'),
+    'o10333': (UNDEFINED, 'Option Exercise at the Money warning'),
+    'o10334': (UNDEFINED, 'Warns that order will be placed into current omnibus account instead of currently selected global account.'),
+    'o10335': (UNDEFINED, 'Serves internal Rapid Entry window.'),
+    'p6': (
+        QuestionType.MULTIPLE_ACCOUNTS,
+        'This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders.',
+    ),
+    'p12': (
+        QuestionType.DISRUPTIVE_ORDERS,
+        'If your order is not immediately executable, our systems may, depending on market conditions, reject your order if its limit price is more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace.\\nUse the Price Management Algo?',
+    ),
 }
 
 _QUESTION_TYPE_TO_MESSAGE_ID = {v[0]: k if v[0] is not UNDEFINED else 'undefined' for k, v in _MESSAGE_ID_TO_QUESTION_TYPE.items()}
@@ -308,7 +334,9 @@ def handle_questions(original_result: Result, answers: Answers, reply_callback: 
 
         if 'error' in data:
             if "Order couldn't be submitted: Local order ID=" in data['error']:
-                raise ExternalBrokerError(f"Order couldn't be submitted. Orders are already registered: {original_result.request.get('json', {}).get('orders', {})}")
+                raise ExternalBrokerError(
+                    f"Order couldn't be submitted. Orders are already registered: {original_result.request.get('json', {}).get('orders', {})}"
+                )
 
             raise ExternalBrokerError(f'While handling questions an error was returned: {pprint.pformat(data)}')
 
@@ -451,154 +479,6 @@ def parse_order_request(order_request: OrderRequest, mapping: dict = None) -> di
     return d
 
 
-def make_order_request(
-    conid: Union[int, str],
-    side: str,
-    quantity: float,
-    order_type: str,
-    acct_id: str,
-    # optional
-    price: float = None,
-    conidex: str = None,
-    sec_type: str = None,
-    coid: str = None,
-    parent_id: str = None,
-    listing_exchange: str = None,
-    is_single_group: bool = None,
-    outside_rth: bool = None,
-    aux_price: float = None,
-    ticker: str = None,
-    tif: str = 'GTC',
-    trailing_amt: float = None,
-    trailing_type: str = None,
-    referrer: str = None,
-    cash_qty: float = None,
-    fx_qty: float = None,
-    use_adaptive: bool = None,
-    is_ccy_conv: bool = None,
-    allocation_method: str = None,
-    strategy: str = None,
-    strategy_parameters=None,
-):  # pragma: no cover
-    """
-     Create an order request object. Arguments set as None will not be included.
-
-    Parameters:
-        conid (int | str): Identifier of the security to trade.
-        side (str): Order side, either 'SELL' or 'BUY'.
-        quantity (int): Order quantity in number of shares.
-        order_type (str): Type of the order (e.g., LMT, MKT, STP).
-        price (float): Order limit price, depends on order type.
-        coid (str): Customer Order ID, unique for a 24h span.
-        acctId (str, optional): Account ID, defaults to the first account if not provided.
-
-        conidex (str, Optional): Concatenated value of contract identifier and exchange.
-        sec_type (str, Optional): Concatenated value of contract-identifier and security type.
-        parent_id (str, Optional): Used for child orders in bracket orders, must match the parent's cOID.
-        listing_exchange (str, Optional, optional): Exchange for order routing, default is "SMART".
-        is_single_group (bool, Optional): Set to True for placing single group orders (OCA).
-        outside_rth (bool, Optional): Set to True if the order can be executed outside regular trading hours.
-        aux_price (float, Optional): Auxiliary price parameter.
-        ticker (str, Optional): Underlying symbol for the contract.
-        tif (str, Optional): Time-In-Force for the order (e.g., GTC, OPG, DAY, IOC). Default: "GTC".
-        trailing_amt (float, Optional): Trailing amount for TRAIL or TRAILLMT orders.
-        trailing_type (str, Optional): Trailing type ('amt' or '%') for TRAIL or TRAILLMT orders.
-        referrer (str, Optional): Custom order reference.
-        cash_qty (float, Optional): Cash Quantity for the order.
-        fx_qty (float, Optional): Cash quantity for Currency Conversion Orders.
-        use_adaptive (bool, Optional): Set to True to use the Price Management Algo.
-        is_ccy_conv (bool, Optional): Set to True for FX conversion orders.
-        allocation_method (str, Optional): Allocation method for FA account orders.
-        strategy (str, Optional): IB Algo algorithm to use for the order.
-        strategy_parameters (dict, Optional): Parameters for the specified IB Algo algorithm.
-    """
-    warn("'make_order_request' is deprecated. Use 'OrderRequest' dataclass instead.", DeprecationWarning, stacklevel=2)
-
-    order_request = {}
-
-    if conid is not None:
-        order_request['conid'] = int(conid)
-
-    if side is not None:
-        order_request['side'] = str(side)
-
-    if quantity is not None:
-        order_request['quantity'] = int(quantity)
-
-    if order_type is not None:
-        order_request['orderType'] = str(order_type)
-
-    if price is not None:
-        order_request['price'] = price
-
-    if coid is not None:
-        order_request['cOID'] = coid
-
-    # optional
-
-    if acct_id is not None:
-        order_request['acctId'] = acct_id
-
-    if conidex is not None:
-        order_request['conidex'] = conidex
-
-    if sec_type is not None:
-        order_request['secType'] = sec_type
-
-    if parent_id is not None:
-        order_request['parentId'] = parent_id
-
-    if listing_exchange is not None:
-        order_request['listingExchange'] = listing_exchange
-
-    if is_single_group is not None:
-        order_request['isSingleGroup'] = is_single_group
-
-    if outside_rth is not None:
-        order_request['outsideRTH'] = outside_rth
-
-    if aux_price is not None:
-        order_request['auxPrice'] = aux_price
-
-    if ticker is not None:
-        order_request['ticker'] = ticker
-
-    if tif is not None:
-        order_request['tif'] = tif
-
-    if trailing_amt is not None:
-        order_request['trailingAmt'] = trailing_amt
-
-    if trailing_type is not None:
-        order_request['trailingType'] = trailing_type
-
-    if referrer is not None:
-        order_request['referrer'] = referrer
-
-    if cash_qty is not None:
-        order_request['cashQty'] = cash_qty
-
-    if fx_qty is not None:
-        order_request['fxQty'] = fx_qty
-
-    if use_adaptive is not None:
-        order_request['useAdaptive'] = use_adaptive
-
-    if is_ccy_conv is not None:
-        order_request['isCcyConv'] = is_ccy_conv
-
-    if allocation_method is not None:
-        order_request['allocationMethod'] = allocation_method
-
-    if strategy is not None:
-        order_request['strategy'] = strategy
-
-    if strategy_parameters is not None:
-        order_request['strategyParameters'] = strategy_parameters
-
-    return order_request
-
-
 def date_from_ibkr(d: str) -> datetime.datetime:
     try:
         return datetime.datetime(int(d[:4]), int(d[4:6]), int(d[6:8]), int(d[8:10]), int(d[10:12]), int(d[12:14]))
@@ -685,7 +565,7 @@ class Tickler:
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
 
-    def stop(self, timeout:float=None):
+    def stop(self, timeout: float = None):
         """
         Stops the Tickler thread.
 

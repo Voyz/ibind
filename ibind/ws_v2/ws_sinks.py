@@ -3,11 +3,70 @@ from threading import Thread, Event
 
 from _queue import Empty
 from queue import Queue, Full
-from typing import Protocol, TypeVar, Dict, List, Callable, Any
+from typing import Protocol, TypeVar, Dict, List, Callable, Any, Hashable, Generic
 
-from ibind import var, QueueAccessor
+from ibind import var
 from ibind.support.py_utils import exception_to_string, tname
 from ibind.ws_v2._ws_events import WsEvent, _LOGGER
+
+
+Q = TypeVar('Q', bound=Hashable)
+
+
+class QueueAccessor(Generic[Q]):  # pragma: no cover
+    """
+    Provides access to a queue with an associated key.
+
+    This class encapsulates a queue and provides methods to interact with it, such as retrieving items
+    and checking if the queue is empty. It is generic and can be associated with a key of any type.
+    """
+
+    def __init__(self, queue: Queue, key: Q):
+        """
+        Parameters:
+            queue (Queue): The queue to be accessed.
+            key (T): The key associated with this queue accessor.
+        """
+        self.__queue__ = queue
+        self._key = key
+
+    def get(self, block: bool = False, timeout=None) -> Any:
+        """
+        Attempts to retrieve an item from the queue.
+
+        This method tries to get an item from the queue. If the queue is empty and 'block' is False,
+        it immediately returns None. Otherwise, it blocks until an item is available or until the
+        timeout (if provided in 'kwargs') elapses.
+
+        Parameters:
+            block (bool, optional): Whether to block if the queue is empty. Defaults to False.
+            timeout (Optional[float]): The maximum time in seconds to block waiting for an item.
+                                       A value of None indicates an indefinite wait. Only effective if 'block' is True.
+
+
+        Returns:
+            The item retrieved from the queue, or None if the queue is empty and 'block' is False.
+        """
+        try:
+            return self.__queue__.get(block=block, timeout=timeout)
+        except Empty:
+            return None
+
+    def empty(self) -> bool:
+        """
+        Checks if the queue is empty.
+
+        Returns:
+            bool: True if the queue is empty, False otherwise.
+        """
+        return self.__queue__.empty()
+
+    @property
+    def key(self) -> Q:
+        return self._key
+
+    def __str__(self):
+        return f'QueueAccessor(key={self._key}, size={self.__queue__.qsize()})'
 
 
 class EventSink(Protocol):  # pragma: no cover
