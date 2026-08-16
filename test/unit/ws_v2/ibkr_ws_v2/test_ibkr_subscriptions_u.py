@@ -154,7 +154,28 @@ class TestAccountSummarySubscription:
     @capture_logs()
     def test_subscribe_payload(self, sub):
         """AccountSummarySubscription generates correct subscribe payload."""
-        assert sub.subscribe_payload() == 'ssd+ACC123'
+        assert sub.subscribe_payload() == 'ssd+ACC123+{}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_keys(self):
+        """AccountSummarySubscription generates correct subscribe payload with keys."""
+        sub = AccountSummarySubscription(account_id='ACC123', keys=['AccruedCash-S', 'ExcessLiquidity-S'])
+        assert sub.subscribe_payload() == 'ssd+ACC123+{"keys":["AccruedCash-S","ExcessLiquidity-S"]}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_fields(self):
+        """AccountSummarySubscription generates correct subscribe payload with fields."""
+        sub = AccountSummarySubscription(account_id='ACC123', fields=['currency', 'monetaryValue'])
+        assert sub.subscribe_payload() == 'ssd+ACC123+{"fields":["currency","monetaryValue"]}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_keys_and_fields(self):
+        """AccountSummarySubscription generates correct subscribe payload with both keys and fields."""
+        sub = AccountSummarySubscription(account_id='ACC123', keys=['AccruedCash-S'], fields=['currency'])
+        result = sub.subscribe_payload()
+        payload_data = json.loads(result.split('+', 2)[2])
+        assert result.startswith('ssd+ACC123+')
+        assert payload_data == {'keys': ['AccruedCash-S'], 'fields': ['currency']}
 
     @capture_logs()
     def test_unsubscribe_payload(self, sub):
@@ -190,7 +211,28 @@ class TestAccountLedgerSubscription:
     @capture_logs()
     def test_subscribe_payload(self, sub):
         """AccountLedgerSubscription generates correct subscribe payload."""
-        assert sub.subscribe_payload() == 'sld+ACC456'
+        assert sub.subscribe_payload() == 'sld+ACC456+{}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_keys(self):
+        """AccountLedgerSubscription generates correct subscribe payload with keys."""
+        sub = AccountLedgerSubscription(account_id='ACC456', keys=['LedgerListEUR', 'LedgerListUSD'])
+        assert sub.subscribe_payload() == 'sld+ACC456+{"keys":["LedgerListEUR","LedgerListUSD"]}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_fields(self):
+        """AccountLedgerSubscription generates correct subscribe payload with fields."""
+        sub = AccountLedgerSubscription(account_id='ACC456', fields=['cashBalance', 'exchangeRate'])
+        assert sub.subscribe_payload() == 'sld+ACC456+{"fields":["cashBalance","exchangeRate"]}'
+
+    @capture_logs()
+    def test_subscribe_payload_with_keys_and_fields(self):
+        """AccountLedgerSubscription generates correct subscribe payload with both keys and fields."""
+        sub = AccountLedgerSubscription(account_id='ACC456', keys=['LedgerListBASE'], fields=['cashBalance'])
+        result = sub.subscribe_payload()
+        payload_data = json.loads(result.split('+', 2)[2])
+        assert result.startswith('sld+ACC456+')
+        assert payload_data == {'keys': ['LedgerListBASE'], 'fields': ['cashBalance']}
 
     @capture_logs()
     def test_unsubscribe_payload(self, sub):

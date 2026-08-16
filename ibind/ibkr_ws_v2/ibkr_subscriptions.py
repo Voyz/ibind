@@ -1,5 +1,5 @@
 import json
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 from pydantic import Field
 
@@ -100,13 +100,22 @@ class AccountSummarySubscription(IbkrSubscription):
 
     Attributes:
         account_id (str): Required. The account ID whose account summary data will be subscribed.
+        keys (List[str], optional): Pass specific account summary data keys to receive messages concerning only those keys.
+        fields (List[str], optional): Pass specific account summary field names to filter responses to include only these fields.
     """
 
     event_type: type[IbkrTopicEvent] = AccountSummary
     account_id: str
+    keys: Optional[List[str]] = None
+    fields: Optional[List[str]] = None
 
     def subscribe_payload(self) -> str:
-        return f'ssd+{self.account_id}'
+        data = filter_none({
+            'keys': self.keys,
+            'fields': self.fields,
+        })
+        data_str = json.dumps(data, separators=(',', ':')) if data else '{}'
+        return f'ssd+{self.account_id}+{data_str}'
 
     def unsubscribe_payload(self) -> str:
         return f'usd+{self.account_id}'
@@ -129,13 +138,22 @@ class AccountLedgerSubscription(IbkrSubscription):
 
     Attributes:
         account_id (str): Required. The account ID whose ledger data will be subscribed.
+        keys (List[str], optional): Pass specific ledger currency keys to receive messages with data only for those currencies.
+        fields (List[str], optional): Pass specific ledger field names to receive messages only those data points.
     """
 
     event_type: type[IbkrTopicEvent] = AccountLedger
     account_id: str
+    keys: Optional[List[str]] = None
+    fields: Optional[List[str]] = None
 
     def subscribe_payload(self) -> str:
-        return f'sld+{self.account_id}'
+        data = filter_none({
+            'keys': self.keys,
+            'fields': self.fields,
+        })
+        data_str = json.dumps(data, separators=(',', ':')) if data else '{}'
+        return f'sld+{self.account_id}+{data_str}'
 
     def unsubscribe_payload(self) -> str:
         return f'uld+{self.account_id}'
