@@ -23,7 +23,7 @@
 
 ## ContractMixin
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#contract
+https://www.interactivebrokers.com/docs/web-api/v1/endpoints/contract
 
 <a id="client.ibkr_client_mixins.contract_mixin.ContractMixin.security_definition_by_conid"></a>
 

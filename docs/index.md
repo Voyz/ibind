@@ -84,9 +84,9 @@ while True:
 
 IBind is not built, maintained, or endorsed by Interactive Brokers. Use at your own discretion. See the [full disclaimer][disclaimer] for details.
 
-[ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
-[ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
-[ibkr-websocket]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+[ibkr-docs]: https://www.interactivebrokers.com/docs/web-api/v1/
+[ibkr-endpoints]: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/introduction
+[ibkr-websocket]: https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
 [github]: https://github.com/Voyz/ibind

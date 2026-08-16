@@ -15,7 +15,7 @@
 
 ## SessionMixin
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
+https://www.interactivebrokers.com/docs/web-api/v1/endpoints/session
 
 <a id="client.ibkr_client_mixins.session_mixin.SessionMixin.authentication_status"></a>
 

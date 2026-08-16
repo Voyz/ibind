@@ -406,7 +406,7 @@ Based on the IBKR documentation at the time of writing this, we've identified th
 
 Learn about the [IbkrWsClient][ibkr-ws-client-docs].
 
-[place-order-docs]: https://ibkrcampus.com/ibkr-api-page/webapi-doc/#order-reply-messages
+[place-order-docs]: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/orders/place-order-reply-confirmation
 
 [ibkr-ws-client-docs]: ../websocket/overview.md
 

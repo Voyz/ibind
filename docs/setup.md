@@ -59,7 +59,7 @@ To get started, familiarise yourself with the [Authentication][authentication].
 
 Above code snippet expects the Gateway URL to be the default `https://localhost:5000/v1/api/`, which may not be the case in your setup. You can learn more about configuring this and other settings in [IBind Configuration][ibind-configuration].
 
-[gateway]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#start-step-two-copyBtn
+[gateway]: https://www.interactivebrokers.com/docs/web-api/authentication/introduction#client-portal-gateway
 
 [ibeam]: https://github.com/Voyz/ibeam
 
@@ -69,8 +69,8 @@ Above code snippet expects the Gateway URL to be the default `https://localhost:
 
 [ibkr-ws-client-docs]: ./websocket/overview.md
 
-[ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
+[ibkr-endpoints]: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/introduction
 
-[ibkr-websockets]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+[ibkr-websockets]: https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
 
 [ibind-configuration]: ./configuration.md

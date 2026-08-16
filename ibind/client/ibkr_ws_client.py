@@ -22,7 +22,7 @@ _LOGGER = project_logger(__file__)
 
 class IbkrWsKey(Enum):
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+    https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
 
     Enumeration of key types for IBKR WebSocket channels.
 

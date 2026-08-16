@@ -11,7 +11,7 @@
 
 ## WatchlistMixin
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
+https://www.interactivebrokers.com/docs/web-api/v1/endpoints/watchlists
 
 <a id="client.ibkr_client_mixins.watchlist_mixin.WatchlistMixin.create_watchlist"></a>
 

@@ -36,7 +36,7 @@ See [OAuth 1.0a][oauth1a] page for how to set it up with IBind.
 
 
 
-[gateway]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#start-step-two-copyBtn
+[gateway]: https://www.interactivebrokers.com/docs/web-api/authentication/introduction#client-portal-gateway
 [ibkr-oauth1a]: https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#oauth-10a
 [ibeam]: https://github.com/Voyz/ibeam
 [oauth1a]: ./oauth/oauth_1a.md

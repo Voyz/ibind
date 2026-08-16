@@ -17,7 +17,7 @@
 
 ## MarketdataMixin
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
+https://www.interactivebrokers.com/docs/web-api/v1/endpoints/market-data
 
 <a id="client.ibkr_client_mixins.marketdata_mixin.MarketdataMixin.live_marketdata_snapshot"></a>
 

@@ -11,8 +11,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 class OrderMixin:
     """
-    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
-    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
+    * https://www.interactivebrokers.com/docs/web-api/v1/endpoints/order-monitoring
+    * https://www.interactivebrokers.com/docs/web-api/v1/endpoints/orders
     """
 
     order_submission_lock = Lock()

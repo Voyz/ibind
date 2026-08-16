@@ -17,8 +17,8 @@
 
 ## OrderMixin
 
-* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#order-monitor
-* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#orders
+* https://www.interactivebrokers.com/docs/web-api/v1/endpoints/order-monitoring
+* https://www.interactivebrokers.com/docs/web-api/v1/endpoints/orders
 
 <a id="client.ibkr_client_mixins.order_mixin.OrderMixin.live_orders"></a>
 

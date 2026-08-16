@@ -24,8 +24,8 @@
 
 ## PortfolioMixin
 
-* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#portfolio
-* https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
+* https://www.interactivebrokers.com/docs/web-api/v1/endpoints/portfolio
+* https://www.interactivebrokers.com/docs/web-api/v1/endpoints/portfolio-analyst
 
 <a id="client.ibkr_client_mixins.portfolio_mixin.PortfolioMixin.portfolio_accounts"></a>
 

@@ -14,7 +14,7 @@
 
 ## AccountsMixin
 
-https://ibkrcampus.com/ibkr-api-page/webapi-doc/#accounts
+https://www.interactivebrokers.com/docs/web-api/v1/endpoints/accounts
 
 <a id="client.ibkr_client_mixins.accounts_mixin.AccountsMixin.account_summary"></a>
 

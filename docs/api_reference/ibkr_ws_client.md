@@ -358,7 +358,7 @@ Returns:
 
 ## IbkrWsKey
 
-https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#websockets
+https://www.interactivebrokers.com/docs/web-api/v1/ws/introduction
 
 Enumeration of key types for IBKR WebSocket channels.
 

@@ -26,7 +26,6 @@ See [API Reference - IbkrClient][api-ibkr-client] for more.
 Almost all endpoints defined in the [IBKR REST API][ibkr-endpoints] are mapped to `IbkrClient` methods. Currently, the endpoint sections that are still NOT mapped are:
 
 * Alerts
-* FA Allocation Management
 * FYIs and Notifications
 
 Note:
@@ -72,7 +71,7 @@ In several cases, `IbkrClient` implements additional logic to allow more sophist
 Learn about the [Advanced REST][advanced-rest] concepts.
 
 
-[ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
+[ibkr-endpoints]: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/introduction
 
 [ibind-configuration-construction-parameters]: ../configuration.md#constructor-parameters
 

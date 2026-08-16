@@ -22,7 +22,7 @@ def _parse_auth_status(auth_status):
 
 class SessionMixin:
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#session
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/session
     """
 
     def authentication_status(self: 'IbkrClient', log: bool = True) -> Result:  # pragma: no cover

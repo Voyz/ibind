@@ -14,7 +14,7 @@ class FaMixin:  # pragma: no cover
     """
     Financial Advisor model portfolio endpoints ('Trading FA Allocation Management').
 
-    * https://www.interactivebrokers.com/campus/ibkr-api-page/web-api/
+    * https://www.interactivebrokers.com/docs/web-api/v1/endpoints/fa-allocation-management/
 
     Covers the `/fa/model/*` and `/fa/fa-preset/*` endpoint group, allowing Financial Advisor accounts to
     list, create, rebalance and monitor model portfolios programmatically.
