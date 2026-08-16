@@ -526,6 +526,19 @@ class TestIbkrRouterHandleSubscribedMessage:
         ## Assert
         assert isinstance(result, events.GenericIbkrEvent)
 
+    @capture_logs(expected_errors=['topic "sbd+ACC789+11111" subscribed but lacking a handler'], partial_match=True)
+    def test_price_ladder_non_list_data_creates_generic_event(self):
+        """Price Ladder messages with non-list data are surfaced without raising."""
+        ## Arrange
+        router = IbkrRouter()
+        raw_message = json.dumps({'topic': 'sbd+ACC789+11111', 'data': {'invalid': 'data'}})
+
+        ## Act
+        result = router.route(raw_message)
+
+        ## Assert
+        assert isinstance(result, events.GenericIbkrEvent)
+
 
 class TestIbkrRouterHandleAccountUpdate:
     @capture_logs()

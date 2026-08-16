@@ -547,6 +547,134 @@ class TestInterface:
         ## Assert
         assert sc.get_status(binding_key) == BindingStatus.DEGRADED
 
+    @capture_logs()
+    def test_invalidate_active_subscriptions_skips_non_active_intent(self, sc, mock_sub, binding_key):
+        """invalidate_active_subscriptions skips bindings with non-ACTIVE intent."""
+        ## Arrange
+        sc.unsubscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        original_status = binding.status
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert binding.status == original_status
+        assert binding.attempts == 0
+        assert binding.last_attempt == 0
+
+    @capture_logs()
+    def test_invalidate_active_subscriptions_resets_retry_state(self, sc, mock_sub, binding_key):
+        """invalidate_active_subscriptions resets attempts and last_attempt for ACTIVE intent bindings."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        binding.attempts = 5
+        binding.last_attempt = 100.0
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert binding.attempts == 0
+        assert binding.last_attempt == 0
+
+    @capture_logs()
+    def test_invalidate_active_subscriptions_marks_degraded_when_not_already(self, sc, mock_sub, binding_key):
+        """invalidate_active_subscriptions marks binding as DEGRADED when status is not already DEGRADED."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        assert binding.status != BindingStatus.DEGRADED
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert binding.status == BindingStatus.DEGRADED
+
+    @capture_logs()
+    def test_invalidate_active_subscriptions_notifies_when_already_degraded(self, sc, mock_sub, binding_key):
+        """invalidate_active_subscriptions notifies condition when binding is already DEGRADED."""
+        ## Arrange
+        sc.subscribe(mock_sub)
+        binding = sc._bindings[binding_key]
+        binding.status = BindingStatus.DEGRADED
+        notify_called = False
+
+        original_notify_all = sc._condition.notify_all
+        def mock_notify_all():
+            nonlocal notify_called
+            notify_called = True
+            original_notify_all()
+
+        sc._condition.notify_all = mock_notify_all
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert notify_called is True
+
+    @capture_logs()
+    def test_invalidate_active_subscriptions_processes_multiple_bindings(self, sc):
+        """invalidate_active_subscriptions processes all bindings with ACTIVE intent."""
+        ## Arrange
+        sub1 = MockSubscription(topic_value='topic1', payload_value='payload1')
+        sub2 = MockSubscription(topic_value='topic2', payload_value='payload2')
+        sub3 = MockSubscription(topic_value='topic3', payload_value='payload3')
+        sc.subscribe(sub1)
+        sc.subscribe(sub2)
+        sc.subscribe(sub3)
+        sc.unsubscribe(sub3)
+
+        binding1 = sc._bindings[sub1.binding_key()]
+        binding2 = sc._bindings[sub2.binding_key()]
+        binding3 = sc._bindings[sub3.binding_key()]
+
+        binding1.attempts = 3
+        binding1.last_attempt = 50.0
+        binding2.attempts = 2
+        binding2.last_attempt = 75.0
+        binding3.attempts = 2
+        binding3.last_attempt = 75.0
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert binding1.attempts == 0
+        assert binding1.last_attempt == 0
+        assert binding1.status == BindingStatus.DEGRADED
+        assert binding2.attempts == 0
+        assert binding2.last_attempt == 0
+        assert binding2.status == BindingStatus.DEGRADED
+        assert binding3.attempts == 2
+        assert binding3.last_attempt == 75.0
+
+    @capture_logs()
+    def test_invalidate_active_subscriptions_with_active_intent_only(self, sc):
+        """invalidate_active_subscriptions only processes bindings with ACTIVE intent."""
+        ## Arrange
+        sub_active = MockSubscription(topic_value='active', payload_value='active_payload')
+        sub_unsubscribed = MockSubscription(topic_value='unsub', payload_value='unsub_payload')
+        sc.subscribe(sub_active)
+        sc.subscribe(sub_unsubscribed)
+        sc.unsubscribe(sub_unsubscribed)
+
+        binding_active = sc._bindings[sub_active.binding_key()]
+        binding_unsubscribed = sc._bindings[sub_unsubscribed.binding_key()]
+
+        binding_active.attempts = 5
+        binding_unsubscribed.attempts = 5
+
+        ## Act
+        sc.invalidate_active_subscriptions()
+
+        ## Assert
+        assert binding_active.attempts == 0
+        assert binding_unsubscribed.attempts == 5
+
 
 class TestObserve:
     @capture_logs()
