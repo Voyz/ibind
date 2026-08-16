@@ -1,8 +1,3 @@
-*This library is currently being beta-tested. See something that's broken? Did we get something
-wrong? [Create an issue and let us know!][issues]*
-
-
-
 <p align="center">
     <a id="ibind" href="#ibind">
         <img src="https://raw.githubusercontent.com/Voyz/ibind/master/media/ibind_logo.png" alt="IBind logo" title="IBind logo" width="600"/>
@@ -59,10 +54,10 @@ Features:
   * [Financial Advisor model portfolios][api-fa-mixin]
   * [and more][wiki-advanced-api]
 * WebSocket:
-  * [WebSocket thread lifecycle handling][wiki-ws-lifecycle]
-  * [Thread-safe Queue data stream][wiki-ws-queues]
-  * [Internal subscription tracking][wiki-ws-subscriptions]
-  * [Health monitoring][wiki-ws-health-monitoring]
+  * [Multi-threaded with async event propagation][wiki-ws-lifecycle]
+  * [Typed, idempotent subscription interface][wiki-ws-subscriptions]
+  * [Event-driven consumption sinks][wiki-ws-sinks]
+  * [Automatic health monitoring and connection recovery][wiki-ws-health-monitoring]
   * [and more][wiki-advanced-websocket]
 
 <a href="https://www.youtube.com/watch?v=34iHETvbdas">
@@ -77,13 +72,13 @@ IBind's core functionality consists of two client classes:
 
   Using the `IbkrClient` requires constructing it with appropriate arguments, then calling the API methods.
 
-* [`IbkrWsClient`][ibkr-ws-client-docs] - for [IBKR WebSocket API][ibkr-websocket]
+* [`IbkrWsClientV2`][ibkr-ws-client-docs] - for [IBKR WebSocket API][ibkr-websocket]
 
-  Using the `IbkrWsClient` involves handling three areas:
+  Using the `IbkrWsClientV2` involves handling three areas:
 
-  * Managing its lifecycle. It is asynchronous and it will run on a separate thread, hence we need to construct it, start it and then manage its lifecycle on the originating thread.
-  * Subscribing and unsubscribing. It is subscription-based, hence we need to specify which channels we want to subscribe to and remember to unsubscribe later.
-  * Consuming data. It uses a queue system, hence we need to access these queues and consume their data.
+  * Managing its lifecycle. It is asynchronous and runs on separate internal threads, hence we need to construct it, start it, and manage it from the originating thread.
+  * Subscribing and unsubscribing. It uses a typed subscription interface with idempotent semantics, allowing flexible subscription management.
+  * Consuming data. It uses a sink-based pattern supporting callbacks, queues, or custom implementations for flexible event consumption.
 
 Their usage differs substantially. Users are encouraged to familiarise themselves with the `IbkrClient` class first.
 
@@ -113,21 +108,26 @@ print(client.portfolio_accounts().data)
 ### Basic WebSocket Example
 
 ```python
-from ibind import IbkrWsKey, IbkrWsClient
+from ibind import QueueSink, IbkrWsClientV2, events
+from ibind.subscriptions import PnlSubscription
 
-# Construct the client. Assumes IBIND_ACCOUNT_ID and IBIND_CACERT environment variables have been set.
-ws_client = IbkrWsClient(start=True)
+# Create a queue-based event sink
+sink = QueueSink()
 
-# Choose the WebSocket channel
-ibkr_ws_key = IbkrWsKey.PNL
+# Construct and start the client
+ws_client = IbkrWsClientV2(account_id='[YOUR_ACCOUNT_ID]', sink=sink)
+ws_client.start()
 
-# Subscribe to the PNL channel
-ws_client.subscribe(channel=ibkr_ws_key.channel)
+# Subscribe to PnL updates
+ws_client.subscribe(PnlSubscription())
 
-# Wait for new items in the PNL queue.
+# Consume PnL events
 while True:
-  while not ws_client.empty(ibkr_ws_key):
-    print(ws_client.get(ibkr_ws_key))
+    while not sink.empty(events.Pnl):
+        event = sink.get(events.Pnl)
+        print(event)
+
+ws_client.shutdown()
 ```
 
 
@@ -176,10 +176,10 @@ Thanks and have an awesome day 👋
 [ibeam]: https://github.com/Voyz/ibeam
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
 [issues]: https://github.com/Voyz/ibind/issues
-[api-ibkr-client]: https://github.com/Voyz/ibind/wiki/API-Reference-%E2%80%90-IbkrClient
-[api-fa-mixin]: https://github.com/Voyz/ibind/wiki/API-Reference-%E2%80%90-IbkrClient#famixin
-[ibkr-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
-[ibkr-ws-client-docs]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
+[api-ibkr-client]: ./docs/api_reference/ibkr_client.md
+[api-fa-mixin]: ./docs/api_reference/ibkr_client.md#famixin
+[ibkr-client-docs]: ./docs/rest/ibkr_client.md
+[ibkr-ws-client-docs]: ./docs/websocket/overview.md
 
 [ibkr-docs]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/
 [ibkr-endpoints]: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#endpoints
@@ -187,22 +187,22 @@ Thanks and have an awesome day 👋
 [web-api]: https://www.interactivebrokers.com/campus/ibkr-api-page/webapi-doc
 
 
-[wiki]: https://github.com/Voyz/ibind/wiki
-[wiki-installation]: https://github.com/Voyz/ibind/wiki/Installation
-[wiki-authentication]: https://github.com/Voyz/ibind/wiki/Authentication
-[wiki-oauth1a]: https://github.com/Voyz/ibind/wiki/OAuth-1.0a
-[wiki-ibind-configuration]: https://github.com/Voyz/ibind/wiki/IBind-Configuration
-[wiki-ibkr-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Client
-[wiki-ibkr-ws-client]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client
+[wiki]: ./docs/index.md
+[wiki-installation]: ./docs/setup.md
+[wiki-authentication]: ./docs/authentication.md
+[wiki-oauth1a]: ./docs/oauth/oauth_1a.md
+[wiki-ibind-configuration]: ./docs/configuration.md
+[wiki-ibkr-client]: ./docs/rest/ibkr_client.md
+[wiki-ibkr-ws-client]: ./docs/websocket/overview.md
 
-[wiki-question-answer]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-place_order
-[wiki-parallel-requests]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-marketdata_history_by_symbols
-[wiki-rate-limiting]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-marketdata_history_by_symbols
-[wiki-conid-unpacking]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#-security_stocks_by_symbol
-[wiki-advanced-api]: https://github.com/Voyz/ibind/wiki/Ibkr-Client#advanced-api
+[wiki-question-answer]: ./docs/rest/ibkr_client.md#-place_order
+[wiki-parallel-requests]: ./docs/rest/ibkr_client.md#-marketdata_history_by_symbols
+[wiki-rate-limiting]: ./docs/rest/ibkr_client.md#-marketdata_history_by_symbols
+[wiki-conid-unpacking]: ./docs/rest/ibkr_client.md#-security_stocks_by_symbol
+[wiki-advanced-api]: ./docs/rest/ibkr_client.md#advanced-api
 
-[wiki-ws-lifecycle]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-managing-the-lifecycle
-[wiki-ws-queues]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-consuming-data
-[wiki-ws-subscriptions]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#-subscribing-and-unsubscribing
-[wiki-ws-health-monitoring]: https://github.com/Voyz/ibind/wiki/Ibkr-Ws-Client#health-monitoring
-[wiki-advanced-websocket]: https://github.com/Voyz/ibind/wiki/Advanced-WebSocket
+[wiki-ws-lifecycle]: ./docs/websocket/overview.md#-managing-the-lifecycle
+[wiki-ws-sinks]: ./docs/websocket/overview.md#-consuming-data
+[wiki-ws-subscriptions]: ./docs/websocket/overview.md#-subscribing-and-unsubscribing
+[wiki-ws-health-monitoring]: ./docs/websocket/overview.md#health-monitoring
+[wiki-advanced-websocket]: ./docs/websocket/overview.md
