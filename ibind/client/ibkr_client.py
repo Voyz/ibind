@@ -26,7 +26,9 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = project_logger(__file__)
 
 
-class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin):
+class IbkrClient(
+    RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMixin, OrderMixin, PortfolioMixin, ScannerMixin, SessionMixin, WatchlistMixin
+):
     """
     A client class for interfacing with the IBKR API, extending the RestClient class.
 
@@ -215,7 +217,7 @@ class IbkrClient(RestClient, AccountsMixin, ContractMixin, FaMixin, MarketdataMi
             consumer_key=self.oauth_config.consumer_key,
         )
         if not success:
-            raise RuntimeError('Live session token validation failed.')
+            raise RuntimeError('Live session token validation failed. You may need to repeat the OAuth1a registration process.')
 
         if maintain_oauth:
             self.start_tickler()
