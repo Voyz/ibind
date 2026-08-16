@@ -84,7 +84,7 @@ class WsTransport:
         get_cookie: Callable[[], str | None] = noop,
         get_header: Callable[[], Dict[str, Any] | None] = noop,
         ping_interval: float = 10,
-        ping_timeout: float = 0.95,
+        ping_timeout: float = 9.5,
         max_ping_interval: float = 20,
         connection_timeout: float = 5,
         reconnect_timeout: float = 5,
