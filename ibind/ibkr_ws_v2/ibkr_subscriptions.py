@@ -270,6 +270,7 @@ class OrdersSubscription(IbkrSubscription):
     filter: str = None
 
     def subscribe_payload(self) -> str:
+        # filter is constrained to IBKR order status values (simple strings without special chars)
         filter_str = f'{{"filters": ["{self.filter}"]}}' if self.filter is not None else '{}'
         return f'sor+{filter_str}'
 
