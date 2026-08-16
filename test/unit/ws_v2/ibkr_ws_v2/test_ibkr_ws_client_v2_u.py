@@ -116,7 +116,7 @@ class TestIbkrWsClientV2Init:
         assert client._account_id == var.IBIND_ACCOUNT_ID
         assert client._ibkr_client == mock_client_instance
         assert client._use_oauth is var.IBIND_USE_OAUTH
-        assert client._mh_subscriptions == []
+        assert client._mh_subscriptions == {}
         assert isinstance(client._conid_server_id_pairs, defaultdict)
         assert client._tic_message == {}
 
@@ -354,7 +354,8 @@ class TestIbkrWsClientV2Callbacks:
         """_on_server_id updates MarketHistorySubscription with server_id."""
         ## Arrange
         subscription = MarketHistorySubscription(conid='12345')
-        client._mh_subscriptions.append(subscription)
+        key = (events.MarketHistory, '12345')
+        client._mh_subscriptions[key] = subscription
         event = events.ServerId(conid='12345', server_id='srv_abc', target_event_type=events.MarketHistory)
 
         ## Act
@@ -369,7 +370,8 @@ class TestIbkrWsClientV2Callbacks:
         """_on_server_id does not update subscription with different conid."""
         ## Arrange
         subscription = MarketHistorySubscription(conid='99999')
-        client._mh_subscriptions.append(subscription)
+        key = (events.MarketHistory, '99999')
+        client._mh_subscriptions[key] = subscription
         event = events.ServerId(conid='12345', server_id='srv_abc', target_event_type=events.MarketHistory)
 
         ## Act
@@ -384,7 +386,8 @@ class TestIbkrWsClientV2Callbacks:
         ## Arrange
         subscription = MarketHistorySubscription(conid='12345')
         subscription.set_server_id('srv_old')
-        client._mh_subscriptions.append(subscription)
+        key = (events.MarketHistory, '12345')
+        client._mh_subscriptions[key] = subscription
         event = events.ServerId(conid='12345', server_id='srv_new', target_event_type=events.MarketHistory)
 
         ## Act
@@ -489,8 +492,8 @@ class TestIbkrWsClientV2GetAuthenticated:
 
 class TestIbkrWsClientV2Subscribe:
     @capture_logs()
-    def test_subscribe_market_history_adds_to_list(self, client):
-        """subscribe adds MarketHistorySubscription to internal list."""
+    def test_subscribe_market_history_adds_to_dict(self, client):
+        """subscribe adds MarketHistorySubscription to internal dict."""
         ## Arrange
         client._runtime = MagicMock()
         subscription = MarketHistorySubscription(conid='12345')
@@ -501,12 +504,14 @@ class TestIbkrWsClientV2Subscribe:
         result = client.subscribe(subscription)
 
         ## Assert
-        assert subscription in client._mh_subscriptions
+        key = (events.MarketHistory, '12345')
+        assert key in client._mh_subscriptions
+        assert client._mh_subscriptions[key] is subscription
         assert result is handle
 
     @capture_logs()
     def test_subscribe_non_market_history(self, client):
-        """subscribe does not add non-MarketHistory subscriptions to list."""
+        """subscribe does not add non-MarketHistory subscriptions to dict."""
         ## Arrange
         client._runtime = MagicMock()
 
@@ -518,8 +523,27 @@ class TestIbkrWsClientV2Subscribe:
         result = client.subscribe(subscription)
 
         ## Assert
-        assert subscription not in client._mh_subscriptions
+        assert len(client._mh_subscriptions) == 0
         assert result is handle
+
+    @capture_logs()
+    def test_subscribe_market_history_replaces_existing_for_same_conid(self, client):
+        """subscribe replaces existing MarketHistorySubscription for same conid."""
+        ## Arrange
+        client._runtime = MagicMock()
+        subscription1 = MarketHistorySubscription(conid='12345', period='1d')
+        subscription2 = MarketHistorySubscription(conid='12345', period='1w')
+        handle = MagicMock(spec=SubscriptionHandle)
+        client._runtime.subscription_controller.subscribe.return_value = handle
+
+        ## Act
+        client.subscribe(subscription1)
+        client.subscribe(subscription2)
+
+        ## Assert
+        key = (events.MarketHistory, '12345')
+        assert len(client._mh_subscriptions) == 1
+        assert client._mh_subscriptions[key] is subscription2
 
 
 class TestIbkrWsClientV2Unsubscribe:
@@ -581,6 +605,43 @@ class TestIbkrWsClientV2Unsubscribe:
         result = client.unsubscribe(subscription)
 
         ## Assert
+        assert result is handle
+
+    @capture_logs()
+    def test_unsubscribe_market_history_removes_from_dict(self, client):
+        """unsubscribe removes MarketHistorySubscription from dict."""
+        ## Arrange
+        client._runtime = MagicMock()
+        subscription = MarketHistorySubscription(conid='12345')
+        subscription.set_server_id('srv_abc')
+        key = (events.MarketHistory, '12345')
+        client._mh_subscriptions[key] = subscription
+        handle = MagicMock(spec=SubscriptionHandle)
+        client._runtime.subscription_controller.unsubscribe.return_value = handle
+
+        ## Act
+        result = client.unsubscribe(subscription)
+
+        ## Assert
+        assert key not in client._mh_subscriptions
+        assert len(client._mh_subscriptions) == 0
+        assert result is handle
+
+    @capture_logs()
+    def test_unsubscribe_market_history_not_in_dict_is_safe(self, client):
+        """unsubscribe handles MarketHistorySubscription not in dict gracefully."""
+        ## Arrange
+        client._runtime = MagicMock()
+        subscription = MarketHistorySubscription(conid='12345')
+        subscription.set_server_id('srv_abc')
+        handle = MagicMock(spec=SubscriptionHandle)
+        client._runtime.subscription_controller.unsubscribe.return_value = handle
+
+        ## Act
+        result = client.unsubscribe(subscription)
+
+        ## Assert
+        assert len(client._mh_subscriptions) == 0
         assert result is handle
 
 

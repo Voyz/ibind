@@ -1,6 +1,6 @@
 import json
 from collections import defaultdict
-from typing import Union, List, Dict, Type, Optional
+from typing import Union, List, Dict, Type, Optional, Tuple
 
 from ibind import events
 from ibind import var
@@ -141,7 +141,7 @@ class IbkrWsClientV2:
         )
         self._register_internal_callbacks()
 
-        self._mh_subscriptions: List[MarketHistorySubscription] = []
+        self._mh_subscriptions: Dict[Tuple[Type[events.IbkrTopicEvent], str], MarketHistorySubscription] = {}
         self._conid_server_id_pairs: Dict[type[events.IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)
         self._tic_message = {}
 
@@ -172,9 +172,10 @@ class IbkrWsClientV2:
 
     def _on_server_id(self, event: events.ServerId):
         self._conid_server_id_pairs[event.target_event_type][event.conid] = event.server_id
-        for subscription in self._mh_subscriptions:
-            if subscription.event_type == event.target_event_type and subscription.conid == event.conid and not subscription.has_server_id():
-                subscription.set_server_id(event.server_id)
+        key = (event.target_event_type, event.conid)
+        subscription = self._mh_subscriptions.get(key)
+        if subscription and not subscription.has_server_id():
+            subscription.set_server_id(event.server_id)
 
     def _get_cookie(self):
         status = self._ibkr_client.tickle()
@@ -235,7 +236,8 @@ class IbkrWsClientV2:
             - This method is non-blocking and idempotent.
         """
         if isinstance(subscription, MarketHistorySubscription):
-            self._mh_subscriptions.append(subscription)
+            key = (subscription.event_type, subscription.conid)
+            self._mh_subscriptions[key] = subscription
         return self._runtime.subscription_controller.subscribe(subscription)
 
     def unsubscribe(self, subscription: Subscription) -> SubscriptionHandle:
@@ -253,6 +255,8 @@ class IbkrWsClientV2:
         """
         if isinstance(subscription, MarketHistorySubscription):
             self._handle_mh_unsubscription(subscription)
+            key = (subscription.event_type, subscription.conid)
+            self._mh_subscriptions.pop(key, None)
         return self._runtime.subscription_controller.unsubscribe(subscription)
 
     def get_binding_status(self, binding_key: str) -> BindingStatus:  # pragma: no cover
@@ -295,7 +299,7 @@ class IbkrWsClientV2:
             f'{self}: Unsubscribing from market history for conid={subscription.conid!r} without server_id. Setting from memory: {server_id!r}. '
             f'Unsubscribe using the same Subscription instance that was used for subscribing to avoid this warning, '
             f'or set it manually before calling unsubscribe by using '
-            f'`subscription.set_server_id(ibkr_ws_client.get_server_id(IbkrWsKey.MARKET_HISTORY, conid))`'
+            f'`subscription.set_server_id(ibkr_ws_client.get_server_id(events.MarketHistory, conid))`'
         )
         subscription.set_server_id(server_id)
 
