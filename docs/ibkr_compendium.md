@@ -59,7 +59,7 @@ From IBKR support agent:
 >
 > I apologize for any inconvenience this limitation may cause. Our log retention policy ensures system performance, but I understand it can complicate troubleshooting older issues. Please don't hesitate to reach out again if you encounter this problem with a more recent timestamp.
 
-# Getting Weekly Options Contracts
+## Getting Weekly Options Contracts
 
 IBKR's Web API returns options data hierarchically. The initial contract search returns only month-level granularity. To access sub-month granularity (weekly options), you must query a specific strike price, which returns all available contracts for that strike, including standard monthlies and weekly expirations.
 
@@ -123,5 +123,19 @@ Note:
 - Month-level queries don't show weeklies - steps 1-4 return only month-level data.
 - Strike-level queries reveal weeklies - step 5 is where weekly options become visible.
 - Different strikes may have different weekly availability - some strikes may have only one contract returned.
+
+## Issue Priority For Live vs Paper Account
+
+_Aug 2026_
+
+Internally IBKR seems to assign different priority to issues appearing in live and paper accounts.
+
+From an exchange with an IBKR support agent:
+
+> [Support]: Please note that this behaviour is a unique artifact of trading in the paper trading environment. As a result, this may not be prioritized compared to our production issues.  
+> [User]: _Based on what you wrote, do I understand correctly you assign higher priority to issues appearing in live accounts than to ones in paper trading accounts?_  
+> [Support]: Yes.
+
+To elevate the priority of an issue, attempt to reproduce it on a live account and provide IBKR support with information on the live account attempts.
 
 [issues]: https://github.com/Voyz/ibind/issues
