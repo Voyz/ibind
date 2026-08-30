@@ -83,11 +83,11 @@ class WsTransport:
         sslopt: Dict[str, Any],
         get_cookie: Callable[[], str | None] = noop,
         get_header: Callable[[], Dict[str, Any] | None] = noop,
-        ping_interval: float = 10,
-        ping_timeout: float = 9.5,
-        max_ping_interval: float = 20,
-        connection_timeout: float = 5,
-        reconnect_timeout: float = 5,
+        ping_interval: float = var.IBIND_WS_PING_INTERVAL,
+        ping_timeout: float = None,
+        max_ping_interval: float = var.IBIND_WS_MAX_PING_INTERVAL,
+        connection_timeout: float = var.IBIND_WS_TIMEOUT,
+        reconnect_timeout: float = var.IBIND_WS_TIMEOUT,
         skip_utf8_validation: bool = var.IBIND_WS_SKIP_UTF8_VALIDATION,
     ):
         """
@@ -99,11 +99,12 @@ class WsTransport:
             sslopt (dict[str, Any]): SSL options for the WebSocket connection.
             get_cookie (Callable, optional): Function to retrieve session cookie. Default: noop.
             get_header (Callable, optional): Function to retrieve HTTP headers. Default: noop.
-            ping_interval (float, optional): Interval in seconds between ping messages. Default: 10.
-            ping_timeout (float, optional): Timeout in seconds for ping responses. Default: 10.
-            max_ping_interval (float, optional): Maximum acceptable time since last pong. Default: 20.
-            connection_timeout (float, optional): Timeout in seconds for connection operations. Default: 5.
-            reconnect_timeout (float, optional): Timeout in seconds before reconnect attempts. Default: 5.
+            ping_interval (float, optional): Interval in seconds between ping messages. Default: IBIND_WS_PING_INTERVAL.
+            ping_timeout (float, optional): Timeout in seconds for ping responses. Must be smaller than `ping_interval`.
+                Default: 95% of `ping_interval`.
+            max_ping_interval (float, optional): Maximum acceptable time since last pong. Default: IBIND_WS_MAX_PING_INTERVAL.
+            connection_timeout (float, optional): Timeout in seconds for connection operations. Default: IBIND_WS_TIMEOUT.
+            reconnect_timeout (float, optional): Timeout in seconds before reconnect attempts. Default: IBIND_WS_TIMEOUT.
             skip_utf8_validation (bool, optional): Whether to skip UTF-8 validation. Default: True
         """
         self._url = url
@@ -112,7 +113,8 @@ class WsTransport:
         self._get_cookie = get_cookie
         self._get_header = get_header
         self._ping_interval = ping_interval
-        self._ping_timeout = ping_timeout
+        # ping_timeout must be smaller than ping_interval, hence we derive it from ping_interval if not provided
+        self._ping_timeout = ping_timeout if ping_timeout is not None else ping_interval * 0.95
         self._max_ping_interval = max_ping_interval
         self._connection_timeout = connection_timeout
         self._reconnect_timeout = reconnect_timeout

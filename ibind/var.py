@@ -87,20 +87,20 @@ IBIND_ACCOUNT_ID = os.getenv('IBIND_ACCOUNT_ID', None)
 IBIND_CACERT = os.getenv('IBIND_CACERT', False)
 """ Path to certificates used to communicate with IBKR Client Portal Gateway."""
 
-IBIND_WS_PING_INTERVAL = int(os.getenv('IBIND_WS_PING_INTERVAL', 45))
-""" Interval between WebSocket pings. """
+IBIND_WS_PING_INTERVAL = float(os.getenv('IBIND_WS_PING_INTERVAL', 10))
+""" Interval in seconds between WebSocket pings sent to IBKR. """
 
-IBIND_WS_MAX_PING_INTERVAL = int(os.getenv('IBIND_WS_MAX_PING_INTERVAL', 300))
-""" Max accepted interval between WebSocket pings. """
+IBIND_WS_MAX_PING_INTERVAL = float(os.getenv('IBIND_WS_MAX_PING_INTERVAL', 20))
+""" Max accepted interval in seconds since the last pong received, after which the connection is reset. """
 
-IBIND_WS_TIMEOUT = int(os.getenv('IBIND_WS_TIMEOUT', 5))
-""" Timeout for WebSocket state change verifications. """
+IBIND_WS_TIMEOUT = float(os.getenv('IBIND_WS_TIMEOUT', 5))
+""" Timeout in seconds for WebSocket connection state change verifications. """
 
-IBIND_WS_SUBSCRIPTION_RETRIES = int(os.getenv('IBIND_WS_SUBSCRIPTION_RETRIES', 5))
-""" Number of attempts to create a WebSocket subscription. """
+IBIND_WS_SUBSCRIPTION_RETRIES = int(os.getenv('IBIND_WS_SUBSCRIPTION_RETRIES', 20))
+""" Number of attempts to create a WebSocket subscription before marking it as failed. """
 
-IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2))
-""" Timeout for WebSocket subscription verifications. """
+IBIND_WS_SUBSCRIPTION_TIMEOUT = float(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 5))
+""" Interval in seconds between subsequent WebSocket subscription attempts. """
 
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
 """ Whether raw WebSocket messages should be logged. """

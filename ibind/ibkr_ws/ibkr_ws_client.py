@@ -135,7 +135,7 @@ class IbkrWsClient:
             sink=sink,
             router=router,
             subscription_resolver=subscription_resolver,
-            connection_timeout=5,
+            connection_timeout=var.IBIND_WS_TIMEOUT,
             get_cookie=self._get_cookie,
             get_header=self._get_header,
             get_authenticated=self._get_authenticated,

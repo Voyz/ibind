@@ -6,6 +6,7 @@ from ibind.client import ibkr_definitions
 from ibind.client.ibkr_utils import extract_conid
 
 from ibind import events
+from ibind import var
 from ibind.events import GenericIbkrEvent, IbkrTopicEvent
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import UNDEFINED, OneOrMany
@@ -43,7 +44,7 @@ def parse_raw_message(raw_message: str):
 
 
 class IbkrRouter:
-    def __init__(self, log_raw_messages: bool = False, unwrap_market_data: bool = True):
+    def __init__(self, log_raw_messages: bool = var.IBIND_WS_LOG_RAW_MESSAGES, unwrap_market_data: bool = True):
         self._log_raw_messages = log_raw_messages
         self._unwrap_market_data = unwrap_market_data
         self._server_id_conid_pairs: Dict[type[IbkrTopicEvent], Dict[str, str]] = defaultdict(dict)

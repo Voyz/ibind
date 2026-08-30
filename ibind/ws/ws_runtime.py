@@ -8,6 +8,7 @@ from typing import Union, List, Dict, Callable
 from ibind.support.logs import project_logger
 from ibind.support.py_utils import noop
 from ibind import events
+from ibind import var
 from ibind.ws._ws_events import WsEvent, Router
 from ibind.ws.ws_sinks import T, AsyncSink, EventSink, CallbackSink
 from ibind.ws.runtime.ws_emitter import WsEmitter
@@ -24,7 +25,7 @@ from ibind.ws.ws_transport import (
 
 _LOGGER = project_logger('ibkr_ws_client')
 
-_DEFAULT_TIMEOUT = 5
+_DEFAULT_TIMEOUT = var.IBIND_WS_TIMEOUT
 
 
 def make_sslopt(cacert: Union[str, bool]):
@@ -49,7 +50,7 @@ class WsRuntime:
         cacert: Union[str, bool] = False,
         connection_timeout: float = _DEFAULT_TIMEOUT,
         reconnect_timeout: float | None = _DEFAULT_TIMEOUT,
-        max_ping_interval: float = 20,
+        max_ping_interval: float = var.IBIND_WS_MAX_PING_INTERVAL,
         get_cookie: Callable = noop,
         get_header: Callable = noop,
         get_authenticated: Callable = noop,

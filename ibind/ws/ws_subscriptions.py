@@ -7,6 +7,7 @@ from typing import Dict, Optional, Callable, Protocol, Tuple, Literal
 from pydantic import BaseModel, ConfigDict
 
 from ibind import events
+from ibind import var
 from ibind.events import WsEvent
 from ibind.support.logs import project_logger
 from ibind.ws.runtime.ws_emitter import WsEmitter
@@ -230,8 +231,8 @@ class SubscriptionController:
         send_payload: Callable[[str], bool],
         emitter: WsEmitter,
         subscription_resolver: SubscriptionResolver,
-        subscription_retries: int = 20,
-        subscription_timeout: float = 5,
+        subscription_retries: int = var.IBIND_WS_SUBSCRIPTION_RETRIES,
+        subscription_timeout: float = var.IBIND_WS_SUBSCRIPTION_TIMEOUT,
     ):
         """
         Create a subscription controller.
@@ -241,8 +242,8 @@ class SubscriptionController:
                 Returns True if sent successfully.
             emit_event (Callable[[WsEvent], None]): Function to emit events.
             subscription_resolver (SubscriptionResolver): Resolver to match events to subscriptions.
-            subscription_retries (int, optional): Maximum retry attempts per subscription. Default: 5.
-            subscription_timeout (float, optional): Seconds to wait between retry attempts. Default: 2.
+            subscription_retries (int, optional): Maximum retry attempts per subscription. Default: IBIND_WS_SUBSCRIPTION_RETRIES.
+            subscription_timeout (float, optional): Seconds to wait between retry attempts. Default: IBIND_WS_SUBSCRIPTION_TIMEOUT.
         """
         self._send_payload = send_payload
         self._emitter = emitter
