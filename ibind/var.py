@@ -50,6 +50,9 @@ IBIND_AUTO_REGISTER_SHUTDOWN = to_bool(os.environ.get('IBIND_AUTO_REGISTER_SHUTD
 IBIND_LOG_RESPONSES = to_bool(os.environ.get('IBIND_LOG_RESPONSES', False))
 """ Whether to log responses coming from the broker. """
 
+IBIND_VERBOSE_RETRIES = to_bool(os.environ.get('IBIND_VERBOSE_RETRIES', True))
+""" Whether to log repetition attempts. """
+
 ##### LOGS #####
 
 LOG_TO_CONSOLE = to_bool(os.environ.get('IBIND_LOG_TO_CONSOLE', True))
@@ -84,23 +87,32 @@ IBIND_ACCOUNT_ID = os.getenv('IBIND_ACCOUNT_ID', None)
 IBIND_CACERT = os.getenv('IBIND_CACERT', False)
 """ Path to certificates used to communicate with IBKR Client Portal Gateway."""
 
-IBIND_WS_PING_INTERVAL = int(os.getenv('IBIND_WS_PING_INTERVAL', 45))
-""" Interval between WebSocket pings. """
+IBIND_WS_PING_INTERVAL = float(os.getenv('IBIND_WS_PING_INTERVAL', 10))
+""" Interval in seconds between WebSocket pings sent to IBKR. """
 
-IBIND_WS_MAX_PING_INTERVAL = int(os.getenv('IBIND_WS_MAX_PING_INTERVAL', 300))
-""" Max accepted interval between WebSocket pings. """
+IBIND_WS_MAX_PING_INTERVAL = float(os.getenv('IBIND_WS_MAX_PING_INTERVAL', 20))
+""" Max accepted interval in seconds since the last pong received, after which the connection is reset. """
 
-IBIND_WS_TIMEOUT = int(os.getenv('IBIND_WS_TIMEOUT', 5))
-""" Timeout for WebSocket state change verifications. """
+IBIND_WS_TIMEOUT = float(os.getenv('IBIND_WS_TIMEOUT', 5))
+""" Timeout in seconds for WebSocket connection state change verifications. """
 
-IBIND_WS_SUBSCRIPTION_RETRIES = int(os.getenv('IBIND_WS_SUBSCRIPTION_RETRIES', 5))
-""" Number of attempts to create a WebSocket subscription. """
+IBIND_WS_SUBSCRIPTION_RETRIES = int(os.getenv('IBIND_WS_SUBSCRIPTION_RETRIES', 20))
+""" Number of attempts to create a WebSocket subscription before marking it as failed. """
 
-IBIND_WS_SUBSCRIPTION_TIMEOUT = int(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 2))
-""" Timeout for WebSocket subscription verifications. """
+IBIND_WS_SUBSCRIPTION_TIMEOUT = float(os.getenv('IBIND_WS_SUBSCRIPTION_TIMEOUT', 5))
+""" Interval in seconds between subsequent WebSocket subscription attempts. """
 
 IBIND_WS_LOG_RAW_MESSAGES = to_bool(os.environ.get('IBIND_WS_LOG_RAW_MESSAGES', False))
 """ Whether raw WebSocket messages should be logged. """
+
+IBIND_WS_SKIP_UTF8_VALIDATION = to_bool(os.environ.get('IBIND_WS_SKIP_UTF8_VALIDATION', True))
+""" Whether to skip UTF-8 validation for WebSocket messages. """
+
+IBIND_WS_MAX_QUEUE_SIZE = int(os.environ.get('IBIND_WS_MAX_QUEUE_SIZE', 10_000))
+""" Maximum queue size for WebSocket events. """
+
+IBIND_WS_DROP_OLDEST = to_bool(os.environ.get('IBIND_WS_DROP_OLDEST', True))
+""" Whether to drop oldest events when full. If False, drops newest events. """
 
 ##### OAuth common #####
 

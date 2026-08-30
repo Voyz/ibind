@@ -16,7 +16,7 @@ _LOGGER = project_logger(__file__)
 
 class MarketdataMixin:
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#md
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/market-data
     """
 
     @ensure_list_arg('conids', 'fields')

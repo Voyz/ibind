@@ -11,7 +11,7 @@ _LOGGER = project_logger(__file__)
 
 class AccountsMixin:  # pragma: no cover
     """
-    https://ibkrcampus.com/ibkr-api-page/webapi-doc/#accounts
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/accounts
     """
 
     def account_summary(self: 'IbkrClient', account_id: str = None) -> Result:

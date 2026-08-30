@@ -1,6 +1,6 @@
 """
 This file contains hard coded definitions of what various IBKR market data snapshot fields stand for.
-See: https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#market-data-fields
+See: https://www.interactivebrokers.com/docs/web-api/v1/endpoints/market-data/market-data-fields
 """
 
 from typing import Union

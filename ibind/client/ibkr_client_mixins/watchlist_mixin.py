@@ -11,7 +11,7 @@ _LOGGER = project_logger(__file__)
 
 class WatchlistMixin:  # pragma: no cover
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#watchlists
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/watchlists
     """
 
     def create_watchlist(self: 'IbkrClient', id: str, name: str, rows: List[Dict[str, Union[str, int]]]) -> Result:

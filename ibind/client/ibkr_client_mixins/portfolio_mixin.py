@@ -12,8 +12,8 @@ _LOGGER = project_logger(__file__)
 
 class PortfolioMixin:  # pragma: no cover
     """
-    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#portfolio
-    * https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#pa
+    * https://www.interactivebrokers.com/docs/web-api/v1/endpoints/portfolio
+    * https://www.interactivebrokers.com/docs/web-api/v1/endpoints/portfolio-analyst
     """
 
     def portfolio_accounts(self: 'IbkrClient') -> Result:

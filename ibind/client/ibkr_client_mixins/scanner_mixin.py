@@ -12,7 +12,7 @@ _LOGGER = project_logger(__file__)
 
 class ScannerMixin:  # pragma: no cover
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#scanner
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/scanner
     """
 
     def scanner_parameters(self: 'IbkrClient') -> Result:

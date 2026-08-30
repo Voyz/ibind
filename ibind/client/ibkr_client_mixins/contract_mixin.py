@@ -11,7 +11,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 class ContractMixin:
     """
-    https://ibkrcampus.com/ibkr-api-page/cpapi-v1/#contract
+    https://www.interactivebrokers.com/docs/web-api/v1/endpoints/contract
     """
 
     default_filtering: bool = True

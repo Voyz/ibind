@@ -1,6 +1,6 @@
 loaders:
   - type: python
-    search_path: ["ibind"]
+    search_path: [ "ibind" ]
 
 processors:
   - type: filter
@@ -17,6 +17,8 @@ renderer:
   type: mkdocs
   mkdocs_config:
     output_directory: ./docs
+    content_directory_name: api_reference
+    docs_dir: api_reference
   markdown:
     encoding: utf-8
     descriptive_module_title: True
@@ -37,34 +39,96 @@ renderer:
       Method: 3
       Function: 2
       Data: 4
+
   pages:
     - title: API IbkrClient
       name: ibkr_client
       contents:
         - client.ibkr_client.IbkrClient.*
-        - client.ibkr_client_mixins.*
         - base.rest_client.Result
+
+    - title: API IbkrClient Accounts Mixin
+      name: ibkr_client/accounts_mixin
+      contents:
+        - client.ibkr_client_mixins.accounts_mixin.*
+
+    - title: API IbkrClient Contract Mixin
+      name: ibkr_client/contract_mixin
+      contents:
+        - client.ibkr_client_mixins.contract_mixin.*
+
+    - title: API IbkrClient FA Mixin
+      name: ibkr_client/fa_mixin
+      contents:
+        - client.ibkr_client_mixins.fa_mixin.*
+
+    - title: API IbkrClient Marketdata Mixin
+      name: ibkr_client/marketdata_mixin
+      contents:
+        - client.ibkr_client_mixins.marketdata_mixin.*
+
+    - title: API IbkrClient Order Mixin
+      name: ibkr_client/order_mixin
+      contents:
+        - client.ibkr_client_mixins.order_mixin.*
+
+    - title: API IbkrClient Portfolio Mixin
+      name: ibkr_client/portfolio_mixin
+      contents:
+        - client.ibkr_client_mixins.portfolio_mixin.*
+
+    - title: API IbkrClient Scanner Mixin
+      name: ibkr_client/scanner_mixin
+      contents:
+        - client.ibkr_client_mixins.scanner_mixin.*
+
+    - title: API IbkrClient Session Mixin
+      name: ibkr_client/session_mixin
+      contents:
+        - client.ibkr_client_mixins.session_mixin.*
+
+    - title: API IbkrClient Watchlist Mixin
+      name: ibkr_client/watchlist_mixin
+      contents:
+        - client.ibkr_client_mixins.watchlist_mixin.*
+
     - title: API IbkWsClient
       name: ibkr_ws_client
       contents:
-        - client.ibkr_ws_client.IbkrWsClient.*
-        - client.ibkr_ws_client.IbkrWsKey.*
-        - base.subscription_controller.SubscriptionController.unsubscribe
-        - base.subscription_controller.SubscriptionController.modify_subscription
-        - base.subscription_controller.SubscriptionController.recreate_subscriptions
-        - base.queue_controller.QueueAccessor.*
-        - base.ws_client.WsClient.start
-        - base.ws_client.WsClient.shutdown
-        - base.ws_client.WsClient.disconnect
-        - base.ws_client.WsClient.check_ping
-        - base.ws_client.WsClient.hard_reset
-        - base.ws_client.WsClient.connected
-        - base.ws_client.WsClient.ready
-        - base.ws_client.WsClient.running
+        - ibkr_ws.ibkr_ws_client.*
+        - ws.ws_subscriptions.Subscription.*
+        - ws.ws_subscriptions.BindingStatus.*
+        - ws.ws_subscriptions.SubscriptionUpdated
+        - ws.ws_subscriptions.Binding.*
+        - ws.ws_subscriptions.SubscriptionHandle.*
+
+    - title: API Subscriptions
+      name: ibkr_ws_subscriptions
+      contents:
+        - ibkr_ws.ibkr_subscriptions.AccountSummarySubscription
+        - ibkr_ws.ibkr_subscriptions.AccountLedgerSubscription
+        - ibkr_ws.ibkr_subscriptions.MarketDataSubscription
+        - ibkr_ws.ibkr_subscriptions.MarketHistorySubscription
+        - ibkr_ws.ibkr_subscriptions.OrdersSubscription
+        - ibkr_ws.ibkr_subscriptions.PriceLadderSubscription
+        - ibkr_ws.ibkr_subscriptions.PnlSubscription
+        - ibkr_ws.ibkr_subscriptions.TradesSubscription
+
+    - title: API Events
+      name: ibkr_ws_events
+      contents:
+        - ws._ws_events.*
+        - ibkr_ws.ibkr_events.*
+
+    - title: API Sinks
+      name: ibkr_ws_sinks
+      contents:
+        - ws.ws_sinks.*
+
     - title: API Utils
       name: utils
       contents:
         - client.ibkr_utils.StockQuery
-        - client.ibkr_utils.make_order_request
+        - client.ibkr_utils.OrderRequest
         - support.py_utils.execute_in_parallel
         - support.logs.ibind_logs_initialize
