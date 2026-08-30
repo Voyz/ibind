@@ -6,6 +6,7 @@ from ibind.ibkr_ws.ibkr_subscriptions import (
     PnlSubscription,
     TradesSubscription,
     MarketHistorySubscription,
+    PriceLadderSubscription,
 )
 
 from ibind.ws.ws_subscriptions import SubscriptionHandle, BindingStatus, Subscription, SubscriptionResolver
@@ -19,6 +20,7 @@ __all__ = [
     'OrdersSubscription',
     'AccountLedgerSubscription',
     'AccountSummarySubscription',
+    'PriceLadderSubscription',
     'PnlSubscription',
     'TradesSubscription',
     'MarketHistorySubscription',
