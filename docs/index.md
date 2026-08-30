@@ -64,14 +64,23 @@ print(client.portfolio_accounts().data)
 
 ### WebSocket API Example
 ```python
-from ibind import IbkrWsClient, IbkrWsKey
+from ibind import IbkrWsClient, QueueSink, events
+from ibind.subscriptions import PnlSubscription
 
-ws_client = IbkrWsClient(start=True)
-ws_client.subscribe(channel=IbkrWsKey.PNL.channel)
+# Create a queue-based event sink
+sink = QueueSink()
 
+# Construct and start the client
+ws_client = IbkrWsClient(sink=sink)
+ws_client.start()
+
+# Subscribe to PnL updates
+ws_client.subscribe(PnlSubscription())
+
+# Consume PnL events
 while True:
-    if not ws_client.empty(IbkrWsKey.PNL):
-        print(ws_client.get(IbkrWsKey.PNL))
+    while not sink.empty(events.Pnl):
+        print(sink.get(events.Pnl))
 ```
 
 ## Support and Contributing

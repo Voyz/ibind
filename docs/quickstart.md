@@ -44,21 +44,26 @@ That's it - you can now call any [IbkrClient method][wiki-ibkr-client] to intera
 If you need real-time streaming data (market data, account updates, etc.), use the WebSocket client:
 
 ```python
-from ibind import IbkrWsClient, IbkrWsKey
+from ibind import IbkrWsClient, QueueSink, events
+from ibind.subscriptions import PnlSubscription
+
+# Create a queue-based event sink
+sink = QueueSink()
 
 # Create and start the WebSocket client
-ws_client = IbkrWsClient(start=True)
+ws_client = IbkrWsClient(sink=sink)
+ws_client.start()
 
-# Subscribe to a channel (eg. account PnL updates)
-ws_client.subscribe(channel=IbkrWsKey.PNL.channel)
+# Subscribe to a topic (eg. account PnL updates)
+ws_client.subscribe(PnlSubscription())
 
-# Consume data from the queue
+# Consume events from the queue
 while True:
-    if not ws_client.empty(IbkrWsKey.PNL):
-        print(ws_client.get(IbkrWsKey.PNL))
+    while not sink.empty(events.Pnl):
+        print(sink.get(events.Pnl))
 ```
 
-See [IbkrWsClient][wiki-ibkr-ws-client] for full details on lifecycle, subscriptions, and data consumption.
+See [WebSocket Client Quickstart][wiki-ws-quickstart] for a step-by-step walkthrough, or [IbkrWsClient][wiki-ibkr-ws-client] for full details on lifecycle, subscriptions, and data consumption.
 
 ----
 #### Next
@@ -71,5 +76,6 @@ See [IbkrWsClient][wiki-ibkr-ws-client] for full details on lifecycle, subscript
 [wiki-authentication]: ./authentication.md
 [wiki-ibkr-client]: ./rest/ibkr_client.md
 [wiki-ibkr-ws-client]: ./websocket/overview.md
+[wiki-ws-quickstart]: ./websocket/quickstart.md
 [wiki-ibind-configuration]: ./configuration.md
 [examples]: https://github.com/Voyz/ibind/blob/master/examples
