@@ -7,7 +7,7 @@ from ibind.support.logs import ibind_logs_initialize
 from ibind.support.py_utils import execute_in_parallel
 from ibind import events, subscriptions
 from ibind.ws.runtime.ws_state_manager import WsState
-from ibind.ws.ws_sinks import EventSink, LogSink, NoopSink, CallbackSink, QueueSink, CompositeSink
+from ibind.ws.ws_sinks import EventSink, LogSink, NoopSink, CallbackSink, QueueSink, CompositeSink, QueueAccessor
 from ibind.ws.ws_subscriptions import SubscriptionHandle, BindingStatus, SubscriptionConflictError
 from ibind.ibkr_ws.ibkr_ws_client import IbkrWsClient
 from ibind.ibkr_ws.ibkr_subscriptions import make_binding_key
@@ -32,6 +32,7 @@ __all__ = [
     'EventSink',
     'NoopSink',
     'LogSink',
+    'QueueAccessor',
     'QueueSink',
     'CallbackSink',
     'CompositeSink',
