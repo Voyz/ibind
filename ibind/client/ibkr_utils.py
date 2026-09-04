@@ -171,6 +171,10 @@ class QuestionType(VerboseEnum):
     MULTIPLE_ACCOUNTS = 'This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders.'
     DISRUPTIVE_ORDERS = 'If your order is not immediately executable, our systems may, depending on market conditions, reject your order'
     CLOSE_POSITION = 'Would you like to cancel all open orders and then place new closing order?'
+    MARKET_ORDER_CONFIRMATION = 'A Market Order is an instruction to trade your order at any available price'
+    STOP_VARIANT_ORDER_CONFIRMATION = (
+        "A Stop Order - i.e. a Stop (Market) Order - is an instruction to buy or sell at the market price once your trigger (\"stop\") price is reached"
+    )
 
 
 # FIXME: Fill in the remaining question types as we find out what they are
@@ -195,8 +199,8 @@ _MESSAGE_ID_TO_QUESTION_TYPE = {
     'o2165': (UNDEFINED, 'Warns that instrument does not support trading in fractions outside regular trading hours'),
     'o10082': (UNDEFINED, 'Called Bond warning'),
     'o10138': (QuestionType.SIZE_MODIFICATION_LIMIT, 'The following order size modification exceeds the size modification limit.'),
-    'o10151': (UNDEFINED, 'Warns about risks with Market Orders'),
-    'o10152': (UNDEFINED, 'Warns about risks associated with stop orders once they become active'),
+    'o10151': (QuestionType.MARKET_ORDER_CONFIRMATION, 'Warns about risks with Market Orders'),
+    'o10152': (QuestionType.STOP_VARIANT_ORDER_CONFIRMATION, 'Warns about risks associated with stop orders once they become active'),
     'o10153': (
         QuestionType.MANDATORY_CAP_PRICE,
         '<h4>Confirm Mandatory Cap Price</h4>To avoid trading at a price that is not consistent with a fair and orderly market, IB may set a cap (for a buy order) or sell order). THIS MAY CAUSE AN ORDER THAT WOULD OTHERWISE BE MARKETABLE TO NOT BE TRADED.',
