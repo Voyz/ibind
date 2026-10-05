@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from ibind.base.rest_client import Result
-from ibind.support.logs import mask_account_id, project_logger
+from ibind.support.logs import project_logger
 
 if TYPE_CHECKING:  # pragma: no cover
     from ibind import IbkrClient
@@ -80,7 +80,7 @@ class AccountsMixin:  # pragma: no cover
         result = self.post('iserver/account', params={'acctId': account_id})
         self.account_id = account_id
         self._make_logger()
-        _LOGGER.debug(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {mask_account_id(self.account_id)}')
+        _LOGGER.debug(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
         return result
 
     def receive_brokerage_accounts(self: 'IbkrClient') -> Result:  # pragma: no cover

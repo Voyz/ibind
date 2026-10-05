@@ -13,7 +13,7 @@ from requests.exceptions import ChunkedEncodingError
 
 from ibind import var
 from ibind.support.errors import ExternalBrokerError
-from ibind.support.logs import mask_account_ids, new_daily_rotating_file_handler, project_logger
+from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 from ibind.support.py_utils import filter_none, UNDEFINED
 
 _LOGGER = project_logger(__file__)
@@ -246,20 +246,20 @@ class RestClient:
         # we repeat the request attempts in case of ReadTimeouts up to max_retries
         for attempt in range(self._max_retries + 1):
             if log:
-                self.logger.info(mask_account_ids(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}'))
+                self.logger.info(f'{method} {url} {kwargs}{" (attempt: " + str(attempt) + ")" if attempt > 0 else ""}')
 
             try:
                 response = request_function(method, url, verify=self.cacert, headers=headers, timeout=self._timeout, **kwargs)
                 result = Result(request={'url': url, **kwargs})
                 result = self._process_response(response, result)
                 if self._log_responses:
-                    self.logger.info(mask_account_ids(result))
+                    self.logger.info(result)
                 return result
 
             except ReadTimeout as e:
                 if attempt >= self._max_retries:
                     raise TimeoutError(f'{self}: Reached max retries ({self._max_retries}) for {method} {url} {kwargs}') from e
-                msg = mask_account_ids(f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}')
+                msg = f'{self}: Timeout for {method} {url} {kwargs}, retrying attempt {attempt + 1}/{self._max_retries}'
                 self.logger.info(msg)
                 if self._verbose_retries:
                     _LOGGER.info(msg)

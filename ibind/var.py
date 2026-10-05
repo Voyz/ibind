@@ -73,6 +73,9 @@ LOGS_DIR = os.getenv('IBIND_LOGS_DIR', tempfile.gettempdir())
 PRINT_FILE_LOGS = to_bool(os.getenv('IBIND_PRINT_FILE_LOGS', False))
 """ Whether file logs should also be output into terminal. """
 
+MASK_ACCOUNT_IDS = to_bool(os.getenv('IBIND_MASK_ACCOUNT_IDS', True))
+""" Whether account IDs should be masked in the output of IBind's console and file log handlers. """
+
 ##### IBKR #####
 
 IBIND_REST_URL = os.getenv('IBIND_REST_URL', None)

@@ -4,7 +4,7 @@ import os.path
 import re
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from ibind import var
 
@@ -61,23 +61,22 @@ def project_logger(filepath=None):
 _ACCOUNT_ID_RE = re.compile(r'(?<![A-Za-z0-9])(U|D[UF]P?)(\d{6,10})(?![0-9])')
 
 
-def mask_account_id(account_id: Optional[str]) -> Optional[str]:
-    """
-    Masks an account id for logging, keeping the letter prefix and the last four digits.
-
-    For example, `DU1234567` becomes `DU***4567`. Ids with four or fewer digits are masked entirely after the prefix.
-    """
-    if account_id is None:
-        return None
-    account_id = str(account_id)
-    prefix = re.match(r'[A-Za-z]*', account_id).group(0)
-    digits = account_id[len(prefix) :]
-    return f'{prefix}***{digits[-4:]}' if len(digits) > 4 else f'{prefix}***'
-
-
 def mask_account_ids(text) -> str:
     """Masks every account id found in `text`, such as in URLs, request parameters or response payloads."""
     return _ACCOUNT_ID_RE.sub(lambda m: f'{m.group(1)}***{m.group(2)[-4:]}', str(text))
+
+
+class AccountIdMaskingFormatter(logging.Formatter):
+    """
+    Formatter that masks account ids in the final log output, including exception tracebacks.
+
+    Used by IBind's built-in console and file handlers. Apply it to your own handlers receiving IBind logs to mask
+    account ids there too. Masking can be disabled with the `IBIND_MASK_ACCOUNT_IDS` environment variable.
+    """
+
+    def format(self, record):
+        text = super().format(record)
+        return mask_account_ids(text) if var.MASK_ACCOUNT_IDS else text
 
 
 _LOGGER = project_logger()
@@ -113,7 +112,7 @@ def ibind_logs_initialize(
     _log_to_file = log_to_file
 
     logger = logging.getLogger('ibind')
-    formatter = logging.Formatter(log_format, datefmt='%H:%M:%S')
+    formatter = AccountIdMaskingFormatter(log_format, datefmt='%H:%M:%S')
     logger.setLevel(logging.DEBUG)
 
     h1 = logging.StreamHandler(stream=sys.stdout)
@@ -158,18 +157,18 @@ def new_daily_rotating_file_handler(logger_name, filepath):
                 break
 
         if ibind_filehandler is None:
-            _LOGGER.info(f'New daily rotating file handler for logger "{logger_name}": {mask_account_ids(filepath)}')
+            _LOGGER.info(f'New daily rotating file handler for logger "{logger_name}": {filepath}')
             fh_logger = logging.getLogger('ibind_fh')
             handler = DailyRotatingFileHandler(filename=filepath, encoding='utf-8')
             handler.name = logger_name
-            handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
+            handler.setFormatter(AccountIdMaskingFormatter(DEFAULT_FORMAT))
 
             # if filehandler outputs are disabled, this should bring over the filter that will do this
             for filter in fh_logger.filters:
                 logger.addFilter(filter)
             logger.addHandler(handler)
         else:
-            _LOGGER.info(f'Existing daily rotating file handler for logger "{logger_name}": {mask_account_ids(filepath)}')
+            _LOGGER.info(f'Existing daily rotating file handler for logger "{logger_name}": {filepath}')
 
         logger.setLevel(logging.DEBUG)
     else:

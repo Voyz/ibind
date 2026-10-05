@@ -17,7 +17,7 @@ from ibind.client.ibkr_client_mixins.session_mixin import SessionMixin
 from ibind.client.ibkr_client_mixins.watchlist_mixin import WatchlistMixin
 from ibind.client.ibkr_utils import Tickler
 from ibind.support.errors import ExternalBrokerError
-from ibind.support.logs import mask_account_id, new_daily_rotating_file_handler, project_logger
+from ibind.support.logs import new_daily_rotating_file_handler, project_logger
 from ibind.support.py_utils import exception_to_string
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -118,7 +118,7 @@ class IbkrClient(
 
         self.logger.info('#################')
         self.logger.info(
-            f'New IbkrClient(base_url={self.base_url!r}, account_id={mask_account_id(self.account_id)!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})'
+            f'New IbkrClient(base_url={self.base_url!r}, account_id={self.account_id!r}, ssl={self.cacert!r}, timeout={self._timeout}, max_retries={self._max_retries}, use_oauth={self._use_oauth})'
         )
 
         if self._use_oauth:
