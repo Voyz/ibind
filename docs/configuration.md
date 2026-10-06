@@ -98,6 +98,7 @@ A full and most up-to-date list of environment variables can be found in the [`v
 | `IBIND_LOG_FORMAT` | '%(asctime)s\|%(levelname)-.1s\| %(message)s' | Log format that is used by IBind |
 | `IBIND_LOGS_DIR` | tempfile.gettempdir() | Directory of file logs produced. |
 | `IBIND_LOG_TO_FILE` | True | Whether logs should be saved to a file. |
+| `IBIND_MASK_ACCOUNT_IDS` | True | Whether account IDs should be masked in the output of IBind's console and file log handlers. |
 | `IBIND_REST_URL` | None | IBKR Client Portal Gateway's URL for REST API. |
 | `IBIND_WS_URL` | None | IBKR Client Portal Gateway's URL for WebSocket API. |
 | `IBIND_ACCOUNT_ID` | None | IBKR account ID to use. |
@@ -160,6 +161,16 @@ Note:
 * All of these parameters are read from the environment variables by default.
 * The daily file logs are saved in the directory specified by the `IBIND_LOGS_DIR` environment variable, the system temp directory by default.
 * To get more verbose logs, set either the `log_level` parameter or the `IBIND_LOG_LEVEL` environment variable to `'DEBUG'`
+
+### Account-ID masking
+
+IBind's built-in console and file handlers mask account IDs by default, preserving the letter prefix and last four digits. For example, `DU1234567` appears as `DU***4567`.
+
+Masking affects log output only. Requests, subscription keys, and event data retain their original account IDs.
+
+To disable masking set `IBIND_MASK_ACCOUNT_IDS` env var to `False`.
+
+If your application configures its own logging handlers, apply `AccountIdMaskingFormatter` to each handler receiving IBind logs. Application-configured handlers do not automatically use this formatter.
 
 ----
 ##### Next

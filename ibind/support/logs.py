@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os.path
+import re
 import sys
 from pathlib import Path
 from typing import List
@@ -55,6 +56,29 @@ def project_logger(filepath=None):
     return logging.getLogger(logger_name)
 
 
+# IBKR account ids: `U`, `DU`, `DF` or `DFP` followed by digits. Lookarounds rather than `\b`, so that
+# ids preceded by an underscore (e.g. the `ibkr_client_<id>` log file path) are matched too.
+_ACCOUNT_ID_RE = re.compile(r'(?<![A-Za-z0-9])(U|D[UF]P?)(\d{6,10})(?![0-9])')
+
+
+def mask_account_ids(text) -> str:
+    """Masks every account id found in `text`, such as in URLs, request parameters or response payloads."""
+    return _ACCOUNT_ID_RE.sub(lambda m: f'{m.group(1)}***{m.group(2)[-4:]}', str(text))
+
+
+class AccountIdMaskingFormatter(logging.Formatter):
+    """
+    Formatter that masks account ids in the final log output, including exception tracebacks.
+
+    Used by IBind's built-in console and file handlers. Apply it to your own handlers receiving IBind logs to mask
+    account ids there too. Masking can be disabled with the `IBIND_MASK_ACCOUNT_IDS` environment variable.
+    """
+
+    def format(self, record):
+        text = super().format(record)
+        return mask_account_ids(text) if var.MASK_ACCOUNT_IDS else text
+
+
 _LOGGER = project_logger()
 
 
@@ -88,7 +112,7 @@ def ibind_logs_initialize(
     _log_to_file = log_to_file
 
     logger = logging.getLogger('ibind')
-    formatter = logging.Formatter(log_format, datefmt='%H:%M:%S')
+    formatter = AccountIdMaskingFormatter(log_format, datefmt='%H:%M:%S')
     logger.setLevel(logging.DEBUG)
 
     h1 = logging.StreamHandler(stream=sys.stdout)
@@ -137,7 +161,7 @@ def new_daily_rotating_file_handler(logger_name, filepath):
             fh_logger = logging.getLogger('ibind_fh')
             handler = DailyRotatingFileHandler(filename=filepath, encoding='utf-8')
             handler.name = logger_name
-            handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
+            handler.setFormatter(AccountIdMaskingFormatter(DEFAULT_FORMAT))
 
             # if filehandler outputs are disabled, this should bring over the filter that will do this
             for filter in fh_logger.filters:

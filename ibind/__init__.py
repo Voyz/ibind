@@ -3,7 +3,7 @@ from ibind.client.ibkr_client import IbkrClient
 from ibind.client.ibkr_utils import StockQuery, OrderRequest, QuestionType, Answers, question_type_to_message_id
 from ibind.client.ibkr_definitions import snapshot_keys_to_ids
 from ibind.support.errors import ExternalBrokerError
-from ibind.support.logs import ibind_logs_initialize
+from ibind.support.logs import AccountIdMaskingFormatter, ibind_logs_initialize
 from ibind.support.py_utils import execute_in_parallel
 from ibind import events, subscriptions
 from ibind.ws.runtime.ws_state_manager import WsState
@@ -14,6 +14,7 @@ from ibind.ibkr_ws.ibkr_subscriptions import make_binding_key
 
 __all__ = [
     'ibind_logs_initialize',
+    'AccountIdMaskingFormatter',
     'IbkrClient',
     'StockQuery',
     'OrderRequest',

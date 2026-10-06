@@ -80,7 +80,7 @@ class AccountsMixin:  # pragma: no cover
         result = self.post('iserver/account', params={'acctId': account_id})
         self.account_id = account_id
         self._make_logger()
-        _LOGGER.warning(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
+        _LOGGER.debug(f'ALSO NEED TO SWITCH WEBSOCKET ACCOUNT TO {self.account_id}')
         return result
 
     def receive_brokerage_accounts(self: 'IbkrClient') -> Result:  # pragma: no cover
