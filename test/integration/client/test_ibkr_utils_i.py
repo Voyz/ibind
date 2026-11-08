@@ -15,7 +15,7 @@ from ibind.client.ibkr_utils import (
     parse_order_request,
 )
 from test.integration.client import ibkr_responses
-from test.test_utils import CaptureLogsContext
+from test.test_utils import CaptureLogsContext, capture_logs
 
 
 # --------------------------------------------------------------------------------------
@@ -61,8 +61,7 @@ def test_filter_stocks(instruments, instruments_result):
 
     ## Assert
     expected_error = (
-        f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {instruments_result}. '
-        f'Skipping query={queries[-1]}.'
+        f'Error getting stocks. Could not find valid instruments INVALID_SYMBOL in result: {instruments_result}. Skipping query={queries[-1]}.'
     )
     assert expected_error in cm.output
 
@@ -206,6 +205,13 @@ def test_question_type_to_message_id_successful():
     assert message_id == 'o163'
 
 
+@capture_logs()
+def test_limited_liquidity_message_id():
+    """Maps the limited-liquidity warning to its IBKR message ID."""
+    ## Act & Assert
+    assert question_type_to_message_id(QuestionType.LIMITED_LIQUIDITY) == 'o10336'
+
+
 # --------------------------------------------------------------------------------------
 # Finding answers
 # --------------------------------------------------------------------------------------
@@ -226,6 +232,16 @@ def test_valid_question(answers):
 
     ## Assert
     assert answer is True
+
+
+@capture_logs()
+def test_limited_liquidity_question():
+    """Matches the limited-liquidity warning returned during order submission."""
+    ## Arrange
+    question = 'This security has limited liquidity. If you choose to trade this security, there is a heightened risk that you may not be able to close your position at the time you wish, at a price you wish, and/or without incurring a loss. Confirm that you understand the risks of trading illiquid securities.Are you sure you want to submit this order?'
+
+    ## Act & Assert
+    assert find_answer(question, {QuestionType.LIMITED_LIQUIDITY: True}) is True
 
 
 def test_invalid_question(answers):

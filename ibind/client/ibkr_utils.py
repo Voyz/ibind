@@ -168,12 +168,13 @@ class QuestionType(VerboseEnum):
     STOP_ORDER_RISKS = (
         'You are about to submit a stop order. Please be aware of the various stop order types available and the risks associated with each one.'
     )
+    LIMITED_LIQUIDITY = 'This security has limited liquidity. If you choose to trade this security, there is a heightened risk that you may not be able to close your position at the time you wish, at a price you wish, and/or without incurring a loss. Confirm that you understand the risks of trading illiquid securities.Are you sure you want to submit this order?'
     MULTIPLE_ACCOUNTS = 'This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders.'
     DISRUPTIVE_ORDERS = 'If your order is not immediately executable, our systems may, depending on market conditions, reject your order'
     CLOSE_POSITION = 'Would you like to cancel all open orders and then place new closing order?'
     MARKET_ORDER_CONFIRMATION = 'A Market Order is an instruction to trade your order at any available price'
     STOP_VARIANT_ORDER_CONFIRMATION = (
-        "A Stop Order - i.e. a Stop (Market) Order - is an instruction to buy or sell at the market price once your trigger (\"stop\") price is reached"
+        'A Stop Order - i.e. a Stop (Market) Order - is an instruction to buy or sell at the market price once your trigger ("stop") price is reached'
     )
 
 
@@ -222,6 +223,10 @@ _MESSAGE_ID_TO_QUESTION_TYPE = {
     'o10333': (UNDEFINED, 'Option Exercise at the Money warning'),
     'o10334': (UNDEFINED, 'Warns that order will be placed into current omnibus account instead of currently selected global account.'),
     'o10335': (UNDEFINED, 'Serves internal Rapid Entry window.'),
+    'o10336': (
+        QuestionType.LIMITED_LIQUIDITY,
+        'This security has limited liquidity. If you choose to trade this security, there is a heightened risk that you may not be able to close your position at the time you wish, at a price you wish, and/or without incurring a loss. Confirm that you understand the risks of trading illiquid securities.Are you sure you want to submit this order?',
+    ),
     'p6': (
         QuestionType.MULTIPLE_ACCOUNTS,
         'This order will be distributed over multiple accounts. We strongly suggest you familiarize yourself with our allocation facilities before submitting orders.',
